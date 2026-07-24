@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
+import LoadingScreen from "@/components/loading/LoadingScreen";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -26,7 +28,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id" className="h-full">
-      <body className="min-h-full flex flex-col antialiased">{children}</body>
+      <body className="min-h-full flex flex-col antialiased">
+        <Suspense fallback={<LoadingScreen />}>
+          {children}
+        </Suspense>
+      </body>
     </html>
   );
 }
