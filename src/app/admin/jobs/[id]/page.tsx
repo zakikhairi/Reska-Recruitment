@@ -229,7 +229,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
             <div style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", position: "sticky", top: "24px" }}>
               <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#111111", marginBottom: "20px" }}>Kisaran Gaji</h3>
               <div style={{ padding: "20px", background: "linear-gradient(135deg, #FF5E00 0%, #ff7a2f 100%)", borderRadius: "12px", textAlign: "center" }}>
-                <p style={{ fontSize: "24px", fontWeight: 800, color: "#ffffff" }}>{job.salary}</p>
+                <p style={{ fontSize: "24px", fontWeight: 800, color: "#ffffff" }}>{job.salaryMin} - {job.salaryMax}</p>
                 <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.8)", marginTop: "4px" }}>per bulan</p>
               </div>
 

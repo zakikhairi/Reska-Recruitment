@@ -60,7 +60,7 @@ export default function CreateJobPage() {
     location: "",
     multipleLocations: false,
     otherLocations: [] as string[],
-    education: "",
+    minEducation: "",
     salaryMin: "",
     salaryMax: "",
     description: "",
@@ -224,8 +224,8 @@ export default function CreateJobPage() {
                   </label>
                   <div style={{ position: "relative" }}>
                     <select
-                      value={formData.education}
-                      onChange={(e) => handleInputChange("education", e.target.value)}
+                      value={formData.minEducation}
+                      onChange={(e) => handleInputChange("minEducation", e.target.value)}
                       style={{ width: "100%", padding: "12px 40px 12px 16px", border: "2px solid #e5e7eb", borderRadius: "12px", fontSize: "14px", outline: "none", background: "#ffffff", cursor: "pointer", appearance: "none", color: "#374151", fontWeight: 500, backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", backgroundSize: "16px" }}
                     >
                       <option value="">Pilih Pendidikan</option>

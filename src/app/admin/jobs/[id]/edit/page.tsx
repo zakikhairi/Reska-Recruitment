@@ -54,7 +54,7 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
     division: "",
     jobType: "FULL_TIME",
     location: "",
-    education: "",
+    minEducation: "",
     salaryMin: "",
     salaryMax: "",
     description: "",
@@ -75,7 +75,7 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
         division: job.division || "",
         jobType: job.jobType || "FULL_TIME",
         location: job.location || "",
-        education: job.education || "",
+        minEducation: job.minEducation || "",
         salaryMin: job.salaryMin || "",
         salaryMax: job.salaryMax || "",
         description: job.description || "",
@@ -219,8 +219,8 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
                 <div>
                   <label style={{ fontSize: "14px", fontWeight: 600, color: "#111111", marginBottom: "8px", display: "block" }}>Pendidikan Min.</label>
                   <select
-                    value={formData.education}
-                    onChange={(e) => handleInputChange("education", e.target.value)}
+                    value={formData.minEducation}
+                    onChange={(e) => handleInputChange("minEducation", e.target.value)}
                     style={{ width: "100%", padding: "12px 16px", border: "2px solid #e5e7eb", borderRadius: "12px", fontSize: "14px", outline: "none", background: "#ffffff", cursor: "pointer", color: "#374151" }}
                   >
                     <option value="">Pilih Pendidikan</option>

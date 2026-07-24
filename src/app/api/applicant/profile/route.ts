@@ -39,7 +39,7 @@ export async function PUT(request: NextRequest) {
         nik: profileData.nik,
         phone: profileData.phone,
         placeOfBirth: profileData.placeOfBirth || "",
-        dateOfBirth: profileData.dateOfBirth ? new Date(profileData.dateOfBirth) : null,
+        dateOfBirth: profileData.dateOfBirth ? new Date(profileData.dateOfBirth) : undefined,
         gender: profileData.gender || "MALE",
         address: profileData.address || "",
         city: profileData.city || "",

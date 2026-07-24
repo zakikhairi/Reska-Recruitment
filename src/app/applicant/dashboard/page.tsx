@@ -6,7 +6,7 @@ import Link from "next/link";
 // Mock data - new applicants start with empty applications
 const applications: any[] = [];
 
-const upcomingTests = [];
+const upcomingTests: any[] = [];
 
 const applicationSteps = [
   { id: 1, label: "Administrasi", status: "completed" },

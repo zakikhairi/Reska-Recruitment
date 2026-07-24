@@ -23,7 +23,7 @@ import {
   PieChart,
   CheckCircle2,
 } from "lucide-react";
-import { exportToPDF, exportToExcel, exportToCSV, ReportConfig } from "@/lib/export-utils";
+import { exportToPDF, exportToExcel, exportToCSV, ReportConfig, generateMockData } from "@/lib/export-utils";
 
 const reportTypes = [
   { id: "monthly", name: "Laporan Bulanan", icon: Calendar, description: "Ringkasan bulanan pelamar dan hasil tes" },
@@ -86,16 +86,17 @@ export default function CreateReportPage() {
     };
 
     // Generate report based on selected format
+    const data = generateMockData(config);
     setTimeout(() => {
       switch (reportFormat) {
         case "pdf":
-          exportToPDF(config);
+          exportToPDF(data);
           break;
         case "xlsx":
-          exportToExcel(config);
+          exportToExcel(data);
           break;
         case "csv":
-          exportToCSV(config);
+          exportToCSV(data);
           break;
       }
       setIsGenerating(false);

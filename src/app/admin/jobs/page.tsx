@@ -201,7 +201,7 @@ export default function JobsPage() {
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", color: "#666666" }}>
                     <Briefcase className="w-4 h-4" style={{ color: "#888888" }} />
-                    Min. {job.education}
+                    Min. {job.minEducation}
                   </div>
                 </div>
 
