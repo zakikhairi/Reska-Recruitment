@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Rekrutmen KAI - Mockup Preview</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background: #e3e7eb; min-height: 100vh; padding: 40px; }
+        .mockup-frame { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.15); margin-bottom: 40px; }
+        .mockup-label { background: #FF5E00; color: white; padding: 12px 24px; font-size: 14px; font-weight: 600; display: inline-block; margin-bottom: 20px; border-radius: 8px; }
+        .mockup-title { color: #00205B; font-size: 24px; font-weight: 800; margin-bottom: 20px; }
+
+        /* Navigation */
+        .top-nav { background: white; border-bottom: 1px solid #eee; padding: 16px 40px; display: flex; justify-content: space-between; align-items: center; }
+        .logo { display: flex; align-items: center; gap: 12px; font-weight: 800; color: #00205B; font-size: 20px; }
+        .logo-icon { width: 40px; height: 40px; background: #00205B; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; }
+        .nav-links { display: flex; gap: 32px; align-items: center; }
+        .nav-links a { color: #666; text-decoration: none; font-weight: 500; }
+        .nav-links a:hover { color: #FF5E00; }
+        .nav-buttons { display: flex; gap: 12px; }
+        .btn-masuk { padding: 10px 24px; border: 2px solid #00205B; background: white; color: #00205B; border-radius: 10px; font-weight: 600; cursor: pointer; }
+        .btn-daftar { padding: 10px 24px; background: #FF5E00; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; }
+
+        /* Hero */
+        .hero { padding: 80px 40px; text-align: center; background: linear-gradient(135deg, #00205B 0%, #1a3a6b 100%); color: white; }
+        .hero h1 { font-size: 42px; font-weight: 800; margin-bottom: 16px; }
+        .hero p { font-size: 18px; opacity: 0.9; margin-bottom: 32px; }
+        .hero-buttons { display: flex; gap: 16px; justify-content: center; }
+        .hero-btn-primary { padding: 14px 32px; background: #FF5E00; color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; }
+        .hero-btn-secondary { padding: 14px 32px; background: transparent; color: white; border: 2px solid white; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; }
+
+        /* Footer */
+        .footer { padding: 24px 40px; background: #f8f9fa; text-align: center; color: #666; font-size: 14px; border-top: 1px solid #eee; }
+
+        /* Login Page */
+        .login-container { display: flex; min-height: calc(100vh - 200px); }
+        .login-left { flex: 1; background: linear-gradient(135deg, #00205B 0%, #1a3a6b 100%); padding: 60px; display: flex; flex-direction: column; justify-content: center; color: white; }
+        .login-left h2 { font-size: 32px; margin-bottom: 16px; }
+        .login-left p { opacity: 0.9; line-height: 1.7; }
+        .login-right { flex: 1; padding: 60px; display: flex; flex-direction: column; justify-content: center; }
+        .login-box { max-width: 400px; margin: 0 auto; width: 100%; }
+        .login-box h2 { color: #00205B; font-size: 28px; margin-bottom: 8px; }
+        .login-box p { color: #666; margin-bottom: 32px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-weight: 600; color: #333; margin-bottom: 8px; }
+        .form-group input { width: 100%; padding: 14px 16px; border: 2px solid #e5e7eb; border-radius: 12px; font-size: 14px; }
+        .form-group input:focus { outline: none; border-color: #FF5E00; }
+        .login-btn { width: 100%; padding: 14px; background: #FF5E00; color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; }
+
+        /* Dashboard */
+        .dashboard { display: flex; min-height: 100vh; }
+        .sidebar { width: 260px; background: white; border-right: 1px solid #eee; padding: 24px 16px; }
+        .sidebar-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 10px; color: #666; cursor: pointer; margin-bottom: 4px; }
+        .sidebar-item:hover { background: #f8f9fa; }
+        .sidebar-item.active { background: #FF5E00; color: white; }
+        .sidebar-item .icon { width: 20px; text-align: center; }
+        .main-content { flex: 1; padding: 32px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
+        .header h1 { color: #00205B; font-size: 28px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 32px; }
+        .stat-card { background: white; padding: 24px; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .stat-number { font-size: 36px; font-weight: 800; color: #00205B; }
+        .stat-label { color: #666; font-size: 14px; margin-top: 4px; }
+        .stat-card.orange .stat-number { color: #FF5E00; }
+        .stat-card.green .stat-number { color: #10B981; }
+
+        /* Jobs Page */
+        .jobs-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+        .job-card { background: white; padding: 24px; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .job-header { display: flex; justify-content: space-between; margin-bottom: 12px; }
+        .badge { padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .badge-active { background: #dcfce7; color: #16a34a; }
+        .badge-draft { background: #fef3c7; color: #d97706; }
+        .job-title { font-size: 18px; font-weight: 700; color: #111; margin-bottom: 8px; }
+        .job-meta { display: flex; gap: 16px; color: #666; font-size: 14px; margin-bottom: 16px; }
+        .job-actions { display: flex; gap: 12px; }
+        .btn-edit { padding: 8px 16px; background: #00205B15; color: #00205B; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+        .btn-delete { padding: 8px 16px; background: #EF444415; color: #EF4444; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+        .btn-view { width: 100%; padding: 12px; background: #f0f4ff; color: #00205B; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; margin-top: 16px; }
+        .btn-create { display: flex; align-items: center; gap: 8px; padding: 12px 24px; background: #FF5E00; color: white; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; }
+
+        /* Reports Page */
+        .report-types { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 32px; }
+        .report-type { background: white; padding: 32px; border-radius: 16px; text-align: center; cursor: pointer; border: 2px solid transparent; transition: all 0.2s; }
+        .report-type:hover, .report-type.active { border-color: #FF5E00; }
+        .report-icon { font-size: 48px; margin-bottom: 16px; }
+        .report-type h3 { color: #00205B; font-size: 20px; margin-bottom: 8px; }
+        .report-type p { color: #666; font-size: 14px; }
+        .filter-row { display: flex; gap: 16px; margin-bottom: 24px; }
+        .filter-select { padding: 12px 16px; border: 2px solid #e5e7eb; border-radius: 12px; background: white; min-width: 200px; }
+        .preview-table { background: white; border-radius: 16px; overflow: hidden; }
+        .preview-table table { width: 100%; border-collapse: collapse; }
+        .preview-table th { background: #f8f9fa; padding: 14px 16px; text-align: left; font-weight: 600; color: #333; }
+        .preview-table td { padding: 14px 16px; border-top: 1px solid #eee; }
+        .btn-download { padding: 12px 32px; background: #10B981; color: white; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; }
+
+        /* Test Config Page */
+        .config-card { background: white; padding: 24px; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .config-info h3 { font-size: 18px; color: #111; margin-bottom: 8px; }
+        .config-meta { display: flex; gap: 20px; color: #666; font-size: 14px; margin-bottom: 12px; }
+        .config-tags { display: flex; gap: 8px; }
+        .config-tag { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+
+        /* Test Page */
+        .test-container { max-width: 800px; margin: 0 auto; padding: 40px; }
+        .test-header { display: flex; justify-content: space-between; align-items: center; background: #00205B; color: white; padding: 20px 32px; border-radius: 16px 16px 0 0; }
+        .test-timer { font-size: 24px; font-weight: 700; }
+        .test-progress { padding: 24px; background: white; border-radius: 0 0 16px 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .question-number { color: #666; margin-bottom: 8px; }
+        .question-category { display: inline-block; padding: 4px 12px; background: #FF5E00; color: white; border-radius: 20px; font-size: 12px; font-weight: 600; margin-bottom: 16px; }
+        .question-text { font-size: 18px; font-weight: 600; color: #111; margin-bottom: 24px; line-height: 1.6; }
+        .answer-option { display: flex; align-items: center; gap: 12px; padding: 16px 20px; background: #f8f9fa; border-radius: 12px; margin-bottom: 12px; cursor: pointer; border: 2px solid transparent; }
+        .answer-option:hover { border-color: #FF5E00; }
+        .answer-option.selected { background: #FF5E0015; border-color: #FF5E00; }
+        .answer-letter { width: 32px; height: 32px; background: white; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+        .test-nav { display: flex; justify-content: space-between; margin-top: 32px; }
+        .btn-prev, .btn-next { padding: 12px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; }
+        .btn-prev { background: #f8f9fa; border: none; color: #666; }
+        .btn-next { background: #00205B; border: none; color: white; }
+        .btn-submit { background: #10B981; border: none; color: white; padding: 12px 32px; border-radius: 12px; font-weight: 600; cursor: pointer; }
+        .question-dots { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 24px; padding-top: 24px; border-top: 1px solid #eee; }
+        .q-dot { width: 32px; height: 32px; background: #f8f9fa; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; }
+        .q-dot.answered { background: #FF5E00; color: white; }
+        .q-dot.current { background: #00205B; color: white; }
+    </style>
+</head>
+<body>
+    <div class="mockup-label">📸 Screenshot bagian ini untuk Figma</div>
+
+    <!-- Page 1: Landing Page -->
+    <div class="mockup-frame">
+        <div class="mockup-title">1. Landing Page (Home)</div>
+
+        <nav class="top-nav">
+            <div class="logo">
+                <div class="logo-icon">🚂</div>
+                KAI Recruitment
+            </div>
+            <div class="nav-links">
+                <a href="#">Home</a>
+                <a href="#">Lowongan</a>
+                <a href="#">Panduan</a>
+                <a href="#">Tentang</a>
+            </div>
+            <div class="nav-buttons">
+                <button class="btn-masuk">Masuk</button>
+                <button class="btn-daftar">Daftar</button>
+            </div>
+        </nav>
+
+        <div class="hero">
+            <h1>🚂 REKRUTMEN KERETA API INDONESIA</h1>
+            <p>Jelajahi peluang karir di PT KAI dan afiliasinya.<br>Bergabunglah dengan kami untuk masa depan yang lebih cerah.</p>
+            <div class="hero-buttons">
+                <button class="hero-btn-primary">Lihat Lowongan</button>
+                <button class="hero-btn-secondary">Daftar Sekarang</button>
+            </div>
+        </div>
+
+        <div class="footer">
+            © 2026 PT Reska Multi Usaha - Sistem Rekrutmen Berbasis Web dengan Tes Kompetensi
+        </div>
+    </div>
+
+    <!-- Page 2: Login Page -->
+    <div class="mockup-frame">
+        <div class="mockup-title">2. Halaman Login</div>
+
+        <nav class="top-nav">
+            <div class="logo">
+                <div class="logo-icon">🚂</div>
+                KAI Recruitment
+            </div>
+        </nav>
+
+        <div class="login-container">
+            <div class="login-left">
+                <h2>Selamat Datang</h2>
+                <p>Sistem Rekrutmen PT KAI memungkinkan Anda untuk melamar pekerjaan dan mengikuti tes kompetensi secara online. Akses mudah, proses cepat, dan transparan.</p>
+            </div>
+            <div class="login-right">
+                <div class="login-box">
+                    <h2>Masuk</h2>
+                    <p>Masuk ke akun Anda untuk melanjutkan</p>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" placeholder="admin@kai.co.id">
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" placeholder="••••••••">
+                    </div>
+                    <button class="login-btn">Masuk</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Page 3: Dashboard Admin -->
+    <div class="mockup-frame">
+        <div class="mockup-title">3. Dashboard Admin</div>
+
+        <div class="dashboard">
+            <div class="sidebar">
+                <div class="sidebar-item active">
+                    <span class="icon">📊</span> Dashboard
+                </div>
+                <div class="sidebar-item">
+                    <span class="icon">👥</span> Pelamar
+                </div>
+                <div class="sidebar-item">
+                    <span class="icon">💼</span> Lowongan
+                </div>
+                <div class="sidebar-item">
+                    <span class="icon">📝</span> Tes
+                </div>
+                <div class="sidebar-item">
+                    <span class="icon">📊</span> Laporan
+                </div>
+                <div class="sidebar-item">
+                    <span class="icon">⚙️</span> Konfigurasi
+                </div>
+            </div>
+            <div class="main-content">
+                <div class="header">
+                    <h1>Dashboard</h1>
+                    <div style="display: flex; align-items: center; gap: 16px;">
+                        <span>🔔</span>
+                        <span style="padding: 8px 16px; background: #f8f9fa; border-radius: 10px; font-weight: 600;">👤 Admin HRD</span>
+                    </div>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number">12</div>
+                        <div class="stat-label">Lowongan Aktif</div>
+                    </div>
+                    <div class="stat-card orange">
+                        <div class="stat-number">89</div>
+                        <div class="stat-label">Total Pelamar</div>
+                    </div>
+                    <div class="stat-card green">
+                        <div class="stat-number">45</div>
+                        <div class="stat-label">Sudah Tes</div>
+                    </div>
+                </div>
+                <div style="background: white; padding: 24px; border-radius: 16px;">
+                    <h3 style="margin-bottom: 16px; color: #00205B;">Aplikasi Terbaru</h3>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr style="border-bottom: 1px solid #eee;">
+                            <td style="padding: 12px 0;">👤</td>
+                            <td><strong>John Doe</strong><br><span style="color: #666; font-size: 13px;">Pramugara</span></td>
+                            <td style="color: #10B981;">✓ Lulus Tes</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #eee;">
+                            <td style="padding: 12px 0;">👤</td>
+                            <td><strong>Jane Smith</strong><br><span style="color: #666; font-size: 13px;">Steward</span></td>
+                            <td style="color: #F59E0B;">⏳ Menunggu Tes</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 12px 0;">👤</td>
+                            <td><strong>Bob Lee</strong><br><span style="color: #666; font-size: 13px;">IT Staff</span></td>
+                            <td style="color: #666;">📝 Sedang Tes</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Page 4: Jobs Page -->
+    <div class="mockup-frame">
+        <div class="mockup-title">4. Halaman Lowongan</div>
+
+        <div class="dashboard">
+            <div class="sidebar">
+                <div class="sidebar-item">
+                    <span class="icon">📊</span> Dashboard
+                </div>
+                <div class="sidebar-item">
+                    <span class="icon">👥</span> Pelamar
+                </div>
+                <div class="sidebar-item active">
+                    <span class="icon">💼</span> Lowongan
+                </div>
+                <div class="sidebar-item">
+                    <span class="icon">📝</span> Tes
+                </div>
+                <div class="sidebar-item">
+                    <span class="icon">📊</span> Laporan
+                </div>
+                <div class="sidebar-item">
+                    <span class="icon">⚙️</span> Konfigurasi
+                </div>
+            </div>
+            <div class="main-content">
+                <div class="header">
+                    <h1>Lowongan Kerja</h1>
+                    <button class="btn-create">+ Buat Lowongan</button>
+                </div>
+                <div class="jobs-grid">
+                    <div class="job-card">
+                        <div class="job-header">
+                            <span class="badge badge-active">Aktif</span>
+                            <div class="job-actions">
+                                <button class="btn-edit">Edit</button>
+                                <button class="btn-delete">Hapus</button>
+                            </div>
+                        </div>
+                        <div class="job-title">Pramugara / Pramugari Kereta Api</div>
+                        <div style="display: inline-block; padding: 4px 10px; background: #f0f4ff; color: #00205B; border-radius: 20px; font-size: 12px; margin-bottom: 12px;">On-Train Service</div>
+                        <div class="job-meta">
+                            <span>📍 Jakarta</span>
+                            <span>👥 245 pelamar</span>
+                            <span>📅 15 Ags 2026</span>
+                        </div>
+                        <button class="btn-view">Lihat Detail</button>
+                    </div>
+                    <div class="job-card">
+                        <div class="job-header">
+                            <span class="badge badge-active">Aktif</span>
+                            <div class="job-actions">
+                                <button class="btn-edit">Edit</button>
+                                <button class="btn-delete">Hapus</button>
+                            </div>
+                        </div>
+                        <div class="job-title">Staff IT Support</div>
+                        <div style="display: inline-block; padding: 4px 10px; background: #f0f4ff; color: #00205B; border-radius: 20px; font-size: 12px; margin-bottom: 12px;">IT Staff</div>
+                        <div class="job-meta">
+                            <span>📍 Jakarta</span>
+                            <span>👥 89 pelamar</span>
+                            <span>📅 10 Ags 2026</span>
+                        </div>
+                        <button class="btn-view">Lihat Detail</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Page 5: Reports Page -->
+    <div class="mockup-frame">
+        <div class="mockup-title">5. Halaman Laporan (PDF/Excel/CSV)</div>
+
+        <div class="dashboard">
+            <div class="sidebar">
+                <div class="sidebar-item">
+                    <span class="icon">📊</span> Dashboard
+                </div>
+                <div class="sidebar-item">
+                    <span class="icon">👥</span> Pelamar
+                </div>
+                <div class="sidebar-item">
+                    <span class="icon">💼</span> Lowongan
+                </div>
+                <div class="sidebar-item">
+                    <span class="icon">📝</span> Tes
+                </div>
+                <div class="sidebar-item active">
+                    <span class="icon">📊</span> Laporan
+                </div>
+                <div class="sidebar-item">
+                    <span class="icon">⚙️</span> Konfigurasi
+                </div>
+            </div>
+            <div class="main-content">
+                <div class="header">
+                    <h1>Generate Laporan</h1>
+                </div>
+                <div class="report-types">
+                    <div class="report-type active">
+                        <div class="report-icon">📄</div>
+                        <h3>PDF</h3>
+                        <p>Format dokumen</p>
+                    </div>
+                    <div class="report-type">
+                        <div class="report-icon">📊</div>
+                        <h3>Excel</h3>
+                        <p>Spreadsheet</p>
+                    </div>
+                    <div class="report-type">
+                        <div class="report-icon">📋</div>
+                        <h3>CSV</h3>
+                        <p>Data teks</p>
+                    </div>
+                </div>
+                <div class="filter-row">
+                    <select class="filter-select">
+                        <option>Semua Lowongan</option>
+                        <option>Pramugara</option>
+                        <option>IT Staff</option>
+                    </select>
+                    <select class="filter-select">
+                        <option>Semua Status</option>
+                        <option>Lulus</option>
+                        <option>Gagal</option>
+                    </select>
+                    <button class="btn-download">⬇ Download</button>
+                </div>
+                <div class="preview-table">
+                    <table>
+                        <tr>
+                            <th>No</th>
+                            <th>Nama</th>
+                            <th>Lowongan</th>
+                            <th>Status</th>
+                            <th>Skor</th>
+                        </tr>
+                        <tr>
+                            <td>1</td>
+                            <td>John Doe</td>
+                            <td>Pramugara</td>
+                            <td style="color: #10B981;">✓ Lulus</td>
+                            <td>85%</td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>Jane Smith</td>
+                            <td>Steward</td>
+                            <td style="color: #EF4444;">✗ Gagal</td>
+                            <td>45%</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Page 6: Test Config Page -->
+    <div class="mockup-frame">
+        <div class="mockup-title">6. Halaman Konfigurasi Tes</div>
+
+        <div class="dashboard">
+            <div class="sidebar">
+                <div class="sidebar-item">
+                    <span class="icon">📊</span> Dashboard
+                </div>
+                <div class="sidebar-item">
+                    <span class="icon">👥</span> Pelamar
+                </div>
+                <div class="sidebar-item">
+                    <span class="icon">💼</span> Lowongan
+                </div>
+                <div class="sidebar-item">
+                    <span class="icon">📝</span> Tes
+                </div>
+                <div class="sidebar-item">
+                    <span class="icon">📊</span> Laporan
+                </div>
+                <div class="sidebar-item active">
+                    <span class="icon">⚙️</span> Konfigurasi
+                </div>
+            </div>
+            <div class="main-content">
+                <div class="header">
+                    <h1>Konfigurasi Tes</h1>
+                    <button class="btn-create">+ Buat Konfigurasi</button>
+                </div>
+                <div class="config-card">
+                    <div class="config-info">
+                        <span class="badge badge-active" style="margin-bottom: 8px; display: inline-block;">Aktif</span>
+                        <h3>Pramugara / Pramugari Kereta Api</h3>
+                        <div class="config-meta">
+                            <span>⏱️ 90 menit</span>
+                            <span>📝 30 soal</span>
+                            <span>📊 60%</span>
+                        </div>
+                        <div class="config-tags">
+                            <span class="config-tag" style="background: #00205B15; color: #00205B;">AKHLAK</span>
+                            <span class="config-tag" style="background: #FF5E0015; color: #FF5E00;">HOSPITALITY</span>
+                            <span class="config-tag" style="background: #8B5CF615; color: #8B5CF6;">APTITUDE</span>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 12px;">
+                        <button class="btn-edit">Edit</button>
+                        <button class="btn-delete">Hapus</button>
+                    </div>
+                </div>
+                <div class="config-card">
+                    <div class="config-info">
+                        <span class="badge badge-draft" style="margin-bottom: 8px; display: inline-block;">Draft</span>
+                        <h3>Staff IT Support</h3>
+                        <div class="config-meta">
+                            <span>⏱️ 60 menit</span>
+                            <span>📝 20 soal</span>
+                            <span>📊 70%</span>
+                        </div>
+                        <div class="config-tags">
+                            <span class="config-tag" style="background: #00205B15; color: #00205B;">AKHLAK</span>
+                            <span class="config-tag" style="background: #10B98115; color: #10B981;">TECHNICAL</span>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 12px;">
+                        <button class="btn-edit">Edit</button>
+                        <button class="btn-delete">Hapus</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Page 7: Test Page (Pelamar) -->
+    <div class="mockup-frame">
+        <div class="mockup-title">7. Halaman Tes Kompetensi (Pelamar)</div>
+
+        <div class="test-container">
+            <div class="test-header">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 24px;">🚂</span>
+                    <span style="font-weight: 700;">SMART RECRUITMENT TEST</span>
+                </div>
+                <div class="test-timer">⏱️ 45:23</div>
+            </div>
+            <div class="test-progress">
+                <div class="question-number">Soal 1 dari 30</div>
+                <span class="question-category">AKHLAK</span>
+                <div class="question-text">Apa kepanjangan dari AKHLAK yang merupakan nilai dasar BUMN?</div>
+                <div class="answer-option">
+                    <div class="answer-letter">A</div>
+                    <span>Amanah, Profesional, Harmonis</span>
+                </div>
+                <div class="answer-option selected">
+                    <div class="answer-letter">B</div>
+                    <span>Amanah, Kompeten, Harmonis, Loyal, Adaptif</span>
+                </div>
+                <div class="answer-option">
+                    <div class="answer-letter">C</div>
+                    <span>Akhlak, Loyal, Honest, Aktif</span>
+                </div>
+                <div class="answer-option">
+                    <div class="answer-letter">D</div>
+                    <span>Akurat, Komprehensif, Hemat, Logis</span>
+                </div>
+                <div class="test-nav">
+                    <button class="btn-prev">← Sebelumnya</button>
+                    <button class="btn-submit">✓ Akhiri Tes</button>
+                    <button class="btn-next">Selanjutnya →</button>
+                </div>
+                <div class="question-dots">
+                    <div class="q-dot current">1</div>
+                    <div class="q-dot answered">2</div>
+                    <div class="q-dot">3</div>
+                    <div class="q-dot">4</div>
+                    <div class="q-dot">5</div>
+                    <div class="q-dot answered">6</div>
+                    <div class="q-dot">7</div>
+                    <div class="q-dot">8</div>
+                    <div class="q-dot">9</div>
+                    <div class="q-dot">10</div>
+                    <div class="q-dot">...</div>
+                    <div class="q-dot">30</div>
+                </div>
+                <div style="margin-top: 16px; display: flex; gap: 16px; font-size: 13px; color: #666;">
+                    <span>● Dijawab</span>
+                    <span>○ Belum dijawab</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
