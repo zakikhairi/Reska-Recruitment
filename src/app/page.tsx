@@ -116,8 +116,25 @@ export default function HomePage() {
       </header>
 
       {/* Hero */}
-      <section style={{ paddingTop: "72px", background: "linear-gradient(135deg, #00205B 0%, #0C2340 100%)", color: "#ffffff" }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "100px 32px", display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "80px", alignItems: "center" }}>
+      <section style={{ paddingTop: "72px", position: "relative", color: "#ffffff" }}>
+        {/* Background Image */}
+        <img
+          src="/home-photo.jpg"
+          alt="KAI Recruitment"
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: "center",
+            zIndex: 0
+          }}
+        />
+        {/* Dark Overlay */}
+        <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "linear-gradient(135deg, rgba(0,32,91,0.85) 0%, rgba(12,35,64,0.75) 100%)", zIndex: 1 }} />
+        <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "100px 32px", display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "80px", alignItems: "center", position: "relative", zIndex: 2 }}>
           <div>
             <AnimatedSection delay={0}>
               <div style={{ display: "inline-block", padding: "8px 16px", background: "rgba(255,255,255,0.1)", borderRadius: "24px", fontSize: "14px", fontWeight: 500, marginBottom: "24px" }}>
