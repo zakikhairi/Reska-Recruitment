@@ -12,35 +12,36 @@ const applications = [
     location: "Jakarta, Bandung, Surabaya",
     appliedDate: "2026-07-15",
     deadline: "2026-08-15",
-    status: "TEST_COMPLETED",
-    score: 85,
+    status: "ADMINISTRATION",
+    score: null,
   },
   {
     id: "2",
     jobTitle: "Staff IT Support",
     division: "IT_STAFF",
     location: "Jakarta",
-    appliedDate: "2026-07-10",
+    appliedDate: "2026-07-18",
     deadline: "2026-08-10",
-    status: "INTERVIEW",
-    score: 78,
+    status: "TEST",
+    score: null,
   },
   {
     id: "3",
-    jobTitle: "Cleaning Service - ResClean",
-    division: "RES_CLEAN",
+    jobTitle: "Steward Kereta Api",
+    division: "ON_TRAIN_SERVICE",
     location: "Bandung",
-    appliedDate: "2026-06-20",
-    deadline: "2026-07-30",
-    status: "REJECTED",
-    score: 55,
+    appliedDate: "2026-07-20",
+    deadline: "2026-08-20",
+    status: "ADMINISTRATION",
+    score: null,
   }
 ];
 
 const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
-  PENDING: { bg: "#fef3c7", text: "#d97706", label: "Menunggu" },
+  ADMINISTRATION: { bg: "#fef3c7", text: "#d97706", label: "Menunggu Administrasi" },
+  TEST: { bg: "#dbeafe", text: "#2563eb", label: "Menunggu Tes" },
   TEST_COMPLETED: { bg: "#dcfce7", text: "#16a34a", label: "Tes Selesai" },
-  INTERVIEW: { bg: "#dbeafe", text: "#2563eb", label: "Interview" },
+  INTERVIEW: { bg: "#e0e7ff", text: "#4f46e5", label: "Interview" },
   REJECTED: { bg: "#fee2e2", text: "#dc2626", label: "Ditolak" },
 };
 
@@ -62,7 +63,7 @@ export default function ApplicationsPage() {
           {/* Left - Application List */}
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             <div style={{ display: "flex", gap: "8px" }}>
-              {["all", "TEST_COMPLETED", "INTERVIEW", "REJECTED"].map((f) => (
+              {["all", "ADMINISTRATION", "TEST", "INTERVIEW"].map((f) => (
                 <button key={f} onClick={() => setFilter(f)} style={{
                   padding: "8px 16px",
                   background: filter === f ? "#00205B" : "#fff",
