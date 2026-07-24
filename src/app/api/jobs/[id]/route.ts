@@ -3,8 +3,8 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import path from "path";
 
-const dbUrl = process.env.DATABASE_URL || `file:${path.join(process.cwd(), "prisma", "dev.db")}`;
-const adapter = new PrismaLibSql({ url: dbUrl });
+const dbPath = path.join(process.cwd(), "prisma", "dev.db");
+const adapter = new PrismaLibSql({ url: `file:${dbPath}` });
 const prisma = new PrismaClient({ adapter });
 
 // GET - Get single job
@@ -54,7 +54,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { title, division, location, description, requirements, minEducation, deadline, salaryRange, status, minHeight, minAge, maxAge } = body;
+    const { title, division, location, description, requirements, minEducation, deadline, status, minHeight, minAge, maxAge } = body;
 
     const job = await prisma.jobPosting.update({
       where: { id },
@@ -66,7 +66,6 @@ export async function PUT(
         requirements,
         minEducation,
         deadline: deadline ? new Date(deadline) : undefined,
-        salaryRange,
         status,
         minHeight: minHeight ? parseFloat(minHeight) : null,
         minAge: minAge ? parseInt(minAge) : null,

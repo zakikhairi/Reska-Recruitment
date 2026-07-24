@@ -3,8 +3,8 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import path from "path";
 
-const dbUrl = process.env.DATABASE_URL || `file:${path.join(process.cwd(), "prisma", "dev.db")}`;
-const adapter = new PrismaLibSql({ url: dbUrl });
+const dbPath = path.join(process.cwd(), "prisma", "dev.db");
+const adapter = new PrismaLibSql({ url: `file:${dbPath}` });
 const prisma = new PrismaClient({ adapter });
 
 // GET - Get all jobs
@@ -33,7 +33,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { title, division, location, description, requirements, minEducation, deadline, salaryRange, status } = body;
+    const { title, division, location, description, requirements, minEducation, deadline, status } = body;
 
     if (!title || !division || !location || !description || !requirements || !minEducation || !deadline) {
       return NextResponse.json(
@@ -51,7 +51,6 @@ export async function POST(request: NextRequest) {
         requirements,
         minEducation,
         deadline: new Date(deadline),
-        salaryRange: salaryRange || "",
         status: status || "ACTIVE",
       }
     });

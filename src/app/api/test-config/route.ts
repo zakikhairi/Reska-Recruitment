@@ -3,8 +3,8 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import path from "path";
 
-const dbUrl = process.env.DATABASE_URL || `file:${path.join(process.cwd(), "prisma", "dev.db")}`;
-const adapter = new PrismaLibSql({ url: dbUrl });
+const dbPath = path.join(process.cwd(), "prisma", "dev.db");
+const adapter = new PrismaLibSql({ url: `file:${dbPath}` });
 const prisma = new PrismaClient({ adapter });
 
 // GET - Get all test configs
@@ -47,35 +47,11 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { jobPostingId, categories, passingGrade, duration, questionsPerCategory, active } = body;
+    const { jobTitle, division, categories, passingGrade, duration, questionsPerCategory, active } = body;
 
-    if (!jobPostingId || !categories || categories.length === 0) {
+    if (!jobTitle || !categories || categories.length === 0) {
       return NextResponse.json(
         { error: "Data tidak lengkap" },
-        { status: 400 }
-      );
-    }
-
-    // Check if job exists
-    const job = await prisma.jobPosting.findUnique({
-      where: { id: jobPostingId }
-    });
-
-    if (!job) {
-      return NextResponse.json(
-        { error: "Lowongan tidak ditemukan" },
-        { status: 404 }
-      );
-    }
-
-    // Check if config already exists for this job
-    const existingConfig = await prisma.testConfig.findUnique({
-      where: { jobPostingId }
-    });
-
-    if (existingConfig) {
-      return NextResponse.json(
-        { error: "Konfigurasi sudah ada untuk lowongan ini" },
         { status: 400 }
       );
     }
@@ -94,7 +70,18 @@ export async function POST(request: NextRequest) {
 
     const config = await prisma.testConfig.create({
       data: {
-        jobPostingId,
+        jobPosting: {
+          create: {
+            title: jobTitle,
+            division: division || "ON_TRAIN_SERVICE",
+            location: "Indonesia",
+            description: "Lowongan tes",
+            requirements: "-",
+            minEducation: "SMA",
+            deadline: new Date("2026-12-31"),
+            status: "ACTIVE",
+          }
+        },
         categories: categories.join(","),
         categoryWeights: JSON.stringify(categoryWeights),
         passingGrades: JSON.stringify(passingGrades),
