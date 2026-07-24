@@ -9,6 +9,7 @@
     "lint": "eslint",
     "db:push": "prisma db push",
     "db:seed": "npx tsx prisma/seed.ts",
+    "db:setup": "prisma db push --force-reset && npx tsx prisma/seed.ts",
     "db:studio": "prisma studio"
   },
   "prisma": {

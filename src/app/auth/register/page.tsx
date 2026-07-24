@@ -189,13 +189,19 @@ function RegisterForm() {
 
           <div>
             <label style={{ display: "block", fontSize: "14px", fontWeight: 600, color: "#222222", marginBottom: "8px" }}>NIK</label>
-            <input type="text" placeholder="16 digit nomor KTP" value={form.nik} onChange={(e) => setForm({ ...form, nik: e.target.value })}
+            <input type="text" placeholder="16 digit nomor KTP" value={form.nik} onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, '').slice(0, 16);
+                setForm({ ...form, nik: value });
+              }}
               style={{ width: "100%", height: "54px", padding: "0 18px", border: "2px solid #e5e5e5", borderRadius: "12px", fontSize: "15px", outline: "none", transition: "border-color 0.2s", background: "#ffffff" }} />
           </div>
 
           <div>
             <label style={{ display: "block", fontSize: "14px", fontWeight: 600, color: "#222222", marginBottom: "8px" }}>Nomor HP</label>
-            <input type="tel" placeholder="08xxxxxxxxxx" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })}
+            <input type="tel" placeholder="08xxxxxxxxxx" value={form.phone} onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, '').slice(0, 13);
+                setForm({ ...form, phone: value });
+              }}
               style={{ width: "100%", height: "54px", padding: "0 18px", border: "2px solid #e5e5e5", borderRadius: "12px", fontSize: "15px", outline: "none", transition: "border-color 0.2s", background: "#ffffff" }} />
           </div>
 
