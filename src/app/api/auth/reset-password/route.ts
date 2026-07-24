@@ -1,43 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import path from "path";
-import fs from "fs";
+import prisma from "@/lib/db";
+import { createHash } from "crypto";
 
-const CODE_STORE_FILE = path.join(process.cwd(), "tmp", "reset-codes.json");
-
-interface ResetCode {
-  email: string;
-  code: string;
-  expires: number;
-  attempts: number;
-}
-
-function getCodes(): Record<string, ResetCode> {
-  try {
-    if (fs.existsSync(CODE_STORE_FILE)) {
-      return JSON.parse(fs.readFileSync(CODE_STORE_FILE, "utf-8"));
-    }
-  } catch (e) {}
-  return {};
-}
-
-function saveCodes(codes: Record<string, ResetCode>) {
-  const dir = path.dirname(CODE_STORE_FILE);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  fs.writeFileSync(CODE_STORE_FILE, JSON.stringify(codes, null, 2));
-}
-
-function deleteCode(email: string) {
-  const codes = getCodes();
-  delete codes[email.toLowerCase()];
-  saveCodes(codes);
+function hashPassword(password: string): string {
+  return createHash("sha256").update(password).digest("hex");
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { email, newPassword, resetToken } = body;
+
+    console.log("[RESET] Request received for:", email);
 
     if (!email || !newPassword || !resetToken) {
       return NextResponse.json(
@@ -52,12 +26,14 @@ export async function POST(request: NextRequest) {
       const [storedEmail] = decoded.split(":");
 
       if (storedEmail !== email.toLowerCase()) {
+        console.log("[RESET] Invalid token - email mismatch");
         return NextResponse.json(
           { error: "Token tidak valid" },
           { status: 400 }
         );
       }
     } catch (e) {
+      console.log("[RESET] Invalid token - decode error");
       return NextResponse.json(
         { error: "Token tidak valid" },
         { status: 400 }
@@ -72,23 +48,47 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if code is still valid
-    const codes = getCodes();
-    const storedData = codes[email.toLowerCase()];
+    // Find user with reset data
+    const user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+      include: { passwordReset: true }
+    });
 
-    if (!storedData || Date.now() > storedData.expires) {
+    if (!user || !user.passwordReset) {
+      console.log("[RESET] No reset session found");
       return NextResponse.json(
         { error: "Sesi reset sudah kadaluarsa. Silakan mulai ulang." },
         { status: 400 }
       );
     }
 
-    // In a real app, you would update the password in the database here
-    // For demo, we just log it and delete the code
-    console.log(`[PASSWORD RESET] User: ${email}, New Password: ${newPassword}`);
+    // Check if still valid
+    if (Date.now() > user.passwordReset.expires.getTime()) {
+      await prisma.passwordReset.delete({
+        where: { userId: user.id }
+      });
+      console.log("[RESET] Session expired");
+      return NextResponse.json(
+        { error: "Sesi reset sudah kadaluarsa. Silakan mulai ulang." },
+        { status: 400 }
+      );
+    }
 
-    // Delete the code after successful reset
-    deleteCode(email);
+    // Hash new password
+    const passwordHash = hashPassword(newPassword);
+
+    // Update password in database
+    await prisma.user.update({
+      where: { email: email.toLowerCase() },
+      data: { passwordHash },
+    });
+
+    // Delete reset code
+    await prisma.passwordReset.delete({
+      where: { userId: user.id }
+    });
+
+    console.log("[RESET] Password updated for:", email);
 
     return NextResponse.json({
       success: true,

@@ -1,32 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import path from "path";
-import fs from "fs";
-
-const CODE_STORE_FILE = path.join(process.cwd(), "tmp", "reset-codes.json");
-
-interface ResetCode {
-  email: string;
-  code: string;
-  expires: number;
-  attempts: number;
-}
-
-function getCodes(): Record<string, ResetCode> {
-  try {
-    if (fs.existsSync(CODE_STORE_FILE)) {
-      return JSON.parse(fs.readFileSync(CODE_STORE_FILE, "utf-8"));
-    }
-  } catch (e) {}
-  return {};
-}
-
-function saveCodes(codes: Record<string, ResetCode>) {
-  const dir = path.dirname(CODE_STORE_FILE);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  fs.writeFileSync(CODE_STORE_FILE, JSON.stringify(codes, null, 2));
-}
+import prisma from "@/lib/db";
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,20 +13,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const codes = getCodes();
-    const storedData = codes[email.toLowerCase()];
+    console.log("[VERIFY] Email:", email);
+    console.log("[VERIFY] Input code:", code);
 
-    if (!storedData) {
+    // Find user
+    const user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+      include: { passwordReset: true }
+    });
+
+    if (!user || !user.passwordReset) {
+      console.log("[VERIFY] No reset request found");
       return NextResponse.json(
         { error: "Kode sudah kadaluarsa atau tidak ditemukan. Silakan minta kode baru." },
         { status: 400 }
       );
     }
 
+    const resetData = user.passwordReset;
+
     // Check if expired
-    if (Date.now() > storedData.expires) {
-      delete codes[email.toLowerCase()];
-      saveCodes(codes);
+    if (Date.now() > resetData.expires.getTime()) {
+      await prisma.passwordReset.delete({
+        where: { userId: user.id }
+      });
+      console.log("[VERIFY] Code expired");
       return NextResponse.json(
         { error: "Kode sudah kadaluarsa. Silakan minta kode baru." },
         { status: 400 }
@@ -61,9 +45,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Check attempts
-    if (storedData.attempts >= 5) {
-      delete codes[email.toLowerCase()];
-      saveCodes(codes);
+    if (resetData.attempts >= 5) {
+      await prisma.passwordReset.delete({
+        where: { userId: user.id }
+      });
+      console.log("[VERIFY] Too many attempts");
       return NextResponse.json(
         { error: "Terlalu banyak percobaan salah. Silakan minta kode baru." },
         { status: 400 }
@@ -71,24 +57,31 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify code
-    if (storedData.code !== code) {
-      storedData.attempts += 1;
-      saveCodes(codes);
+    if (resetData.code !== code) {
+      await prisma.passwordReset.update({
+        where: { userId: user.id },
+        data: { attempts: resetData.attempts + 1 }
+      });
+      console.log("[VERIFY] Wrong code, attempts:", resetData.attempts + 1);
       return NextResponse.json(
         {
           error: "Kode tidak benar",
-          attemptsLeft: 5 - storedData.attempts
+          attemptsLeft: 5 - resetData.attempts - 1
         },
         { status: 400 }
       );
     }
 
-    // Code is valid - generate a temporary token for password reset
+    console.log("[VERIFY] Code verified successfully!");
+
+    // Generate reset token (valid for 30 minutes)
     const resetToken = Buffer.from(`${email.toLowerCase()}:${Date.now()}`).toString("base64");
 
-    // Extend the expiry for the reset flow
-    storedData.expires = Date.now() + 30 * 60 * 1000; // 30 minutes to complete reset
-    saveCodes(codes);
+    // Extend expiry for reset flow
+    await prisma.passwordReset.update({
+      where: { userId: user.id },
+      data: { expires: new Date(Date.now() + 30 * 60 * 1000) }
+    });
 
     return NextResponse.json({
       success: true,
