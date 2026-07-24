@@ -1,20 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-import { PrismaLibSql } from "@prisma/adapter-libsql";
-import path from "path";
+import prisma from "@/lib/db";
+import { createHash } from "crypto";
 
-// Create Prisma client with LibSQL adapter
-const dbPath = path.join(process.cwd(), "prisma", "dev.db");
-const adapter = new PrismaLibSql({ url: `file:${dbPath}` });
-const prisma = new PrismaClient({ adapter });
-
-// Simple password verification (for demo)
-function verifyPassword(password: string, storedPassword: string): boolean {
-  // For demo: accept these passwords
-  if (password === "demo123") return true;
-  if (password === "demo456") return true;
-  if (password === storedPassword) return true;
-  return false;
+function hashPassword(password: string): string {
+  return createHash("sha256").update(password).digest("hex");
 }
 
 export async function POST(request: NextRequest) {
@@ -31,11 +20,7 @@ export async function POST(request: NextRequest) {
 
     // Find user by email
     const user = await prisma.user.findUnique({
-      where: { email },
-      include: {
-        admin: true,
-        applicant: true,
-      },
+      where: { email: email.toLowerCase() },
     });
 
     if (!user) {
@@ -46,43 +31,28 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify password
-    if (!verifyPassword(password, user.passwordHash)) {
+    const passwordHash = hashPassword(password);
+
+    if (user.passwordHash !== passwordHash) {
       return NextResponse.json(
         { error: "Email atau password salah" },
         { status: 401 }
       );
     }
 
-    // Build response user data based on role
-    let userData: any = {
-      id: user.id,
-      email: user.email,
-      role: user.role,
-      fullName: "",
-    };
+    console.log(`[LOGIN] User logged in: ${email}`);
 
-    if (user.role === "HR_ADMIN" || user.role === "SUPER_ADMIN") {
-      if (user.admin) {
-        userData.fullName = user.admin.fullName;
-        userData.employeeId = user.admin.employeeId;
-        userData.department = user.admin.department;
-      }
-    } else if (user.role === "APPLICANT") {
-      if (user.applicant) {
-        userData.fullName = user.applicant.fullName;
-        userData.applicantId = user.applicant.id;
-        userData.fullProfile = {
-          nik: user.applicant.nik,
-          phone: user.applicant.phone,
-          education: user.applicant.education,
-        };
-      }
-    }
-
+    // Return success (in real app, create session/JWT here)
     return NextResponse.json({
       success: true,
-      user: userData,
+      message: "Login berhasil!",
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+      },
     });
+
   } catch (error) {
     console.error("Login error:", error);
     return NextResponse.json(
