@@ -341,37 +341,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Photo Banner */}
-      <section style={{ position: "relative", height: "400px", overflow: "hidden" }}>
-        <img
-          src="/home-photo.jpg"
-          alt="KAI Recruitment"
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            objectPosition: "center"
-          }}
-        />
-        <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "linear-gradient(135deg, rgba(0,32,91,0.7) 0%, rgba(12,35,64,0.6) 100%)" }} />
-        <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", textAlign: "center", zIndex: 1, width: "100%" }}>
-          <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 800, color: "#ffffff", marginBottom: "16px", letterSpacing: "-0.02em" }}>
-            Bergabunglah dengan Keluarga Besar KAI Services
-          </h2>
-          <p style={{ fontSize: "18px", color: "rgba(255,255,255,0.8)", maxWidth: "600px", margin: "0 auto 32px", lineHeight: 1.6 }}>
-            Temukan peluang karier terbaik di industri transportasi kereta api Indonesia
-          </p>
-          <Link href="/auth/register">
-            <button style={{ padding: "16px 40px", fontSize: "16px", fontWeight: 700, background: "#FF5E00", color: "#ffffff", border: "none", borderRadius: "12px", cursor: "pointer", boxShadow: "0 4px 20px rgba(255,94,0,0.4)" }}>
-              Daftar Sekarang
-            </button>
-          </Link>
-        </div>
-      </section>
-
       {/* About */}
       <section id="tentang" style={{ padding: "100px 32px", background: "linear-gradient(135deg, #00205B 0%, #0C2340 100%)", color: "#ffffff" }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "80px", alignItems: "center" }}>
