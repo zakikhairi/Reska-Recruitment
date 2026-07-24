@@ -116,7 +116,7 @@ export default function HomePage() {
       </header>
 
       {/* Hero */}
-      <section style={{ paddingTop: "72px", position: "relative", color: "#ffffff" }}>
+      <section style={{ paddingTop: "72px", position: "relative", color: "#ffffff", minHeight: "700px" }}>
         {/* Background Image */}
         <img
           src="/home-photo.jpg"
@@ -128,7 +128,7 @@ export default function HomePage() {
             width: "100%",
             height: "100%",
             objectFit: "cover",
-            objectPosition: "center",
+            objectPosition: "center top",
             zIndex: 0
           }}
         />
@@ -280,7 +280,7 @@ export default function HomePage() {
       </section>
 
       {/* Jobs */}
-      <section id="lowongan" style={{ padding: "100px 32px", background: "#f8f9fa" }}>
+      <section id="lowongan" style={{ padding: "80px 32px", background: "#f8f9fa" }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
           <AnimatedSection>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "40px", flexWrap: "wrap", gap: "20px" }}>
@@ -342,7 +342,7 @@ export default function HomePage() {
       </section>
 
       {/* About */}
-      <section id="tentang" style={{ padding: "100px 32px", background: "linear-gradient(135deg, #00205B 0%, #0C2340 100%)", color: "#ffffff" }}>
+      <section id="tentang" style={{ padding: "80px 32px", background: "linear-gradient(135deg, #00205B 0%, #0C2340 100%)", color: "#ffffff" }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "80px", alignItems: "center" }}>
           <AnimatedSection>
             <h2 style={{ fontSize: "36px", fontWeight: 700, marginBottom: "24px", letterSpacing: "-0.02em" }}>Tentang KAI Services</h2>

@@ -3,12 +3,12 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import path from "path";
 
-// Use DATABASE_URL from env or default to absolute path
-const dbUrl = process.env.DATABASE_URL || `file:${path.join(process.cwd(), "prisma", "dev.db")}`;
-const adapter = new PrismaLibSql({ url: dbUrl });
+// Create Prisma client with LibSQL adapter
+const dbPath = path.join(process.cwd(), "prisma", "dev.db");
+const adapter = new PrismaLibSql({ url: `file:${dbPath}` });
 const prisma = new PrismaClient({ adapter });
 
-// Simple hash function for demo purposes (in production, use bcrypt)
+// Simple hash function for demo (must match the one in register route)
 function simpleHash(str: string): string {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -20,10 +20,19 @@ function simpleHash(str: string): string {
 }
 
 function verifyPassword(password: string, hash: string): boolean {
-  // For demo: "demo123" always works
-  if (password === "demo123") return true;
-  // Check against stored hash
-  return simpleHash(password) === hash || hash.startsWith("demo_");
+  // Check against simpleHash
+  const computedHash = simpleHash(password);
+  if (computedHash === hash) return true;
+
+  // Check if hash starts with "demo_" and compare
+  if (hash.startsWith("demo_")) {
+    return computedHash === hash;
+  }
+
+  // Legacy check: demo123 always works for demo accounts
+  if (password === "demo123" && hash.includes("example_hash")) return true;
+
+  return false;
 }
 
 export async function POST(request: NextRequest) {
