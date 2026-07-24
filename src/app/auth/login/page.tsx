@@ -305,6 +305,14 @@ export default function LoginPage() {
             </Link>
           </p>
 
+          {/* Back to Home */}
+          <p style={{ marginTop: "16px", textAlign: "center" }}>
+            <Link href="/" style={{ fontSize: "14px", color: "#888888", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+              Kembali ke Beranda
+            </Link>
+          </p>
+
         </div>
       </div>
 
