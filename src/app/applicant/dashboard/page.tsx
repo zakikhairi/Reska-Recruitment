@@ -1,20 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useAuthStore } from "@/stores/auth";
 
 // Mock data - new applicants start with empty applications
 const applications: any[] = [];
 
 const upcomingTests: any[] = [];
-
-const applicationSteps = [
-  { id: 1, label: "Administrasi", status: "completed" },
-  { id: 2, label: "Tes Kompetensi", status: "completed" },
-  { id: 3, label: "Interview", status: "active" },
-  { id: 4, label: "MCU", status: "pending" },
-  { id: 5, label: "Offering", status: "pending" },
-];
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -28,7 +21,27 @@ const getStatusColor = (status: string) => {
 };
 
 export default function ApplicantDashboardPage() {
+  const { user } = useAuthStore();
   const [selectedApplication, setSelectedApplication] = useState<any>(null);
+  const [userName, setUserName] = useState("Pelamar");
+
+  useEffect(() => {
+    // Fetch user profile to get real name
+    const fetchProfile = async () => {
+      try {
+        const res = await fetch("/api/applicant/profile");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.profile?.fullName) {
+            setUserName(data.profile.fullName);
+          }
+        }
+      } catch (err) {
+        console.log("Could not fetch profile");
+      }
+    };
+    fetchProfile();
+  }, []);
 
   return (
     <div style={{ fontFamily: "Inter, system-ui, -apple-system, sans-serif", minHeight: "100vh", background: "#f8f9fa", color: "#111111", margin: 0, padding: 0 }}>
@@ -36,7 +49,7 @@ export default function ApplicantDashboardPage() {
       <header style={{ background: "#ffffff", borderBottom: "1px solid #eeeeee", padding: "20px 32px", marginBottom: "32px" }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
           <h1 style={{ fontSize: "28px", fontWeight: 800, color: "#00205B", marginBottom: "4px", letterSpacing: "-0.02em" }}>Dashboard Pelamar</h1>
-          <p style={{ fontSize: "15px", color: "#666666" }}>Selamat datang, <strong>Ahmad Wijaya</strong>. Berikut ringkasan aktivitas Anda.</p>
+          <p style={{ fontSize: "15px", color: "#666666" }}>Selamat datang, <strong>{userName}</strong>. Berikut ringkasan aktivitas Anda.</p>
         </div>
       </header>
 
@@ -171,7 +184,13 @@ export default function ApplicantDashboardPage() {
                   <div style={{ marginTop: "24px" }}>
                     <h4 style={{ fontSize: "13px", fontWeight: 600, color: "#888888", marginBottom: "20px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Progress Seleksi</h4>
                     <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
-                      {applicationSteps.map((step, index) => (
+                      {[
+                        { id: 1, label: "Administrasi", status: selectedApplication.status === "ADMINISTRATION" ? "active" : "completed" },
+                        { id: 2, label: "Tes Kompetensi", status: selectedApplication.status === "TEST" || selectedApplication.status === "IN_TEST" ? "active" : selectedApplication.status === "TEST_COMPLETED" || selectedApplication.status === "INTERVIEW" || selectedApplication.status === "MCU" || selectedApplication.status === "OFFERING" ? "completed" : "pending" },
+                        { id: 3, label: "Interview", status: selectedApplication.status === "INTERVIEW" ? "active" : selectedApplication.status === "MCU" || selectedApplication.status === "OFFERING" ? "completed" : "pending" },
+                        { id: 4, label: "MCU", status: selectedApplication.status === "MCU" ? "active" : selectedApplication.status === "OFFERING" ? "completed" : "pending" },
+                        { id: 5, label: "Offering", status: selectedApplication.status === "OFFERING" ? "active" : "pending" },
+                      ].map((step, index) => (
                         <div key={step.id} style={{ display: "flex", gap: "14px" }}>
                           <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                             <div style={{ width: "36px", height: "36px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: step.status === "completed" ? "#16a34a" : step.status === "active" ? "#FF5E00" : "#e5e5e5", color: step.status !== "pending" ? "#ffffff" : "#888888", fontSize: "14px", fontWeight: 700 }}>
@@ -179,11 +198,11 @@ export default function ApplicantDashboardPage() {
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>
                               ) : step.id}
                             </div>
-                            {index < applicationSteps.length - 1 && (
+                            {index < 4 && (
                               <div style={{ width: "2px", height: "28px", background: step.status === "completed" ? "#16a34a" : "#e5e5e5" }} />
                             )}
                           </div>
-                          <div style={{ paddingBottom: index < applicationSteps.length - 1 ? "28px" : "0" }}>
+                          <div style={{ paddingBottom: index < 4 ? "28px" : "0" }}>
                             <p style={{ fontSize: "14px", fontWeight: 600, color: step.status === "active" ? "#FF5E00" : "#111111", marginBottom: "2px" }}>{step.label}</p>
                             <p style={{ fontSize: "12px", color: "#888888" }}>
                               {step.status === "completed" ? "Selesai" : step.status === "active" ? "Sedang Berlangsung" : "Menunggu"}
