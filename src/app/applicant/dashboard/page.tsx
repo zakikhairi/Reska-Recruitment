@@ -3,12 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 
-// Mock data
-const applications = [
-  { id: "1", jobTitle: "Pramugara Kereta Api", division: "Layanan Kereta", appliedDate: "15 Jul 2026", status: "ADMINISTRATION", testScore: null },
-  { id: "2", jobTitle: "Staff IT Support", division: "IT Staff", appliedDate: "18 Jul 2026", status: "ADMINISTRATION", testScore: null },
-  { id: "3", jobTitle: "Steward Kereta Api", division: "Layanan Kereta", appliedDate: "20 Jul 2026", status: "TEST", testScore: null },
-];
+// Mock data - new applicants start with empty applications
+const applications: any[] = [];
 
 const upcomingTests = [];
 
@@ -32,7 +28,7 @@ const getStatusColor = (status: string) => {
 };
 
 export default function ApplicantDashboardPage() {
-  const [selectedApplication, setSelectedApplication] = useState(applications[0]);
+  const [selectedApplication, setSelectedApplication] = useState<any>(null);
 
   return (
     <div style={{ fontFamily: "Inter, system-ui, -apple-system, sans-serif", minHeight: "100vh", background: "#f8f9fa", color: "#111111", margin: 0, padding: 0 }}>
@@ -48,9 +44,9 @@ export default function ApplicantDashboardPage() {
         {/* Stats Cards */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "20px", marginBottom: "40px" }}>
           {[
-            { label: "Total Lamaran", value: "3", icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg> },
-            { label: "Menunggu Seleksi", value: "2", icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> },
-            { label: "Menunggu Tes", value: "1", icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg> },
+            { label: "Total Lamaran", value: "0", icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg> },
+            { label: "Menunggu Seleksi", value: "0", icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> },
+            { label: "Menunggu Tes", value: "0", icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg> },
             { label: "Interview", value: "0", icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> }
           ].map((stat, i) => (
             <div key={i} style={{ background: "#ffffff", borderRadius: "16px", padding: "24px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
@@ -76,10 +72,25 @@ export default function ApplicantDashboardPage() {
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                {applications.map((app) => {
-                  const status = getStatusColor(app.status);
-                  return (
-                    <div key={app.id} onClick={() => setSelectedApplication(app)} style={{ padding: "20px", borderRadius: "14px", border: `2px solid ${selectedApplication.id === app.id ? "#FF5E00" : "#eeeeee"}`, background: selectedApplication.id === app.id ? "#fff7f0" : "#ffffff", cursor: "pointer", transition: "all 0.2s" }}>
+                {applications.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "40px 20px", background: "#f8f9fa", borderRadius: "14px" }}>
+                    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#e5e5e5" strokeWidth="2" style={{ margin: "0 auto 16px" }}>
+                      <rect x="2" y="7" width="20" height="14" rx="2"/>
+                      <path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/>
+                    </svg>
+                    <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#111111", marginBottom: "8px" }}>Belum Ada Lamaran</h3>
+                    <p style={{ fontSize: "14px", color: "#666666", marginBottom: "20px" }}>Mulai lamar pekerjaan yang Anda minati</p>
+                    <Link href="/applicant/jobs">
+                      <button style={{ padding: "12px 24px", background: "#FF5E00", color: "#ffffff", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 16px rgba(255,94,0,0.3)" }}>
+                        Lihat Lowongan
+                      </button>
+                    </Link>
+                  </div>
+                ) : (
+                  applications.map((app) => {
+                    const status = getStatusColor(app.status);
+                    return (
+                      <div key={app.id} onClick={() => setSelectedApplication(app)} style={{ padding: "20px", borderRadius: "14px", border: `2px solid ${selectedApplication.id === app.id ? "#FF5E00" : "#eeeeee"}`, background: selectedApplication.id === app.id ? "#fff7f0" : "#ffffff", cursor: "pointer", transition: "all 0.2s" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                         <div>
                           <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#111111", marginBottom: "6px" }}>{app.jobTitle}</h3>
@@ -101,7 +112,8 @@ export default function ApplicantDashboardPage() {
                       )}
                     </div>
                   );
-                })}
+                })
+                )}
               </div>
             </div>
 
@@ -148,37 +160,50 @@ export default function ApplicantDashboardPage() {
             {/* Application Detail */}
             <div style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
               <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#111111", marginBottom: "20px" }}>Detail Lamaran</h2>
-              <h3 style={{ fontSize: "17px", fontWeight: 700, color: "#111111", marginBottom: "12px" }}>{selectedApplication.jobTitle}</h3>
-              <span style={{ display: "inline-block", padding: "6px 14px", background: getStatusColor(selectedApplication.status).bg, color: getStatusColor(selectedApplication.status).text, borderRadius: "20px", fontSize: "12px", fontWeight: 700, marginBottom: "24px" }}>
-                {getStatusColor(selectedApplication.status).label}
-              </span>
+              {selectedApplication ? (
+                <>
+                  <h3 style={{ fontSize: "17px", fontWeight: 700, color: "#111111", marginBottom: "12px" }}>{selectedApplication.jobTitle}</h3>
+                  <span style={{ display: "inline-block", padding: "6px 14px", background: getStatusColor(selectedApplication.status).bg, color: getStatusColor(selectedApplication.status).text, borderRadius: "20px", fontSize: "12px", fontWeight: 700, marginBottom: "24px" }}>
+                    {getStatusColor(selectedApplication.status).label}
+                  </span>
 
-              {/* Progress Steps */}
-              <div style={{ marginTop: "24px" }}>
-                <h4 style={{ fontSize: "13px", fontWeight: 600, color: "#888888", marginBottom: "20px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Progress Seleksi</h4>
-                <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
-                  {applicationSteps.map((step, index) => (
-                    <div key={step.id} style={{ display: "flex", gap: "14px" }}>
-                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                        <div style={{ width: "36px", height: "36px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: step.status === "completed" ? "#16a34a" : step.status === "active" ? "#FF5E00" : "#e5e5e5", color: step.status !== "pending" ? "#ffffff" : "#888888", fontSize: "14px", fontWeight: 700 }}>
-                          {step.status === "completed" ? (
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>
-                          ) : step.id}
+                  {/* Progress Steps */}
+                  <div style={{ marginTop: "24px" }}>
+                    <h4 style={{ fontSize: "13px", fontWeight: 600, color: "#888888", marginBottom: "20px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Progress Seleksi</h4>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
+                      {applicationSteps.map((step, index) => (
+                        <div key={step.id} style={{ display: "flex", gap: "14px" }}>
+                          <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                            <div style={{ width: "36px", height: "36px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: step.status === "completed" ? "#16a34a" : step.status === "active" ? "#FF5E00" : "#e5e5e5", color: step.status !== "pending" ? "#ffffff" : "#888888", fontSize: "14px", fontWeight: 700 }}>
+                              {step.status === "completed" ? (
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>
+                              ) : step.id}
+                            </div>
+                            {index < applicationSteps.length - 1 && (
+                              <div style={{ width: "2px", height: "28px", background: step.status === "completed" ? "#16a34a" : "#e5e5e5" }} />
+                            )}
+                          </div>
+                          <div style={{ paddingBottom: index < applicationSteps.length - 1 ? "28px" : "0" }}>
+                            <p style={{ fontSize: "14px", fontWeight: 600, color: step.status === "active" ? "#FF5E00" : "#111111", marginBottom: "2px" }}>{step.label}</p>
+                            <p style={{ fontSize: "12px", color: "#888888" }}>
+                              {step.status === "completed" ? "Selesai" : step.status === "active" ? "Sedang Berlangsung" : "Menunggu"}
+                            </p>
+                          </div>
                         </div>
-                        {index < applicationSteps.length - 1 && (
-                          <div style={{ width: "2px", height: "28px", background: step.status === "completed" ? "#16a34a" : "#e5e5e5" }} />
-                        )}
-                      </div>
-                      <div style={{ paddingBottom: index < applicationSteps.length - 1 ? "28px" : "0" }}>
-                        <p style={{ fontSize: "14px", fontWeight: 600, color: step.status === "active" ? "#FF5E00" : "#111111", marginBottom: "2px" }}>{step.label}</p>
-                        <p style={{ fontSize: "12px", color: "#888888" }}>
-                          {step.status === "completed" ? "Selesai" : step.status === "active" ? "Sedang Berlangsung" : "Menunggu"}
-                        </p>
-                      </div>
+                      ))}
                     </div>
-                  ))}
+                  </div>
+                </>
+              ) : (
+                <div style={{ textAlign: "center", padding: "40px 20px", background: "#f8f9fa", borderRadius: "14px" }}>
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#e5e5e5" strokeWidth="2" style={{ margin: "0 auto 12px" }}>
+                    <rect x="2" y="7" width="20" height="14" rx="2"/>
+                    <path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/>
+                  </svg>
+                  <p style={{ fontSize: "14px", color: "#666666" }}>Belum ada lamaran aktif</p>
+                  <p style={{ fontSize: "12px", color: "#888888", marginTop: "4px" }}>Lamar pekerjaan untuk melihat detail</p>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Quick Actions */}
