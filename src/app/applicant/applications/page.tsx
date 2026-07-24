@@ -3,39 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 
-// Mock data for applications
-const applications = [
-  {
-    id: "1",
-    jobTitle: "Pramugara / Pramugari Kereta Api",
-    division: "ON_TRAIN_SERVICE",
-    location: "Jakarta, Bandung, Surabaya",
-    appliedDate: "2026-07-15",
-    deadline: "2026-08-15",
-    status: "ADMINISTRATION",
-    score: null,
-  },
-  {
-    id: "2",
-    jobTitle: "Staff IT Support",
-    division: "IT_STAFF",
-    location: "Jakarta",
-    appliedDate: "2026-07-18",
-    deadline: "2026-08-10",
-    status: "TEST",
-    score: null,
-  },
-  {
-    id: "3",
-    jobTitle: "Steward Kereta Api",
-    division: "ON_TRAIN_SERVICE",
-    location: "Bandung",
-    appliedDate: "2026-07-20",
-    deadline: "2026-08-20",
-    status: "ADMINISTRATION",
-    score: null,
-  }
-];
+// Mock data - empty for new applicants
+const applications: any[] = [];
 
 const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
   ADMINISTRATION: { bg: "#fef3c7", text: "#d97706", label: "Menunggu Administrasi" },
@@ -46,10 +15,40 @@ const statusConfig: Record<string, { bg: string; text: string; label: string }> 
 };
 
 export default function ApplicationsPage() {
-  const [selectedApp, setSelectedApp] = useState(applications[0]);
+  const [selectedApp, setSelectedApp] = useState<any>(null);
   const [filter, setFilter] = useState("all");
 
   const filteredApps = filter === "all" ? applications : applications.filter(a => a.status === filter);
+
+  // Empty state for new applicants
+  if (applications.length === 0) {
+    return (
+      <div style={{ fontFamily: "Inter, system-ui, sans-serif", minHeight: "100vh", background: "#f8f9fa", padding: "24px" }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+          <div style={{ marginBottom: "32px" }}>
+            <h1 style={{ fontSize: "28px", fontWeight: 800, color: "#00205B", marginBottom: "4px" }}>Lamaran Saya</h1>
+            <p style={{ fontSize: "14px", color: "#666666" }}>Belum ada lamaran</p>
+          </div>
+
+          <div style={{ background: "#fff", borderRadius: "16px", padding: "80px 40px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", textAlign: "center" }}>
+            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#e5e5e5" strokeWidth="1.5" style={{ margin: "0 auto 24px" }}>
+              <rect x="2" y="7" width="20" height="14" rx="2"/>
+              <path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/>
+            </svg>
+            <h2 style={{ fontSize: "24px", fontWeight: 700, color: "#111", marginBottom: "12px" }}>Belum Ada Lamaran</h2>
+            <p style={{ fontSize: "15px", color: "#666", marginBottom: "32px", maxWidth: "400px", margin: "0 auto 32px" }}>
+              Anda belum melamar pekerjaan apapun. Mulai lamar pekerjaan yang Anda minati.
+            </p>
+            <Link href="/applicant/jobs">
+              <button style={{ padding: "14px 32px", background: "#FF5E00", color: "#fff", border: "none", borderRadius: "12px", fontSize: "15px", fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 16px rgba(255,94,0,0.3)" }}>
+                Lihat Lowongan
+              </button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ fontFamily: "Inter, system-ui, sans-serif", minHeight: "100vh", background: "#f8f9fa", padding: "24px" }}>
@@ -82,7 +81,7 @@ export default function ApplicationsPage() {
 
             {filteredApps.map((app) => {
               const status = statusConfig[app.status] || statusConfig.PENDING;
-              const isSelected = selectedApp.id === app.id;
+              const isSelected = selectedApp?.id === app.id;
               return (
                 <div key={app.id} onClick={() => setSelectedApp(app)} style={{
                   background: "#fff",
@@ -116,10 +115,10 @@ export default function ApplicationsPage() {
 
           {/* Right - Detail */}
           <div style={{ background: "#fff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", height: "fit-content", position: "sticky", top: "24px" }}>
-            <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#111", marginBottom: "8px" }}>{selectedApp.jobTitle}</h2>
-            <p style={{ fontSize: "14px", color: "#666", marginBottom: "16px" }}>{selectedApp.location}</p>
-            <span style={{ display: "inline-block", padding: "8px 16px", background: statusConfig[selectedApp.status]?.bg, color: statusConfig[selectedApp.status]?.text, borderRadius: "20px", fontSize: "14px", fontWeight: 700, marginBottom: "24px" }}>
-              {statusConfig[selectedApp.status]?.label}
+            <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#111", marginBottom: "8px" }}>{selectedApp?.jobTitle}</h2>
+            <p style={{ fontSize: "14px", color: "#666", marginBottom: "16px" }}>{selectedApp?.location}</p>
+            <span style={{ display: "inline-block", padding: "8px 16px", background: statusConfig[selectedApp?.status]?.bg, color: statusConfig[selectedApp?.status]?.text, borderRadius: "20px", fontSize: "14px", fontWeight: 700, marginBottom: "24px" }}>
+              {statusConfig[selectedApp?.status]?.label}
             </span>
 
             <div style={{ marginTop: "24px", paddingTop: "24px", borderTop: "1px solid #eee" }}>
@@ -127,13 +126,13 @@ export default function ApplicationsPage() {
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <span style={{ fontSize: "14px", color: "#666" }}>Tanggal Lamar</span>
-                  <span style={{ fontSize: "14px", fontWeight: 600, color: "#111" }}>{new Date(selectedApp.appliedDate).toLocaleDateString("id-ID")}</span>
+                  <span style={{ fontSize: "14px", fontWeight: 600, color: "#111" }}>{selectedApp ? new Date(selectedApp.appliedDate).toLocaleDateString("id-ID") : "-"}</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <span style={{ fontSize: "14px", color: "#666" }}>Batas Lamar</span>
-                  <span style={{ fontSize: "14px", fontWeight: 600, color: "#111" }}>{new Date(selectedApp.deadline).toLocaleDateString("id-ID")}</span>
+                  <span style={{ fontSize: "14px", fontWeight: 600, color: "#111" }}>{selectedApp ? new Date(selectedApp.deadline).toLocaleDateString("id-ID") : "-"}</span>
                 </div>
-                {selectedApp.score !== null && (
+                {selectedApp?.score !== null && (
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <span style={{ fontSize: "14px", color: "#666" }}>Skor Tes</span>
                     <span style={{ fontSize: "14px", fontWeight: 700, color: selectedApp.score >= 70 ? "#16a34a" : "#d97706" }}>{selectedApp.score}%</span>
@@ -148,10 +147,6 @@ export default function ApplicationsPage() {
               </Link>
             </div>
           </div>
-        </div>
-
-        <div style={{ marginTop: "24px" }}>
-          <Link href="/applicant/dashboard" style={{ fontSize: "14px", color: "#FF5E00", textDecoration: "none", fontWeight: 600 }}>← Kembali ke Dashboard</Link>
         </div>
       </div>
     </div>
