@@ -280,7 +280,7 @@ export default function HomePage() {
       </section>
 
       {/* Jobs */}
-      <section id="lowongan" style={{ padding: "100px 32px", position: "relative", color: "#ffffff", minHeight: "600px" }}>
+      <section id="lowongan" style={{ padding: "80px 32px", position: "relative", color: "#ffffff" }}>
         {/* Background Image */}
         <img
           src="/section-bg.jpg"
@@ -291,7 +291,7 @@ export default function HomePage() {
             left: 0,
             width: "100%",
             height: "100%",
-            objectFit: "cover",
+            objectFit: "contain",
             objectPosition: "center top",
             zIndex: 0
           }}
@@ -359,7 +359,7 @@ export default function HomePage() {
       </section>
 
       {/* About */}
-      <section id="tentang" style={{ padding: "100px 32px", position: "relative", color: "#ffffff", minHeight: "600px" }}>
+      <section id="tentang" style={{ padding: "80px 32px", position: "relative", color: "#ffffff" }}>
         {/* Background Image */}
         <img
           src="/section-bg.jpg"
@@ -370,7 +370,7 @@ export default function HomePage() {
             left: 0,
             width: "100%",
             height: "100%",
-            objectFit: "cover",
+            objectFit: "contain",
             objectPosition: "center top",
             zIndex: 0
           }}
