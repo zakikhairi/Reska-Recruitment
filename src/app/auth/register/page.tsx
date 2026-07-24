@@ -175,12 +175,26 @@ export default function RegisterPage() {
   return (
     <div style={{ fontFamily: "Inter, system-ui, -apple-system, sans-serif", minHeight: "100vh", display: "flex" }}>
       {/* Left Panel - Branding */}
-      <div style={{ display: "none", flex: "1", background: "linear-gradient(160deg, #00205B 0%, #001a3d 50%, #0C2340 100%)", padding: "60px", flexDirection: "column", position: "relative", overflow: "hidden" }} className="left-panel">
+      <div style={{ display: "none", flex: "1", position: "relative", overflow: "hidden" }} className="left-panel">
+        {/* Background Image */}
+        <img
+          src="/login-bg.jpg"
+          alt="KAI Recruitment"
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: "center"
+          }}
+        />
+        {/* Dark Overlay */}
+        <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "linear-gradient(160deg, rgba(0,32,91,0.85) 0%, rgba(0,26,61,0.75) 50%, rgba(12,35,64,0.8) 100%)" }} />
 
-        {/* Decorative Elements */}
-        <div style={{ position: "absolute", top: "-150px", right: "-150px", width: "500px", height: "500px", background: "radial-gradient(circle, rgba(255,94,0,0.15) 0%, transparent 70%)" }} />
-        <div style={{ position: "absolute", bottom: "-100px", left: "-100px", width: "300px", height: "300px", background: "radial-gradient(circle, rgba(255,94,0,0.1) 0%, transparent 70%)" }} />
-        <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "600px", height: "600px", border: "1px solid rgba(255,255,255,0.03)", borderRadius: "50%" }} />
+        {/* Content Wrapper */}
+        <div style={{ position: "relative", zIndex: 1, width: "100%", height: "100%", display: "flex", flexDirection: "column", padding: "60px" }}>
 
         {/* Logo & Brand */}
         <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", gap: "16px" }}>
@@ -277,6 +291,8 @@ export default function RegisterPage() {
           <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.3)", textAlign: "center", paddingTop: "24px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
             2026 PT Reska Multi Usaha. Bagian dari PT Kereta Api Indonesia.
           </div>
+        </div>
+
         </div>
       </div>
 
