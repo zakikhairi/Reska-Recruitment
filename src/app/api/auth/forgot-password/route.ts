@@ -58,11 +58,22 @@ export async function POST(request: NextRequest) {
     console.log("[FORGOT] Code generated:", code);
 
     // Create transporter
+    const emailUser = process.env.EMAIL_USER;
+    const emailPass = process.env.EMAIL_PASS;
+
+    if (!emailUser || !emailPass) {
+      console.error("[FORGOT] Email credentials not configured. Set EMAIL_USER and EMAIL_PASS in .env");
+      return NextResponse.json({
+        success: false,
+        error: "Fitur reset password belum dikonfigurasi. Hubungi administrator.",
+      }, { status: 503 });
+    }
+
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+        user: emailUser,
+        pass: emailPass,
       },
     });
 
