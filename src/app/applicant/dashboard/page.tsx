@@ -5,14 +5,12 @@ import Link from "next/link";
 
 // Mock data
 const applications = [
-  { id: "1", jobTitle: "Pramugara Kereta Api", division: "Layanan Kereta", appliedDate: "15 Jul 2026", status: "TEST_COMPLETED", testScore: 85 },
-  { id: "2", jobTitle: "Staff IT Support", division: "IT Staff", appliedDate: "18 Jul 2026", status: "IN_TEST", testScore: null },
-  { id: "3", jobTitle: "Teknisi Maintenance", division: "Logistik", appliedDate: "10 Jul 2026", status: "INTERVIEW", testScore: 78 },
+  { id: "1", jobTitle: "Pramugara Kereta Api", division: "Layanan Kereta", appliedDate: "15 Jul 2026", status: "ADMINISTRATION", testScore: null },
+  { id: "2", jobTitle: "Staff IT Support", division: "IT Staff", appliedDate: "18 Jul 2026", status: "ADMINISTRATION", testScore: null },
+  { id: "3", jobTitle: "Steward Kereta Api", division: "Layanan Kereta", appliedDate: "20 Jul 2026", status: "TEST", testScore: null },
 ];
 
-const upcomingTests = [
-  { id: "1", title: "Tes Kompetensi - Staff IT Support", date: "25 Jul 2026", duration: 90 },
-];
+const upcomingTests = [];
 
 const applicationSteps = [
   { id: 1, label: "Administrasi", status: "completed" },
@@ -24,9 +22,11 @@ const applicationSteps = [
 
 const getStatusColor = (status: string) => {
   switch (status) {
+    case "ADMINISTRATION": return { bg: "#fef3c7", text: "#d97706", label: "Menunggu Administrasi" };
+    case "TEST": return { bg: "#dbeafe", text: "#2563eb", label: "Menunggu Tes" };
     case "TEST_COMPLETED": return { bg: "#dcfce7", text: "#16a34a", label: "Tes Selesai" };
     case "IN_TEST": return { bg: "#fef3c7", text: "#d97706", label: "Sedang Tes" };
-    case "INTERVIEW": return { bg: "#dbeafe", text: "#2563eb", label: "Interview" };
+    case "INTERVIEW": return { bg: "#e0e7ff", text: "#4f46e5", label: "Interview" };
     default: return { bg: "#f1f5f9", text: "#64748b", label: "Menunggu" };
   }
 };
@@ -49,9 +49,9 @@ export default function ApplicantDashboardPage() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "20px", marginBottom: "40px" }}>
           {[
             { label: "Total Lamaran", value: "3", icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg> },
-            { label: "Dalam Proses", value: "2", icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> },
-            { label: "Tes Selesai", value: "2", icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg> },
-            { label: "Interview", value: "1", icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> }
+            { label: "Menunggu Seleksi", value: "2", icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> },
+            { label: "Menunggu Tes", value: "1", icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg> },
+            { label: "Interview", value: "0", icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> }
           ].map((stat, i) => (
             <div key={i} style={{ background: "#ffffff", borderRadius: "16px", padding: "24px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
               <div style={{ width: "48px", height: "48px", background: "#f0f4ff", borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "16px", color: "#00205B" }}>{stat.icon}</div>
