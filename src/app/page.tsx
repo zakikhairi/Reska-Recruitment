@@ -280,13 +280,30 @@ export default function HomePage() {
       </section>
 
       {/* Jobs */}
-      <section id="lowongan" style={{ padding: "100px 32px", background: "#f8f9fa" }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+      <section id="lowongan" style={{ padding: "100px 32px", position: "relative", color: "#ffffff" }}>
+        {/* Background Image */}
+        <img
+          src="/section-bg.jpg"
+          alt="KAI Recruitment"
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: "center",
+            zIndex: 0
+          }}
+        />
+        {/* Dark Overlay */}
+        <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(0,32,91,0.85)", zIndex: 1 }} />
+        <div style={{ maxWidth: "1200px", margin: "0 auto", position: "relative", zIndex: 2 }}>
           <AnimatedSection>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "40px", flexWrap: "wrap", gap: "20px" }}>
               <div>
-                <h2 style={{ fontSize: "36px", fontWeight: 700, color: "#00205B", marginBottom: "8px", letterSpacing: "-0.02em" }}>Lowongan Tersedia</h2>
-                <p style={{ fontSize: "16px", color: "#666666" }}>{filteredJobs.length} posisi terbuka untuk Anda</p>
+                <h2 style={{ fontSize: "36px", fontWeight: 700, color: "#ffffff", marginBottom: "8px", letterSpacing: "-0.02em" }}>Lowongan Tersedia</h2>
+                <p style={{ fontSize: "16px", color: "rgba(255,255,255,0.8)" }}>{filteredJobs.length} posisi terbuka untuk Anda</p>
               </div>
               <Link href="/auth/register">
                 <button style={{ padding: "14px 28px", background: "#FF5E00", color: "#ffffff", border: "none", borderRadius: "12px", fontSize: "15px", fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 16px rgba(255,94,0,0.3)" }}>Lamar Sekarang</button>
@@ -297,14 +314,14 @@ export default function HomePage() {
           <AnimatedSection>
             <div style={{ marginBottom: "28px" }}>
               <input type="text" placeholder="Cari posisi atau lokasi..." value={search} onChange={(e) => setSearch(e.target.value)}
-                style={{ width: "100%", maxWidth: "440px", height: "52px", padding: "0 20px", border: "2px solid #e8e8e8", borderRadius: "12px", fontSize: "15px", outline: "none", background: "#ffffff" }} />
+                style={{ width: "100%", maxWidth: "440px", height: "52px", padding: "0 20px", border: "2px solid rgba(255,255,255,0.3)", borderRadius: "12px", fontSize: "15px", outline: "none", background: "rgba(255,255,255,0.1)", color: "#ffffff" }} />
             </div>
 
             <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "40px" }}>
               {filters.map((f) => (
                 <button key={f} onClick={() => setActiveFilter(f)} style={{
                   padding: "10px 20px", borderRadius: "24px", fontSize: "14px", fontWeight: 600, border: "none", cursor: "pointer",
-                  background: activeFilter === f ? "#00205B" : "#ffffff", color: activeFilter === f ? "#ffffff" : "#666666", boxShadow: "0 2px 8px rgba(0,0,0,0.08)", transition: "all 0.2s"
+                  background: activeFilter === f ? "#FF5E00" : "rgba(255,255,255,0.15)", color: activeFilter === f ? "#ffffff" : "#ffffff", boxShadow: "0 2px 8px rgba(0,0,0,0.2)", transition: "all 0.2s"
                 }}>{f}</button>
               ))}
             </div>
@@ -313,21 +330,21 @@ export default function HomePage() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "28px" }}>
             {filteredJobs.map((job, i) => (
               <AnimatedCard key={job.id} delay={i * 100}>
-                <div style={{ background: "#ffffff", padding: "28px", borderRadius: "16px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", transition: "transform 0.3s, box-shadow 0.3s" }}
+                <div style={{ background: "rgba(255,255,255,0.95)", padding: "28px", borderRadius: "16px", boxShadow: "0 4px 20px rgba(0,0,0,0.3)", transition: "transform 0.3s, box-shadow 0.3s" }}
                   onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-8px)"; e.currentTarget.style.boxShadow = "0 12px 24px rgba(0,0,0,0.12)"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.06)"; }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
                     <span style={{ padding: "6px 14px", borderRadius: "14px", fontSize: "12px", fontWeight: 700, background: job.isNew ? "#dcfce7" : "#f0f0f0", color: job.isNew ? "#16a34a" : "#666666" }}>{job.isNew ? "Baru" : "Aktif"}</span>
                     <span style={{ fontSize: "13px", color: "#999999", fontWeight: 500 }}>{job.applicants} pelamar</span>
                   </div>
-                  <h3 style={{ fontSize: "17px", fontWeight: 700, color: "#111111", marginBottom: "12px", lineHeight: 1.4 }}>{job.title}</h3>
-                  <div style={{ fontSize: "14px", color: "#666666", marginBottom: "20px", lineHeight: 1.6 }}>
+                  <h3 style={{ fontSize: "17px", fontWeight: 700, color: "#ffffff", marginBottom: "12px", lineHeight: 1.4 }}>{job.title}</h3>
+                  <div style={{ fontSize: "14px", color: "rgba(255,255,255,0.8)", marginBottom: "20px", lineHeight: 1.6 }}>
                     <div style={{ marginBottom: "6px" }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888888" strokeWidth="2" style={{ display: "inline", verticalAlign: "middle", marginRight: "4px" }}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2" style={{ display: "inline", verticalAlign: "middle", marginRight: "4px" }}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
                       {job.location}
                     </div>
                     <div>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888888" strokeWidth="2" style={{ display: "inline", verticalAlign: "middle", marginRight: "4px" }}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2" style={{ display: "inline", verticalAlign: "middle", marginRight: "4px" }}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                       {job.deadline}
                     </div>
                   </div>
@@ -342,8 +359,25 @@ export default function HomePage() {
       </section>
 
       {/* About */}
-      <section id="tentang" style={{ padding: "100px 32px", background: "linear-gradient(135deg, #00205B 0%, #0C2340 100%)", color: "#ffffff" }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "80px", alignItems: "center" }}>
+      <section id="tentang" style={{ padding: "100px 32px", position: "relative", color: "#ffffff" }}>
+        {/* Background Image */}
+        <img
+          src="/section-bg.jpg"
+          alt="KAI Services"
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: "center",
+            zIndex: 0
+          }}
+        />
+        {/* Dark Overlay */}
+        <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(0,32,91,0.85)", zIndex: 1 }} />
+        <div style={{ maxWidth: "1200px", margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "80px", alignItems: "center", position: "relative", zIndex: 2 }}>
           <AnimatedSection>
             <h2 style={{ fontSize: "36px", fontWeight: 700, marginBottom: "24px", letterSpacing: "-0.02em" }}>Tentang KAI Services</h2>
             <p style={{ color: "rgba(255,255,255,0.7)", lineHeight: 1.8, marginBottom: "20px", fontSize: "16px" }}>
