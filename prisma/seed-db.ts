@@ -2,8 +2,8 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import path from "path";
 
-const dbUrl = process.env.DATABASE_URL || `file:${path.join(process.cwd(), "prisma", "dev.db")}`;
-const adapter = new PrismaLibSql({ url: dbUrl });
+const dbPath = path.join(process.cwd(), "prisma", "dev.db");
+const adapter = new PrismaLibSql({ url: `file:${dbPath}` });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
@@ -15,7 +15,7 @@ async function main() {
     update: {},
     create: {
       email: "admin@kai.co.id",
-      passwordHash: "demo_admin",
+      passwordHash: "demo123",
       role: "HR_ADMIN",
       emailVerified: true,
       admin: {
@@ -27,7 +27,35 @@ async function main() {
       },
     },
   });
-  console.log("✅ Admin user created:", adminUser.email);
+  console.log("✅ Admin user:", adminUser.email);
+
+  // Create applicant user for testing
+  const applicantUser = await prisma.user.upsert({
+    where: { email: "pelamar@kai.co.id" },
+    update: {},
+    create: {
+      email: "pelamar@kai.co.id",
+      passwordHash: "demo123",
+      role: "APPLICANT",
+      emailVerified: true,
+      applicant: {
+        create: {
+          nik: "1234567890123456",
+          fullName: "Budi Pelamar",
+          phone: "081234567890",
+          dateOfBirth: new Date("1998-05-15"),
+          placeOfBirth: "Jakarta",
+          gender: "MALE",
+          address: "Jl. Sudirman No. 123",
+          city: "Jakarta",
+          postalCode: "10220",
+          education: "SMA",
+          university: null,
+        },
+      },
+    },
+  });
+  console.log("✅ Applicant user:", applicantUser.email);
 
   // Create sample jobs
   const jobs = [
@@ -46,7 +74,7 @@ async function main() {
       division: "ON_TRAIN_SERVICE",
       location: "Bandung",
       description: "Memberikan pelayanan prima kepada penumpang kereta api selama perjalanan.",
-      requirements: "• Usia maksimal 30 tahun\n• Sehat jasmani dan rohani\n• Pendidikan minimal SMA/SMK\n• Pengalaman di bidang hospitality menjadi nilai tambah",
+      requirements: "• Usia maksimal 30 tahun\n• Sehat jasmani dan rohani\n• Pendidikan minimal SMA/SMK",
       minEducation: "SMA",
       deadline: new Date("2026-08-20"),
       status: "ACTIVE",
@@ -56,7 +84,7 @@ async function main() {
       division: "IT_STAFF",
       location: "Jakarta",
       description: "Mengelola dan mendukung infrastruktur IT perusahaan untuk kelancaran operasional.",
-      requirements: "• Pendidikan S1 Teknik Informatika atau setara\n• Pengalaman minimal 2 tahun di bidang IT\n• Menguasai jaringan komputer dan troubleshooting\n• Sertifikasi IT menjadi nilai tambah",
+      requirements: "• Pendidikan S1 Teknik Informatika atau setara\n• Pengalaman minimal 2 tahun di bidang IT",
       minEducation: "S1",
       deadline: new Date("2026-08-10"),
       status: "ACTIVE",
@@ -65,8 +93,8 @@ async function main() {
       title: "Teknisi Maintenance Kereta",
       division: "LOGISTICS",
       location: "Madiun",
-      description: "Melakukan perawatan dan perbaikan kereta api untuk menjaga keselamatan penumpang.",
-      requirements: "• Pendidikan D3 Teknik Mesin\n• Pengalaman di bidang maintenance minimal 1 tahun\n• Memahami mekanik dasar kereta api\n• Bersedia bekerja shift",
+      description: "Melakukan perawatan dan perbaikan kereta api untuk menjaga keselamatan.",
+      requirements: "• Pendidikan D3 Teknik Mesin\n• Pengalaman di bidang maintenance",
       minEducation: "D3",
       deadline: new Date("2026-08-25"),
       status: "ACTIVE",
@@ -76,7 +104,7 @@ async function main() {
       division: "RES_CLEAN",
       location: "Bandung, Jakarta",
       description: "Membersihkan dan merawat kebersihan kereta api dan area stasiun.",
-      requirements: "• Pendidikan minimal SMA/SMK\n• Sehat jasmani\n• Tidak memiliki riwayat penyakit kulit\n• Bersedia bekerja shift",
+      requirements: "• Pendidikan minimal SMA/SMK\n• Sehat jasmani",
       minEducation: "SMA",
       deadline: new Date("2026-09-01"),
       status: "ACTIVE",
@@ -86,7 +114,7 @@ async function main() {
       division: "ADMIN",
       location: "Jakarta",
       description: "Mengelola administrasi kantor dan dokumentasi perusahaan.",
-      requirements: "• Pendidikan D3 Administrasi atau setara\n• Menguasai MS Office (Word, Excel, PowerPoint)\n• Pengalaman di bidang administrasi\n• Komunikasi baik",
+      requirements: "• Pendidikan D3 Administrasi atau setara\n• Menguasai MS Office",
       minEducation: "D3",
       deadline: new Date("2026-08-18"),
       status: "ACTIVE",
@@ -102,9 +130,9 @@ async function main() {
       await prisma.jobPosting.create({
         data: jobData,
       });
-      console.log(`✅ Job created: ${jobData.title}`);
+      console.log(`✅ Job: ${jobData.title}`);
     } else {
-      console.log(`⏭️ Job already exists: ${jobData.title}`);
+      console.log(`⏭️ Job exists: ${jobData.title}`);
     }
   }
 
@@ -131,7 +159,7 @@ async function main() {
           isActive: true,
         },
       });
-      console.log("✅ Test config created for first job");
+      console.log("✅ Test config created");
     }
   }
 

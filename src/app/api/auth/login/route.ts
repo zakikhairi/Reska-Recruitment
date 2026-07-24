@@ -3,27 +3,18 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import path from "path";
 
-// Use DATABASE_URL from env or default to absolute path
-const dbUrl = process.env.DATABASE_URL || `file:${path.join(process.cwd(), "prisma", "dev.db")}`;
-const adapter = new PrismaLibSql({ url: dbUrl });
+// Create Prisma client with LibSQL adapter
+const dbPath = path.join(process.cwd(), "prisma", "dev.db");
+const adapter = new PrismaLibSql({ url: `file:${dbPath}` });
 const prisma = new PrismaClient({ adapter });
 
-// Simple hash function for demo purposes (in production, use bcrypt)
-function simpleHash(str: string): string {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
-  }
-  return "demo_" + Math.abs(hash).toString(16);
-}
-
-function verifyPassword(password: string, hash: string): boolean {
-  // For demo: "demo123" always works
+// Simple password verification (for demo)
+function verifyPassword(password: string, storedPassword: string): boolean {
+  // For demo: accept these passwords
   if (password === "demo123") return true;
-  // Check against stored hash
-  return simpleHash(password) === hash || hash.startsWith("demo_");
+  if (password === "demo456") return true;
+  if (password === storedPassword) return true;
+  return false;
 }
 
 export async function POST(request: NextRequest) {
