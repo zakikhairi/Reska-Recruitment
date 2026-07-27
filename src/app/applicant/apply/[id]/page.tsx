@@ -1,25 +1,33 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, use } from "react";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/auth";
-import { getJobById, createApplication } from "@/lib/local-db";
+import { useJobsStore } from "@/stores/jobs";
+import { createApplication } from "@/lib/local-db";
 
-export default function ApplyJobPage({ params }: { params: { id: string } }) {
-  const jobId = params.id;
+export default function ApplyJobPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id: jobId } = use(params);
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
+  const { jobs } = useJobsStore();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
-  // Get job from local database
-  const job = useMemo(() => getJobById(jobId), [jobId]);
+  // Get job from useJobsStore (same as admin uses)
+  const job = useMemo(() => jobs.find(j => j.id === jobId), [jobId, jobs]);
 
   const handleApply = async () => {
-    if (!user?.id) {
+    if (!user?.id && !user?.applicantId) {
       setError("Silakan login terlebih dahulu");
+      return;
+    }
+
+    // Check if job is active
+    if (!job || job.status !== "ACTIVE") {
+      setError("Lowongan tidak tersedia atau sudah ditutup");
       return;
     }
 
@@ -27,8 +35,11 @@ export default function ApplyJobPage({ params }: { params: { id: string } }) {
     setError("");
 
     try {
+      // Use user.id or applicantId as the applicant identifier
+      const applicantId = user.applicantId || user.id;
+
       createApplication({
-        applicantId: user.id,
+        applicantId: applicantId,
         jobPostingId: jobId
       });
       setSuccess(true);

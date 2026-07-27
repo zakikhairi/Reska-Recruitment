@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { getAllJobs } from "@/lib/local-db";
+import { useJobsStore, Job } from "@/stores/jobs";
 
 const filters = ["Semua", "ON_TRAIN_SERVICE", "IT_STAFF", "LOGISTICS", "RES_CLEAN", "ADMIN", "RES_PARKING"];
 
@@ -16,27 +16,39 @@ const divisionNames: Record<string, string> = {
 };
 
 export default function JobsPage() {
-  const [jobs, setJobs] = useState<any[]>([]);
+  const { jobs, _hasHydrated } = useJobsStore();
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("Semua");
   const [isLoading, setIsLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    fetchJobs();
+    setMounted(true);
   }, []);
 
-  const fetchJobs = async () => {
-    try {
-      // Use local database
-      const allJobs = getAllJobs();
-      setJobs(allJobs);
-    } catch (err) {
-      console.error("Failed to fetch jobs:", err);
+  // Wait for hydration before loading jobs
+  useEffect(() => {
+    if (_hasHydrated && mounted) {
+      setIsLoading(false);
     }
-    setIsLoading(false);
-  };
+  }, [_hasHydrated, mounted]);
 
-  const filteredJobs = jobs.filter(job => {
+  // Wait for hydration
+  if (!mounted || !_hasHydrated) {
+    return (
+      <div style={{ fontFamily: "Inter, system-ui, sans-serif", minHeight: "100vh", background: "#f8f9fa", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ width: "40px", height: "40px", border: "4px solid #FF5E00", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
+          <p style={{ color: "#666" }}>Memuat lowongan...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Filter only ACTIVE jobs for applicants
+  const activeJobs = jobs.filter(job => job.status === "ACTIVE");
+
+  const filteredJobs = activeJobs.filter(job => {
     const matchFilter = activeFilter === "Semua" || job.division === activeFilter;
     const matchSearch = job.title.toLowerCase().includes(search.toLowerCase()) ||
                        job.location.toLowerCase().includes(search.toLowerCase());

@@ -19,6 +19,7 @@ import {
   Image,
   X,
 } from "lucide-react";
+import { useJobsStore, Job } from "@/stores/jobs";
 
 const divisions = [
   { value: "ON_TRAIN_SERVICE", label: "On-Train Service" },
@@ -53,6 +54,7 @@ const requirements = [
 
 export default function CreateJobPage() {
   const router = useRouter();
+  const addJob = useJobsStore((state) => state.addJob);
   const [formData, setFormData] = useState({
     title: "",
     division: "",
@@ -74,6 +76,7 @@ export default function CreateJobPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [newLocation, setNewLocation] = useState("");
+  const [error, setError] = useState("");
 
   const handleInputChange = (field: string, value: string) => {
     setFormData({ ...formData, [field]: value });
@@ -97,14 +100,49 @@ export default function CreateJobPage() {
   };
 
   const handleSubmit = (publish: boolean) => {
+    // Validate required fields
+    if (!formData.title || !formData.division || !formData.location || !formData.deadline || !formData.vacancies) {
+      setError("Mohon lengkapi semua field wajib");
+      return;
+    }
+
     setIsSubmitting(true);
+    setError("");
     setStatus(publish ? "ACTIVE" : "DRAFT");
 
-    // Simulate submission
-    setTimeout(() => {
+    try {
+      // Create job object
+      const newJob: Job = {
+        id: "job-" + Date.now(),
+        title: formData.title,
+        division: formData.division,
+        jobType: formData.jobType,
+        location: formData.location,
+        minEducation: formData.minEducation,
+        salaryMin: formData.salaryMin,
+        salaryMax: formData.salaryMax,
+        description: formData.description,
+        responsibilities: formData.responsibilities,
+        requirements: formData.requirements,
+        benefits: formData.benefits,
+        deadline: formData.deadline,
+        vacancies: formData.vacancies,
+        status: publish ? "ACTIVE" : "DRAFT",
+        applicants: 0,
+      };
+
+      // Save to store (localStorage)
+      addJob(newJob);
+
+      // Simulate save delay
+      setTimeout(() => {
+        setIsSubmitting(false);
+        router.push("/admin/jobs");
+      }, 1000);
+    } catch (err) {
+      setError("Terjadi kesalahan saat menyimpan");
       setIsSubmitting(false);
-      router.push("/admin/jobs");
-    }, 1500);
+    }
   };
 
   return (
@@ -505,6 +543,12 @@ export default function CreateJobPage() {
 
               {/* Validation Status */}
               <div style={{ marginBottom: "24px" }}>
+                {error && (
+                  <div style={{ padding: "14px", background: "#fee2e2", borderRadius: "10px", display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
+                    <AlertCircle className="w-5 h-5" style={{ color: "#EF4444" }} />
+                    <span style={{ fontSize: "14px", fontWeight: 500, color: "#DC2626" }}>{error}</span>
+                  </div>
+                )}
                 {formData.title && formData.division && formData.location && formData.deadline && formData.vacancies ? (
                   <div style={{ padding: "14px", background: "#dcfce7", borderRadius: "10px", display: "flex", alignItems: "center", gap: "10px" }}>
                     <CheckCircle className="w-5 h-5" style={{ color: "#16a34a" }} />

@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/auth";
+import { useJobsStore } from "@/stores/jobs";
+import { getApplicationsByApplicant, createApplication, getJobById } from "@/lib/local-db";
 
 const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
   ADMIN_CHECK: { bg: "#fef3c7", text: "#d97706", label: "Menunggu Review HR" },
@@ -17,40 +19,54 @@ const statusConfig: Record<string, { bg: string; text: string; label: string }> 
   PENDING: { bg: "#f1f5f9", text: "#64748b", label: "Menunggu" },
 };
 
+interface AppWithJob {
+  id: string;
+  applicantId: string;
+  jobPostingId: string;
+  status: string;
+  notes?: string;
+  createdAt: string;
+  jobTitle?: string;
+  jobDivision?: string;
+}
+
 export default function ApplicantDashboardPage() {
   const { user } = useAuthStore();
-  const [applications, setApplications] = useState<any[]>([]);
+  const { jobs, _hasHydrated } = useJobsStore();
+  const [applications, setApplications] = useState<AppWithJob[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userName, setUserName] = useState("Pelamar");
 
   useEffect(() => {
-    fetchData();
-  }, [user]);
+    if (user && _hasHydrated) {
+      fetchData();
+    }
+  }, [user, _hasHydrated]);
 
-  const fetchData = async () => {
-    // Fetch profile
-    if (user?.id) {
-      try {
-        const profileRes = await fetch("/api/applicant/profile?userId=" + user.id);
-        if (profileRes.ok) {
-          const profileData = await profileRes.json();
-          if (profileData.applicant?.fullName) {
-            setUserName(profileData.applicant.fullName);
-          }
-        }
-      } catch (err) {
-        console.log("Could not fetch profile");
-      }
+  const fetchData = () => {
+    // Get user name from auth store
+    if (user?.fullName) {
+      setUserName(user.fullName);
+    } else if (user?.email) {
+      setUserName(user.email.split("@")[0]);
     }
 
-    // Fetch applications
+    // Fetch applications from local database
     if (user?.applicantId) {
       try {
-        const appRes = await fetch("/api/applications?applicantId=" + user.applicantId);
-        if (appRes.ok) {
-          const appData = await appRes.json();
-          setApplications(appData.applications || []);
-        }
+        const apps = getApplicationsByApplicant(user.applicantId);
+
+        // Enrich with job data
+        const enrichedApps = apps.map(app => {
+          const job = getJobById(app.jobPostingId);
+          return {
+            ...app,
+            jobTitle: job?.title || "Lowongan",
+            jobDivision: job?.division || "Umum",
+          };
+        });
+
+        setApplications(enrichedApps);
       } catch (err) {
         console.log("Could not fetch applications");
       }
@@ -61,6 +77,18 @@ export default function ApplicantDashboardPage() {
   const pendingApps = applications.filter(a => !["ACCEPTED", "REJECTED"].includes(a.status)).length;
   const testApps = applications.filter(a => ["TEST_SCHEDULED", "IN_TEST"].includes(a.status)).length;
   const interviewApps = applications.filter(a => a.status === "INTERVIEW").length;
+
+  // Wait for hydration
+  if (!_hasHydrated) {
+    return (
+      <div style={{ fontFamily: "Inter, sans-serif", minHeight: "100vh", background: "#f8f9fa", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ width: "40px", height: "40px", border: "4px solid #FF5E00", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
+          <p style={{ color: "#666" }}>Memuat...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ fontFamily: "Inter, sans-serif", minHeight: "100vh", background: "#f8f9fa" }}>

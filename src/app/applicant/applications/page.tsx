@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/auth";
+import { getApplicationsByApplicant, getJobById } from "@/lib/local-db";
 
 const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
   ADMIN_CHECK: { bg: "#fef3c7", text: "#d97706", label: "Menunggu Review HR" },
@@ -17,29 +18,59 @@ const statusConfig: Record<string, { bg: string; text: string; label: string }> 
   PENDING: { bg: "#fef3c7", text: "#d97706", label: "Menunggu" },
 };
 
+interface AppWithJob {
+  id: string;
+  applicantId: string;
+  jobPostingId: string;
+  status: string;
+  notes?: string;
+  createdAt: string;
+  jobTitle?: string;
+  jobLocation?: string;
+  jobDivision?: string;
+}
+
 export default function ApplicationsPage() {
-  const [applications, setApplications] = useState<any[]>([]);
-  const [selectedApp, setSelectedApp] = useState<any>(null);
+  const [applications, setApplications] = useState<AppWithJob[]>([]);
+  const [selectedApp, setSelectedApp] = useState<AppWithJob | null>(null);
   const [filter, setFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const user = useAuthStore((state) => state.user);
 
   useEffect(() => {
-    fetchApplications();
-  }, [user]);
+    setMounted(true);
+  }, []);
 
-  const fetchApplications = async () => {
-    if (!user?.applicantId) {
+  useEffect(() => {
+    if (mounted && user) {
+      fetchApplications();
+    }
+  }, [mounted, user]);
+
+  const fetchApplications = () => {
+    if (!user?.applicantId && !user?.id) {
       setIsLoading(false);
       return;
     }
 
     try {
-      const response = await fetch("/api/applications?applicantId=" + user.applicantId);
-      const data = await response.json();
-      if (data.applications) {
-        setApplications(data.applications);
-      }
+      // Use applicantId or user id as the applicant id
+      const appId = user.applicantId || user.id;
+      const apps = getApplicationsByApplicant(appId);
+
+      // Enrich with job data
+      const enrichedApps = apps.map(app => {
+        const job = getJobById(app.jobPostingId);
+        return {
+          ...app,
+          jobTitle: job?.title || "Lowongan",
+          jobLocation: job?.location || "Lokasi tidak disebutkan",
+          jobDivision: job?.division || "Umum",
+        };
+      });
+
+      setApplications(enrichedApps);
     } catch (err) {
       console.error("Failed to fetch applications:", err);
     }
@@ -136,12 +167,12 @@ export default function ApplicationsPage() {
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
                     <div>
                       <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#111", marginBottom: "4px" }}>{app.jobTitle}</h3>
-                      <p style={{ fontSize: "13px", color: "#666" }}>{app.jobLocation || "Lokasi tidak disebutkan"}</p>
+                      <p style={{ fontSize: "13px", color: "#666" }}>{app.jobLocation}</p>
                     </div>
                     <span style={{ padding: "6px 12px", background: status.bg, color: status.text, borderRadius: "20px", fontSize: "12px", fontWeight: 700 }}>{status.label}</span>
                   </div>
                   <p style={{ fontSize: "12px", color: "#888" }}>
-                    Dilamar: {new Date(app.appliedAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
+                    Dilamar: {new Date(app.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
                   </p>
                 </div>
               );
@@ -164,7 +195,7 @@ export default function ApplicationsPage() {
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
                       <span style={{ fontSize: "14px", color: "#666" }}>Tanggal Lamar</span>
                       <span style={{ fontSize: "14px", fontWeight: 600, color: "#111" }}>
-                        {new Date(selectedApp.appliedAt).toLocaleDateString("id-ID")}
+                        {new Date(selectedApp.createdAt).toLocaleDateString("id-ID")}
                       </span>
                     </div>
                   </div>
