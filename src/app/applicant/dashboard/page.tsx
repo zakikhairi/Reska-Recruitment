@@ -179,7 +179,7 @@ export default function ApplicantDashboardPage() {
                           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                             <span style={{ padding: "4px 12px", background: "#f0f4ff", color: "#00205B", borderRadius: "20px", fontSize: "12px", fontWeight: 600 }}>{app.jobDivision || "Umum"}</span>
                             <span style={{ fontSize: "13px", color: "#888" }}>
-                              {new Date(app.appliedAt).toLocaleDateString("id-ID")}
+                              {new Date(app.createdAt).toLocaleDateString("id-ID")}
                             </span>
                           </div>
                         </div>

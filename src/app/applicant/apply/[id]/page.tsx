@@ -133,11 +133,17 @@ export default function ApplyJobPage({ params }: { params: Promise<{ id: string 
 
           <div style={styles.section}>
             <h3 style={styles.sectionTitle}>Persyaratan</h3>
-            <ul style={styles.requirementsList}>
-              <li>Pendidikan: {job.minEducation}</li>
-              {job.minHeight && <li>Tinggi Badan: {job.minHeight} cm</li>}
-              {job.minAge && <li>Usia: {job.minAge} - {job.maxAge} tahun</li>}
-            </ul>
+            <p style={styles.sectionText}>{job.requirements.split('\n').map((req, i) => <span key={i} style={styles.requirementItem}>• {req}<br/></span>)}</p>
+          </div>
+
+          <div style={styles.section}>
+            <h3 style={styles.sectionTitle}>Tanggung Jawab</h3>
+            <p style={styles.sectionText}>{job.responsibilities.split('\n').map((resp, i) => <span key={i} style={styles.requirementItem}>• {resp}<br/></span>)}</p>
+          </div>
+
+          <div style={styles.section}>
+            <h3 style={styles.sectionTitle}>Benefit</h3>
+            <p style={styles.sectionText}>{job.benefits.split('\n').map((ben, i) => <span key={i} style={styles.requirementItem}>• {ben}<br/></span>)}</p>
           </div>
 
           {error && <div style={styles.errorAlert}>{error}</div>}
@@ -188,6 +194,7 @@ const styles: Record<string, React.CSSProperties> = {
   section: { marginBottom: "24px" },
   sectionTitle: { fontSize: "16px", fontWeight: 700, marginBottom: "12px", color: "#111" },
   sectionText: { fontSize: "14px", color: "#666", lineHeight: 1.7, margin: 0 },
+  requirementItem: { display: "block", marginBottom: "8px" },
   requirementsList: { fontSize: "14px", color: "#666", lineHeight: 2, margin: 0, paddingLeft: "20px" },
   errorAlert: { padding: "14px 16px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "12px", color: "#dc2626", fontSize: "14px", marginBottom: "24px" },
   action: { marginTop: "24px" },

@@ -5,15 +5,30 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthStore, AuthUser } from "@/stores/auth";
 
+// Demo accounts interface
+interface DemoAccount {
+  id: string;
+  email: string;
+  password: string;
+  role: "APPLICANT" | "HR_ADMIN" | "SUPER_ADMIN";
+  fullName: string;
+  applicantId?: string;
+  nik?: string;
+  phone?: string;
+  education?: string;
+  employeeId?: string;
+  department?: string;
+}
+
 // Demo accounts stored in localStorage
 const DEMO_ACCOUNTS_KEY = "kai-demo-accounts";
-const DEFAULT_DEMO_ACCOUNTS: Array<Omit<AuthUser, "employeeId" | "department" | "applicantId" | "nik" | "phone" | "education"> & { password: string }> = [
+const DEFAULT_DEMO_ACCOUNTS: DemoAccount[] = [
   {
     id: "admin-001",
     email: "admin@admin.co.id",
     password: "demo123",
-    role: "HR_ADMIN" as const,
-    fullName: "Dewi Lestari",
+    role: "HR_ADMIN",
+    fullName: "Admin HR",
     employeeId: "EMP001",
     department: "Human Resources",
   },
@@ -21,9 +36,9 @@ const DEFAULT_DEMO_ACCOUNTS: Array<Omit<AuthUser, "employeeId" | "department" | 
     id: "pelamar-001",
     email: "pelamar@test.com",
     password: "demo123",
-    role: "APPLICANT" as const,
-    fullName: "Ahmad Wijaya",
-    applicantId: "pelamar-001", // Same as user id for demo
+    role: "APPLICANT",
+    fullName: "Test Pelamar",
+    applicantId: "pelamar-001",
     nik: "3201234567890123",
     phone: "081234567890",
     education: "SMA",
