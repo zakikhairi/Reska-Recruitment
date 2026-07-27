@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/stores/auth";
 
 function RegisterForm({ onLoadingChange }: { onLoadingChange: (loading: boolean) => void }) {
   const router = useRouter();
+  const register = useAuthStore((state) => state.register);
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -19,9 +21,9 @@ function RegisterForm({ onLoadingChange }: { onLoadingChange: (loading: boolean)
   });
 
   // Update parent when loading changes
-  if (isLoading !== onLoadingChange) {
+  useEffect(() => {
     onLoadingChange(isLoading);
-  }
+  }, [isLoading, onLoadingChange]);
 
   const handleNext = () => {
     setError("");
@@ -30,8 +32,8 @@ function RegisterForm({ onLoadingChange }: { onLoadingChange: (loading: boolean)
         setError(form.password !== form.confirm ? "Password tidak cocok" : "Lengkapi semua field");
         return;
       }
-      if (form.password.length < 8) {
-        setError("Password minimal 8 karakter");
+      if (form.password.length < 6) {
+        setError("Password minimal 6 karakter");
         return;
       }
     }
@@ -53,62 +55,27 @@ function RegisterForm({ onLoadingChange }: { onLoadingChange: (loading: boolean)
     setError("");
 
     // Minimum loading display time for better UX
-    const minLoadingTime = new Promise(resolve => setTimeout(resolve, 1000));
+    const minLoadingTime = new Promise(resolve => setTimeout(resolve, 800));
 
     try {
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: form.email,
-          password: form.password,
-          confirmPassword: form.confirm,
-          fullName: form.name,
-          nik: form.nik,
-          phone: form.phone,
-        }),
+      const result = await register({
+        email: form.email,
+        password: form.password,
+        fullName: form.name,
+        nik: form.nik,
+        phone: form.phone,
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        await minLoadingTime;
-        setError(data.error || "Registrasi gagal");
-        setIsLoading(false);
-        return;
-      }
-
-      // Auto login after successful registration
-      const loginResponse = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: form.email,
-          password: form.password,
-        }),
-      });
-
-      const loginData = await loginResponse.json();
 
       // Wait for minimum time
       await minLoadingTime;
 
-      if (loginResponse.ok && loginData.user) {
-        if (typeof window !== "undefined") {
-          localStorage.setItem("kai-auth", JSON.stringify({
-            state: {
-              user: loginData.user,
-              isAuthenticated: true,
-              isLoading: false,
-              _hasHydrated: true,
-            },
-            version: 0,
-          }));
-        }
-        router.push("/applicant/dashboard");
-      } else {
-        router.push("/auth/login?registered=true");
+      if (!result.success) {
+        setError(result.error || "Registrasi gagal");
+        setIsLoading(false);
+        return;
       }
+
+      router.push("/applicant/dashboard");
     } catch (err) {
       await minLoadingTime;
       setError("Terjadi kesalahan koneksi");
@@ -170,7 +137,7 @@ function RegisterForm({ onLoadingChange }: { onLoadingChange: (loading: boolean)
 
           <div>
             <label style={{ display: "block", fontSize: "14px", fontWeight: 600, color: "#222222", marginBottom: "8px" }}>Password</label>
-            <input type="password" placeholder="Min. 8 karakter" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })}
+            <input type="password" placeholder="Min. 6 karakter" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })}
               style={{ width: "100%", height: "54px", padding: "0 18px", border: "2px solid #e5e5e5", borderRadius: "12px", fontSize: "15px", outline: "none", transition: "border-color 0.2s", background: "#ffffff" }} />
           </div>
 

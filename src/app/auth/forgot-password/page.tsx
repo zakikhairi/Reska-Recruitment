@@ -24,6 +24,7 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setIsLoading(true);
     setError("");
+    setSuccessMessage("");
 
     try {
       const response = await fetch("/api/auth/forgot-password", {
@@ -36,11 +37,20 @@ export default function ForgotPasswordPage() {
 
       if (!response.ok) {
         setError(data.error || "Gagal mengirim kode");
+        if (data.hint) {
+          setSuccessMessage(data.hint);
+        }
         setIsLoading(false);
         return;
       }
 
-      setSuccessMessage("Kode verifikasi sudah dikirim ke email Anda!");
+      // Check if in dev mode (code shown in response)
+      if (data.devCode) {
+        setSuccessMessage(`🔧 DEV MODE: Kode Anda adalah ${data.devCode}`);
+        alert(`🔧 DEV MODE - Kode verifikasi:\n\n${data.devCode}\n\n(Buka browser console untuk detail)`);
+      } else {
+        setSuccessMessage("Kode verifikasi sudah dikirim ke email Anda!");
+      }
       setStep("verify");
     } catch (err) {
       setError("Terjadi kesalahan koneksi");

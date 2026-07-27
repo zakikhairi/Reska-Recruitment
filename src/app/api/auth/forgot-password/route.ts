@@ -55,20 +55,27 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    console.log("[FORGOT] Code generated:", code);
+    console.log("[FORGOT] ✓ Code generated:", code);
 
-    // Create transporter
+    // Check if email is configured
     const emailUser = process.env.EMAIL_USER;
     const emailPass = process.env.EMAIL_PASS;
 
-    if (!emailUser || !emailPass) {
-      console.error("[FORGOT] Email credentials not configured. Set EMAIL_USER and EMAIL_PASS in .env");
+    if (!emailUser || !emailPass || emailPass === "your-app-password-here") {
+      console.log("[FORGOT] ⚠ Email not configured. Showing code in response for dev:");
+      console.log("[FORGOT]   → Email:", email);
+      console.log("[FORGOT]   → Code:", code);
+      console.log("[FORGOT]   → expires:", expires.toISOString());
+
       return NextResponse.json({
-        success: false,
-        error: "Fitur reset password belum dikonfigurasi. Hubungi administrator.",
-      }, { status: 503 });
+        success: true,
+        message: "Mode pengembangan - kode ditampilkan di console",
+        devCode: code, // Remove this in production!
+        hint: "Konfigurasi EMAIL_USER dan EMAIL_PASS di file .env untuk mengirim email sungguhan"
+      });
     }
 
+    // Create transporter
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -79,7 +86,7 @@ export async function POST(request: NextRequest) {
 
     // Email content with 6-digit code
     const mailOptions = {
-      from: `"KAI Recruitment" <${process.env.EMAIL_USER}>`,
+      from: `"KAI Recruitment" <${emailUser}>`,
       to: email,
       subject: "Kode Verifikasi Reset Password - KAI Recruitment",
       html: `
@@ -134,12 +141,21 @@ export async function POST(request: NextRequest) {
       console.log("[EMAIL] ✓ Sent successfully to:", email);
       console.log("[EMAIL] Message ID:", result.messageId);
     } catch (emailError: any) {
-      console.error("[EMAIL] ✗ Failed:", emailError.message);
+      console.error("[EMAIL] ✗ Failed to send:", emailError.message);
+      console.log("[EMAIL] Full error:", emailError);
+
+      // Common Gmail errors
+      let hint = "Pastikan EMAIL_PASS di .env adalah App Password (bukan password biasa)";
+      if (emailError.message?.includes("Invalid login")) {
+        hint = "Gmail Authentication gagal. Pastikan EMAIL_PASS adalah App Password 16 karakter";
+      } else if (emailError.message?.includes("Network")) {
+        hint = "Gagal koneksi ke server Gmail. Periksa koneksi internet Anda";
+      }
 
       return NextResponse.json({
         success: false,
         error: `Gagal mengirim email: ${emailError.message}`,
-        hint: "Pastikan EMAIL_PASS di .env sudah benar"
+        hint
       }, { status: 500 });
     }
 

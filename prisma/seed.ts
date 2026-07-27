@@ -28,7 +28,7 @@ async function main() {
 
   // ========== USERS ==========
 
-  // Admin User
+  // Admin User - Dewi Lestari
   const admin = await prisma.user.upsert({
     where: { email: "admin@kai.co.id" },
     update: { passwordHash: DEMO_HASH },
@@ -48,7 +48,27 @@ async function main() {
   });
   console.log("✅ Admin:", admin.email);
 
-  // Applicant User
+  // Admin User - Wubi
+  const admin2 = await prisma.user.upsert({
+    where: { email: "wubisonodhanu888@gmail.com" },
+    update: { passwordHash: DEMO_HASH },
+    create: {
+      email: "wubisonodhanu888@gmail.com",
+      passwordHash: DEMO_HASH,
+      role: "HR_ADMIN",
+      emailVerified: true,
+      admin: {
+        create: {
+          fullName: "Wubi",
+          employeeId: "EMP002",
+          department: "Human Resources",
+        },
+      },
+    },
+  });
+  console.log("✅ Admin:", admin2.email);
+
+  // Applicant User - Ahmad Wijaya
   const applicant = await prisma.user.upsert({
     where: { email: "applicant@kai.co.id" },
     update: { passwordHash: DEMO_HASH },
@@ -79,7 +99,7 @@ async function main() {
   });
   console.log("✅ Applicant:", applicant.email);
 
-  // Second Applicant
+  // Applicant User - Siti Nurhaliza
   const applicant2 = await prisma.user.upsert({
     where: { email: "siti@kai.co.id" },
     update: { passwordHash: DEMO_HASH },
@@ -109,6 +129,37 @@ async function main() {
     include: { applicant: true },
   });
   console.log("✅ Applicant:", applicant2.email);
+
+  // Applicant User - Test Pelamar
+  const applicant3 = await prisma.user.upsert({
+    where: { email: "pelamar@test.com" },
+    update: { passwordHash: DEMO_HASH },
+    create: {
+      email: "pelamar@test.com",
+      passwordHash: DEMO_HASH,
+      role: "APPLICANT",
+      emailVerified: true,
+      applicant: {
+        create: {
+          nik: "3201234567890125",
+          fullName: "Test Pelamar",
+          phone: "081234567892",
+          dateOfBirth: new Date("1997-08-10"),
+          placeOfBirth: "Surabaya",
+          gender: "MALE",
+          address: "Jl. Test No. 99",
+          city: "Surabaya",
+          postalCode: "60111",
+          height: 175,
+          weight: 70,
+          education: "D3",
+          university: null,
+        },
+      },
+    },
+    include: { applicant: true },
+  });
+  console.log("✅ Applicant:", applicant3.email);
 
   // ========== JOB POSTINGS ==========
 
@@ -324,7 +375,7 @@ async function main() {
     { category: "TECHNICAL", stem: "Apa fungsi dari \"Bogie\" pada kereta api?", optionA: "Menggerakkan kereta", optionB: "Menyangga dan menopang gerbong", optionC: "Menghentikan kereta", optionD: "Menghubungkan gerbong", correctAnswer: "B", difficulty: "MEDIUM" },
     { category: "TECHNICAL", stem: "AC pada kereta api singkatan dari...", optionA: "Air Conditioner", optionB: "Automatic Control", optionC: "Alternating Current", optionD: "Air Compressor", correctAnswer: "A", difficulty: "EASY" },
     { category: "TECHNICAL", stem: "Kereta api diesel memiliki komponen utama berupa...", optionA: "Mesin bensin", optionB: "Mesin diesel elektrik", optionC: "Mesin uap", optionD: "Mesin turbo", correctAnswer: "B", difficulty: "HARD" },
-    { category: "TECHNICAL", stem: "Siginal kereta api berfungsi untuk...", optionA: "Menghias stasiun", optionB: "Mengatur dan menjaga keselamatan perjalanan", optionC: "Memberi peringatan suara", optionD: "Menghitung penumpang", correctAnswer: "B", difficulty: "EASY" },
+    { category: "TECHNICAL", stem: "Sinyal kereta api berfungsi untuk...", optionA: "Menghias stasiun", optionB: "Mengatur dan menjaga keselamatan perjalanan", optionC: "Memberi peringatan suara", optionD: "Menghitung penumpang", correctAnswer: "B", difficulty: "EASY" },
     { category: "TECHNICAL", stem: "Rel kereta api diletakkan di atas...", optionA: "Tanah langsung", optionB: "Bantalan dan ballast", optionC: "Karet", optionD: "Besi hollow", correctAnswer: "B", difficulty: "MEDIUM" },
     { category: "TECHNICAL", stem: "Apa kepanjangan dari KAI?", optionA: "Kereta Api Indonesia", optionB: "KAI Services", optionC: "Komersial Angle Indonesia", optionD: "Koneksi Angkutan Intermoda", correctAnswer: "A", difficulty: "EASY" },
     { category: "TECHNICAL", stem: "PT Reska Multi Usaha merupakan anak perusahaan dari...", optionA: "PT MRT Jakarta", optionB: "PT KAI (Kereta Api Indonesia)", optionC: "PT Garuda Indonesia", optionD: "PT Transportasi Jakarta", correctAnswer: "B", difficulty: "EASY" },
@@ -343,10 +394,10 @@ async function main() {
     { category: "APTITUDE", stem: "Jika 4 pekerja dapat menyelesaikan pekerjaan dalam 6 hari, berapa hari jika 8 pekerja?", optionA: "2 hari", optionB: "3 hari", optionC: "4 hari", optionD: "12 hari", correctAnswer: "B", difficulty: "MEDIUM" },
 
     // FACILITY - 5 questions
-    { category: "FACILITY", stem: "Area вокзал yang digunakan untuk menunggu kereta disebut...", optionA: "Peron", optionB: "Hall", optionC: "Kantin", optionD: "Ruang tunggu VIP", correctAnswer: "A", difficulty: "EASY" },
+    { category: "FACILITY", stem: "Area stasiun yang digunakan untuk menunggu kereta disebut...", optionA: "Peron", optionB: "Hall", optionC: "Kantin", optionD: "Ruang tunggu VIP", correctAnswer: "A", difficulty: "EASY" },
     { category: "FACILITY", stem: "Fasilitas untuk penumpang disabilitas di stasiun meliputi...", optionA: "Hanya lift", optionB: "Lift, ramp, dan guiding block", optionC: "Hanya ramp", optionD: "Tidak ada fasilitas khusus", correctAnswer: "B", difficulty: "EASY" },
     { category: "FACILITY", stem: "Toilet di kereta api harus dalam kondisi...", optionA: "Bebas digunakan kapan saja", optionB: "Bersih dan berfungsi dengan baik", optionC: "Dikunci setiap saat", optionD: "Tidak perlu perawatan", correctAnswer: "B", difficulty: "EASY" },
-    { category: "FACILITY", stem: "Sistem informasi di stasiun yang menampilkan jadwal kereta называется...", optionA: "Papan informasi", optionB: "Tiket elektronik", optionC: "Loker bagasi", optionD: "Ruang menyusui", correctAnswer: "A", difficulty: "EASY" },
+    { category: "FACILITY", stem: "Sistem informasi di stasiun yang menampilkan jadwal kereta disebut...", optionA: "Papan informasi", optionB: "Tiket elektronik", optionC: "Loker bagasi", optionD: "Ruang menyusui", correctAnswer: "A", difficulty: "EASY" },
     { category: "FACILITY", stem: "Kelistrikan di kereta api dihasilkan oleh...", optionA: "Baterai saja", optionB: "Generator atau rel listrik", optionC: "Panel surya", optionD: "Tidak ada listrik", correctAnswer: "B", difficulty: "MEDIUM" },
   ];
 
@@ -374,7 +425,7 @@ async function main() {
           notes: "Tes kompetensi selesai dengan nilai baik",
         },
       });
-      console.log("✅ Application 1 (Pramugara) created for applicant 1");
+      console.log("✅ Application 1 (Pramugara) created for Ahmad Wijaya");
     }
 
     if (itStaff) {
@@ -388,11 +439,11 @@ async function main() {
           notes: "Lulus tes, menunggu jadwal interview",
         },
       });
-      console.log("✅ Application 2 (IT Staff) created for applicant 1");
+      console.log("✅ Application 2 (IT Staff) created for Ahmad Wijaya");
     }
   }
 
-  // Create application for applicant 2
+  // Create application for Siti
   if (applicant2.applicant) {
     const steward = createdJobs.find(j => j.title.includes("Steward"));
     if (steward) {
@@ -406,15 +457,17 @@ async function main() {
           notes: "Lamaran baru",
         },
       });
-      console.log("✅ Application (Steward) created for applicant 2");
+      console.log("✅ Application (Steward) created for Siti Nurhaliza");
     }
   }
 
   console.log("\n🎉 Database seed completed!");
   console.log("\n📋 Test Credentials:");
-  console.log("   Admin:     admin@kai.co.id / demo123");
-  console.log("   Applicant: applicant@kai.co.id / demo123");
-  console.log("   Applicant2: siti@kai.co.id / demo123");
+  console.log("   Admin:      admin@kai.co.id / demo123");
+  console.log("   Admin 2:   wubisonodhanu888@gmail.com / demo123");
+  console.log("   Pelamar 1: applicant@kai.co.id / demo123");
+  console.log("   Pelamar 2: siti@kai.co.id / demo123");
+  console.log("   Pelamar 3: pelamar@test.com / demo123");
 }
 
 main()

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -15,6 +15,7 @@ import {
   GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui";
+import { getAllUsers, getAllApplications, getJobById, type User as UserType } from "@/lib/local-db";
 
 const getStatusConfig = (status: string) => {
   switch (status) {
@@ -45,26 +46,45 @@ export default function ApplicantsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [divisionFilter, setDivisionFilter] = useState("all");
-  const [applicants, setApplicants] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchApplicants();
-  }, []);
+  // Get applicants from local database
+  const applicants = useMemo(() => {
+    const users = getAllUsers();
+    const applications = getAllApplications();
 
-  const fetchApplicants = async () => {
-    try {
-      const res = await fetch("/api/admin/applicants");
-      if (res.ok) {
-        const data = await res.json();
-        setApplicants(data);
+    // Filter only APPLICANT users
+    const applicantUsers = users.filter(u => u.role === "APPLICANT");
+
+    // Combine user data with application data
+    return applicantUsers.map((user: UserType) => {
+      const userApps = applications.filter(a => a.applicantId === user.id);
+      const latestApp = userApps[0];
+      let jobTitle = "-";
+      let division = "-";
+
+      if (latestApp) {
+        const job = getJobById(latestApp.jobPostingId);
+        if (job) {
+          jobTitle = job.title;
+          division = job.division;
+        }
       }
-    } catch (err) {
-      console.error("Failed to fetch applicants:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+
+      return {
+        id: user.id,
+        name: user.fullName || user.email.split("@")[0],
+        email: user.email,
+        nik: user.nik || "-",
+        phone: user.phone || "-",
+        education: user.education || "-",
+        position: jobTitle,
+        division: division,
+        status: latestApp?.status || "PENDING",
+        appliedDate: latestApp?.createdAt || user.createdAt,
+        score: null,
+      };
+    });
+  }, []);
 
   const filteredApplicants = applicants.filter((app) => {
     const matchSearch =
@@ -74,18 +94,6 @@ export default function ApplicantsPage() {
     const matchDivision = divisionFilter === "all" || app.division === divisionFilter;
     return matchSearch && matchStatus && matchDivision;
   });
-
-  if (loading) {
-    return (
-      <div style={{ fontFamily: "Inter, system-ui, sans-serif", minHeight: "100vh", background: "#f8f9fa", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ textAlign: "center" }}>
-          <div style={{ width: "40px", height: "40px", border: "4px solid #e5e5e5", borderTopColor: "#FF5E00", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
-          <p style={{ color: "#666" }}>Memuat data pelamar...</p>
-        </div>
-        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-      </div>
-    );
-  }
 
   return (
     <div style={{ fontFamily: "Inter, system-ui, -apple-system, sans-serif", minHeight: "100vh", background: "#f8f9fa", color: "#111111", margin: 0, padding: 0 }}>

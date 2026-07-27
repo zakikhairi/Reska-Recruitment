@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
-import { createHash } from "crypto";
 
-function hashPassword(password: string): string {
-  return createHash("sha256").update(password).digest("hex");
+function simpleHash(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return "demo_" + Math.abs(hash).toString(16);
 }
 
 export async function POST(request: NextRequest) {
@@ -74,8 +79,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Hash new password
-    const passwordHash = hashPassword(newPassword);
+    // Hash new password using the same method as login/register
+    const passwordHash = simpleHash(newPassword);
 
     // Update password in database
     await prisma.user.update({

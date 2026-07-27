@@ -23,39 +23,32 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-// Stats data
 const stats = [
-  { label: "Total Pelamar", value: "1,247", change: "+12%", trend: "up", icon: Users, color: "#00205B" },
-  { label: "Tes Diselesaikan", value: "892", change: "+8%", trend: "up", icon: ClipboardCheck, color: "#16a34a" },
-  { label: "Passing Rate", value: "72%", change: "-3%", trend: "down", icon: TrendingUp, color: "#f59e0b" },
-  { label: "Lowongan Aktif", value: "6", change: "+2", trend: "up", icon: Briefcase, color: "#8b5cf6" },
+  { label: "Total Pelamar", value: "0", change: "+0%", trend: "up", icon: Users, color: "#00205B" },
+  { label: "Tes Diselesaikan", value: "0", change: "+0%", trend: "up", icon: ClipboardCheck, color: "#16a34a" },
+  { label: "Passing Rate", value: "0%", change: "+0%", trend: "up", icon: TrendingUp, color: "#f59e0b" },
+  { label: "Lowongan Aktif", value: "3", change: "+0", trend: "up", icon: Briefcase, color: "#8b5cf6" },
 ];
 
 const monthlyTrend = [
-  { month: "Jan", pelamar: 120, lulus: 85 },
-  { month: "Feb", pelamar: 145, lulus: 102 },
-  { month: "Mar", pelamar: 168, lulus: 120 },
-  { month: "Apr", pelamar: 195, lulus: 142 },
-  { month: "Mei", pelamar: 210, lulus: 155 },
-  { month: "Jun", pelamar: 225, lulus: 168 },
-  { month: "Jul", pelamar: 184, lulus: 120 },
+  { month: "Jan", pelamar: 0, lulus: 0 },
+  { month: "Feb", pelamar: 0, lulus: 0 },
+  { month: "Mar", pelamar: 0, lulus: 0 },
+  { month: "Apr", pelamar: 0, lulus: 0 },
+  { month: "Mei", pelamar: 0, lulus: 0 },
+  { month: "Jun", pelamar: 0, lulus: 0 },
+  { month: "Jul", pelamar: 0, lulus: 0 },
 ];
 
 const statusDistribution = [
-  { name: "Pending", value: 145, color: "#F59E0B" },
-  { name: "Dalam Tes", value: 89, color: "#8B5CF6" },
-  { name: "Interview", value: 56, color: "#3B82F6" },
-  { name: "Ditolak", value: 198, color: "#EF4444" },
-  { name: "Diterima", value: 404, color: "#10B981" },
+  { name: "Pending", value: 0, color: "#F59E0B" },
+  { name: "Dalam Tes", value: 0, color: "#8B5CF6" },
+  { name: "Interview", value: 0, color: "#3B82F6" },
+  { name: "Ditolak", value: 0, color: "#EF4444" },
+  { name: "Diterima", value: 0, color: "#10B981" },
 ];
 
-const recentApplications = [
-  { id: "1", name: "Ahmad Wijaya", job: "Pramugara Kereta Api", division: "ON_TRAIN_SERVICE", appliedDate: "2026-07-20", status: "INTERVIEW", score: 85 },
-  { id: "2", name: "Siti Nurhaliza", job: "Staff IT Support", division: "IT_STAFF", appliedDate: "2026-07-19", status: "TEST_COMPLETED", score: 78 },
-  { id: "3", name: "Budi Santoso", job: "Teknisi Maintenance", division: "LOGISTICS", appliedDate: "2026-07-19", status: "TEST_COMPLETED", score: 92 },
-  { id: "4", name: "Rina Andayani", job: "Cleaning Service", division: "RES_CLEAN", appliedDate: "2026-07-18", status: "ADMIN_CHECK", score: null },
-  { id: "5", name: "Doni Prasetyo", job: "Staff Administrasi", division: "ADMIN", appliedDate: "2026-07-18", status: "PENDING", score: null },
-];
+const recentApplications: any[] = [];
 
 const getStatusConfig = (status: string) => {
   switch (status) {
@@ -195,7 +188,7 @@ export default function AdminDashboardPage() {
                           <td style={{ padding: "16px" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                               <div style={{ width: "40px", height: "40px", background: "linear-gradient(135deg, #00205B 0%, #003380 100%)", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", color: "#ffffff", fontSize: "13px", fontWeight: 700 }}>
-                                {app.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                                {app.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2)}
                               </div>
                               <div>
                                 <p style={{ fontSize: "14px", fontWeight: 600, color: "#111111" }}>{app.name}</p>
@@ -350,16 +343,15 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
-            {/* Top Divisi */}
-            <div style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-              <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#111111", marginBottom: "20px" }}>Top Divisi</h2>
+              {/* Top Divisi */}
+              <div style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+              <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#111111", marginBottom: "20px" }}>Lowongan Aktif</h2>
               <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                 {[
-                  { name: "On-Train Service", pelamar: 412, color: "#00205B" },
-                  { name: "ResClean", pelamar: 285, color: "#FF5E00" },
-                  { name: "IT Staff", pelamar: 156, color: "#8b5cf6" },
-                  { name: "Logistics", pelamar: 198, color: "#10B981" },
-                ].map((div, i) => (
+                  { name: "Pramugara Kereta Api", pelamar: 1, color: "#00205B" },
+                  { name: "Staff IT Support", pelamar: 1, color: "#FF5E00" },
+                  { name: "Staff Administrasi", pelamar: 1, color: "#8B5cf6" },
+                ].map((div: any, i: number) => (
                   <div key={i}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
                       <span style={{ fontSize: "14px", fontWeight: 500, color: "#111111" }}>{div.name}</span>

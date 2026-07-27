@@ -7,7 +7,7 @@ import { useAuthStore } from "@/stores/auth";
 
 export default function LoginPage() {
   const router = useRouter();
-  const setUser = useAuthStore((state) => state.setUser);
+  const login = useAuthStore((state) => state.login);
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,33 +19,26 @@ export default function LoginPage() {
     setError("");
 
     // Minimum loading display time for better UX
-    const minLoadingTime = new Promise(resolve => setTimeout(resolve, 1000));
+    const minLoadingTime = new Promise(resolve => setTimeout(resolve, 800));
 
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
+      const result = await login(email, password);
 
       // Wait for minimum time before proceeding
       await minLoadingTime;
 
-      if (!response.ok) {
-        setError(data.error || "Login gagal");
+      if (!result.success) {
+        setError(result.error || "Login gagal");
         setIsLoading(false);
         return;
       }
 
-      setUser(data.user);
+      // Get current user from store
+      const { user } = useAuthStore.getState();
 
-      if (data.user.role === "APPLICANT") {
+      if (user?.role === "APPLICANT") {
         router.push("/applicant/dashboard");
-      } else if (data.user.role === "HR_ADMIN" || data.user.role === "SUPER_ADMIN") {
+      } else if (user?.role === "HR_ADMIN" || user?.role === "SUPER_ADMIN") {
         router.push("/admin/dashboard");
       } else {
         router.push("/");
@@ -295,11 +288,11 @@ export default function LoginPage() {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888888" strokeWidth="2">
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              <span style={{ fontSize: "12px", color: "#888888", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Demo Login</span>
+              <span style={{ fontSize: "12px", color: "#888888", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Akun Demo</span>
             </div>
             <div style={{ fontSize: "14px", color: "#555555", lineHeight: 2 }}>
-              <div><span style={{ fontWeight: 600, color: "#333333", display: "inline-block", width: "70px" }}>Admin HR</span> admin@kai.co.id</div>
-              <div><span style={{ fontWeight: 600, color: "#333333", display: "inline-block", width: "70px" }}>Pelamar</span> applicant@kai.co.id</div>
+              <div><span style={{ fontWeight: 600, color: "#333333", display: "inline-block", width: "70px" }}>Admin HR</span> admin@admin.co.id</div>
+              <div><span style={{ fontWeight: 600, color: "#333333", display: "inline-block", width: "70px" }}>Pelamar</span> pelamar@test.com</div>
               <div><span style={{ fontWeight: 600, color: "#333333", display: "inline-block", width: "70px" }}>Password</span> demo123</div>
             </div>
           </div>
