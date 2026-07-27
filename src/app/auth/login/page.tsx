@@ -18,6 +18,9 @@ export default function LoginPage() {
     setIsLoading(true);
     setError("");
 
+    // Minimum loading display time for better UX
+    const minLoadingTime = new Promise(resolve => setTimeout(resolve, 1000));
+
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
@@ -28,6 +31,9 @@ export default function LoginPage() {
       });
 
       const data = await response.json();
+
+      // Wait for minimum time before proceeding
+      await minLoadingTime;
 
       if (!response.ok) {
         setError(data.error || "Login gagal");
@@ -45,6 +51,7 @@ export default function LoginPage() {
         router.push("/");
       }
     } catch (err) {
+      await minLoadingTime;
       setError("Terjadi kesalahan koneksi");
       setIsLoading(false);
     }
@@ -316,7 +323,26 @@ export default function LoginPage() {
         </div>
       </div>
 
+      {/* Loading Overlay */}
+      {isLoading && (
+        <div style={styles.loadingOverlay}>
+          <div style={styles.loadingSpinner}>
+            <div style={styles.outerSpinner} />
+            <div style={styles.innerSpinner} />
+          </div>
+          <p style={styles.loadingText}>Memuat...</p>
+        </div>
+      )}
+
       <style>{`
+        @keyframes spinClockwise {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        @keyframes spinCounterClockwise {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(-360deg); }
+        }
         @media (min-width: 1024px) {
           .left-panel { display: flex !important; }
           .mobile-logo { display: none !important; }
@@ -332,3 +358,52 @@ export default function LoginPage() {
     </div>
   );
 }
+
+const styles: Record<string, React.CSSProperties> = {
+  loadingOverlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: "rgba(255,255,255,0.95)",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 9999,
+  },
+  loadingSpinner: {
+    position: "relative",
+    width: "60px",
+    height: "60px",
+    marginBottom: "20px",
+  },
+  outerSpinner: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    border: "4px solid transparent",
+    borderTopColor: "#FF5E00",
+    borderRadius: "50%",
+    animation: "spinClockwise 1s linear infinite",
+  },
+  innerSpinner: {
+    position: "absolute",
+    top: "10px",
+    left: "10px",
+    width: "calc(100% - 20px)",
+    height: "calc(100% - 20px)",
+    border: "4px solid transparent",
+    borderTopColor: "#00205B",
+    borderRadius: "50%",
+    animation: "spinCounterClockwise 1.2s linear infinite",
+  },
+  loadingText: {
+    fontSize: "16px",
+    fontWeight: 600,
+    color: "#666666",
+  },
+};

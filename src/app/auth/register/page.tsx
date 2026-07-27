@@ -4,7 +4,7 @@ import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-function RegisterForm() {
+function RegisterForm({ onLoadingChange }: { onLoadingChange: (loading: boolean) => void }) {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -17,6 +17,11 @@ function RegisterForm() {
     nik: "",
     phone: ""
   });
+
+  // Update parent when loading changes
+  if (isLoading !== onLoadingChange) {
+    onLoadingChange(isLoading);
+  }
 
   const handleNext = () => {
     setError("");
@@ -47,6 +52,9 @@ function RegisterForm() {
     setIsLoading(true);
     setError("");
 
+    // Minimum loading display time for better UX
+    const minLoadingTime = new Promise(resolve => setTimeout(resolve, 1000));
+
     try {
       const response = await fetch("/api/auth/register", {
         method: "POST",
@@ -64,6 +72,7 @@ function RegisterForm() {
       const data = await response.json();
 
       if (!response.ok) {
+        await minLoadingTime;
         setError(data.error || "Registrasi gagal");
         setIsLoading(false);
         return;
@@ -80,6 +89,9 @@ function RegisterForm() {
       });
 
       const loginData = await loginResponse.json();
+
+      // Wait for minimum time
+      await minLoadingTime;
 
       if (loginResponse.ok && loginData.user) {
         if (typeof window !== "undefined") {
@@ -98,6 +110,7 @@ function RegisterForm() {
         router.push("/auth/login?registered=true");
       }
     } catch (err) {
+      await minLoadingTime;
       setError("Terjadi kesalahan koneksi");
       setIsLoading(false);
     }
@@ -282,6 +295,8 @@ function RegisterForm() {
 }
 
 export default function RegisterPage() {
+  const [isFormLoading, setIsFormLoading] = useState(false);
+
   return (
     <div style={{ fontFamily: "Inter, system-ui, -apple-system, sans-serif", minHeight: "100vh", display: "flex" }}>
       {/* Left Panel - Branding */}
@@ -413,13 +428,32 @@ export default function RegisterPage() {
               Memuat...
             </div>
           }>
-            <RegisterForm />
+            <RegisterForm onLoadingChange={setIsFormLoading} />
           </Suspense>
 
         </div>
       </div>
 
+      {/* Loading Overlay */}
+      {isFormLoading && (
+        <div style={loadingStyles.overlay}>
+          <div style={loadingStyles.spinner}>
+            <div style={loadingStyles.outer} />
+            <div style={loadingStyles.inner} />
+          </div>
+          <p style={loadingStyles.text}>Memuat...</p>
+        </div>
+      )}
+
       <style>{`
+        @keyframes spinClockwise {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        @keyframes spinCounterClockwise {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(-360deg); }
+        }
         @media (min-width: 1024px) {
           .left-panel { display: flex !important; }
           .mobile-logo { display: none !important; }
@@ -435,3 +469,52 @@ export default function RegisterPage() {
     </div>
   );
 }
+
+const loadingStyles: Record<string, React.CSSProperties> = {
+  overlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: "rgba(255,255,255,0.95)",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 9999,
+  },
+  spinner: {
+    position: "relative",
+    width: "60px",
+    height: "60px",
+    marginBottom: "20px",
+  },
+  outer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    border: "4px solid transparent",
+    borderTopColor: "#FF5E00",
+    borderRadius: "50%",
+    animation: "spinClockwise 1s linear infinite",
+  },
+  inner: {
+    position: "absolute",
+    top: "10px",
+    left: "10px",
+    width: "calc(100% - 20px)",
+    height: "calc(100% - 20px)",
+    border: "4px solid transparent",
+    borderTopColor: "#00205B",
+    borderRadius: "50%",
+    animation: "spinCounterClockwise 1.2s linear infinite",
+  },
+  text: {
+    fontSize: "16px",
+    fontWeight: 600,
+    color: "#666666",
+  },
+};
