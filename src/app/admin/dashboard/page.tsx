@@ -21,9 +21,10 @@ import {
   Download,
   Plus,
   ChevronRight,
+  RefreshCw,
 } from "lucide-react";
 import { useJobsStore } from "@/stores/jobs";
-import { getAllApplications, getJobById, getAllUsers } from "@/lib/local-db";
+import { getAllApplications, getJobById, getAllUsers, updateApplicationStatus } from "@/lib/local-db";
 
 const stats: { label: string; value: string; change: string; trend: "up" | "down"; icon: any; color: string }[] = [];
 const statusDistribution: { name: string; value: number; color: string }[] = [];
@@ -61,7 +62,14 @@ export default function AdminDashboardPage() {
     if (_hasHydrated) {
       loadData();
     }
-  }, [_hasHydrated]);
+  }, [_hasHydrated, jobs.length]);
+
+  // Reload data periodically or on focus
+  useEffect(() => {
+    const handleFocus = () => loadData();
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
 
   const loadData = () => {
     try {
@@ -75,6 +83,7 @@ export default function AdminDashboardPage() {
         const user = users.find(u => u.id === app.applicantId);
         return {
           ...app,
+          applicationId: app.id,
           jobTitle: job?.title || "Lowongan",
           division: job?.division || "Umum",
           applicantName: user?.fullName || user?.email?.split("@")[0] || "Pelamar",
@@ -117,6 +126,12 @@ export default function AdminDashboardPage() {
     setIsLoading(false);
   };
 
+  const handleUpdateStatus = (applicationId: string, newStatus: string) => {
+    if (!applicationId) return;
+    updateApplicationStatus(applicationId, newStatus);
+    loadData(); // Refresh data
+  };
+
   // Filter and sort applications based on search query
   const filteredApplications = applications
     .filter((app) => {
@@ -154,6 +169,13 @@ export default function AdminDashboardPage() {
             <p style={{ fontSize: "15px", color: "#666666" }}>Ringkasan aktivitas rekrutmen • Juli 2026</p>
           </div>
           <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+            <button
+              onClick={loadData}
+              style={{ padding: "10px", background: "#f1f5f9", border: "none", borderRadius: "12px", cursor: "pointer" }}
+              title="Refresh"
+            >
+              <RefreshCw className="w-5 h-5" style={{ color: "#64748b" }} />
+            </button>
             <button style={{ position: "relative", padding: "10px", background: "#f1f5f9", border: "none", borderRadius: "12px", cursor: "pointer" }}>
               <Bell className="w-5 h-5" style={{ color: "#64748b" }} />
               <span style={{ position: "absolute", top: "8px", right: "8px", width: "8px", height: "8px", background: "#ef4444", borderRadius: "50%" }} />
@@ -271,11 +293,42 @@ export default function AdminDashboardPage() {
                               <span style={{ fontSize: "14px", color: "#888888" }}>-</span>
                             </td>
                             <td style={{ padding: "16px", textAlign: "right" }}>
-                              <Link href={`/admin/applicants/${app.id}`}>
-                                <button style={{ padding: "8px", background: "transparent", border: "none", borderRadius: "8px", cursor: "pointer", color: "#888888" }}>
-                                  <Eye className="w-4 h-4" />
-                                </button>
-                              </Link>
+                              <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
+                                {/* Quick Accept Button */}
+                                {app.status === "ADMIN_CHECK" && (
+                                  <button
+                                    onClick={() => handleUpdateStatus(app.applicationId, "TEST_SCHEDULED")}
+                                    style={{ padding: "8px", background: "#dcfce7", border: "none", borderRadius: "8px", cursor: "pointer", color: "#16a34a", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                    title="Terima ke Tahap Tes"
+                                  >
+                                    <CheckCircle2 className="w-4 h-4" />
+                                  </button>
+                                )}
+                                {app.status === "TEST_COMPLETED" && (
+                                  <button
+                                    onClick={() => handleUpdateStatus(app.applicationId, "INTERVIEW")}
+                                    style={{ padding: "8px", background: "#dcfce7", border: "none", borderRadius: "8px", cursor: "pointer", color: "#16a34a", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                    title="Terima ke Tahap Interview"
+                                  >
+                                    <CheckCircle2 className="w-4 h-4" />
+                                  </button>
+                                )}
+                                {/* Quick Reject Button */}
+                                {(app.status === "ADMIN_CHECK" || app.status === "TEST_SCHEDULED" || app.status === "TEST_COMPLETED" || app.status === "INTERVIEW") && (
+                                  <button
+                                    onClick={() => handleUpdateStatus(app.applicationId, "REJECTED")}
+                                    style={{ padding: "8px", background: "#fee2e2", border: "none", borderRadius: "8px", cursor: "pointer", color: "#dc2626", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                    title="Tolak"
+                                  >
+                                    <XCircle className="w-4 h-4" />
+                                  </button>
+                                )}
+                                <Link href={`/admin/applicants/${app.applicationId}`}>
+                                  <button style={{ padding: "8px", background: "transparent", border: "none", borderRadius: "8px", cursor: "pointer", color: "#888888" }}>
+                                    <Eye className="w-4 h-4" />
+                                  </button>
+                                </Link>
+                              </div>
                             </td>
                           </tr>
                         );

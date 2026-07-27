@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -13,42 +13,52 @@ import {
   AlertCircle,
   User,
   GraduationCap,
+  ChevronDown,
+  X,
+  Check,
+  Calendar,
+  MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui";
-import { getAllUsers, getAllApplications, getJobById, type User as UserType } from "@/lib/local-db";
+import { getAllUsers, getAllApplications, getJobById, updateApplicationStatus, type User as UserType, type Application } from "@/lib/local-db";
+import { useJobsStore } from "@/stores/jobs";
+
+const statusOptions = [
+  { value: "PENDING", label: "Menunggu", bg: "#fef3c7", text: "#d97706" },
+  { value: "ADMIN_CHECK", label: "Verifikasi Admin", bg: "#dbeafe", text: "#2563eb" },
+  { value: "TEST_SCHEDULED", label: "Jadwal Tes", bg: "#e0e7ff", text: "#4f46e5" },
+  { value: "INTERVIEW", label: "Interview", bg: "#fae8ff", text: "#c026d3" },
+  { value: "MCU", label: "Medical Check-Up", bg: "#d1fae5", text: "#059669" },
+  { value: "OFFERED", label: "Offering", bg: "#fef3c7", text: "#d97706" },
+  { value: "ACCEPTED", label: "Diterima", bg: "#dcfce7", text: "#16a34a" },
+  { value: "REJECTED", label: "Ditolak", bg: "#fee2e2", text: "#dc2626" },
+];
 
 const getStatusConfig = (status: string) => {
-  switch (status) {
-    case "PENDING":
-    case "ADMINISTRATION":
-      return { bg: "#fef3c7", text: "#d97706", label: "Menunggu", icon: <Clock className="w-4 h-4" /> };
-    case "ADMIN_CHECK":
-      return { bg: "#dbeafe", text: "#2563eb", label: "Verifikasi", icon: <AlertCircle className="w-4 h-4" /> };
-    case "TEST":
-    case "IN_TEST":
-      return { bg: "#fef3c7", text: "#d97706", label: "Sedang Tes", icon: <Clock className="w-4 h-4" /> };
-    case "TEST_COMPLETED":
-      return { bg: "#d1fae5", text: "#059669", label: "Tes Selesai", icon: <CheckCircle className="w-4 h-4" /> };
-    case "INTERVIEW":
-      return { bg: "#fae8ff", text: "#c026d3", label: "Interview", icon: <User className="w-4 h-4" /> };
-    case "MCU":
-      return { bg: "#e0e7ff", text: "#4f46e5", label: "MCU", icon: <User className="w-4 h-4" /> };
-    case "OFFERING":
-      return { bg: "#d1fae5", text: "#059669", label: "Offering", icon: <CheckCircle className="w-4 h-4" /> };
-    case "REJECTED":
-      return { bg: "#fee2e2", text: "#dc2626", label: "Ditolak", icon: <XCircle className="w-4 h-4" /> };
-    default:
-      return { bg: "#f1f5f9", text: "#64748b", label: status, icon: <Clock className="w-4 h-4" /> };
-  }
+  const found = statusOptions.find(s => s.value === status);
+  if (found) return found;
+  return { value: status, label: status, bg: "#f1f5f9", text: "#64748b" };
 };
 
 export default function ApplicantsPage() {
+  const { jobs } = useJobsStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [divisionFilter, setDivisionFilter] = useState("all");
+  const [selectedApplicant, setSelectedApplicant] = useState<any>(null);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState("");
+  const [applicants, setApplicants] = useState<any[]>([]);
+  const [mounted, setMounted] = useState(false);
 
-  // Get applicants from local database
-  const applicants = useMemo(() => {
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Load applicants
+  useEffect(() => {
+    if (!mounted) return;
+
     const users = getAllUsers();
     const applications = getAllApplications();
 
@@ -56,17 +66,19 @@ export default function ApplicantsPage() {
     const applicantUsers = users.filter(u => u.role === "APPLICANT");
 
     // Combine user data with application data
-    return applicantUsers.map((user: UserType) => {
+    const apps = applicantUsers.map((user: UserType) => {
       const userApps = applications.filter(a => a.applicantId === user.id);
       const latestApp = userApps[0];
       let jobTitle = "-";
       let division = "-";
+      let jobId = "";
 
       if (latestApp) {
         const job = getJobById(latestApp.jobPostingId);
         if (job) {
           jobTitle = job.title;
           division = job.division;
+          jobId = job.id;
         }
       }
 
@@ -79,12 +91,64 @@ export default function ApplicantsPage() {
         education: user.education || "-",
         position: jobTitle,
         division: division,
+        jobId: jobId,
+        applicationId: latestApp?.id,
         status: latestApp?.status || "PENDING",
         appliedDate: latestApp?.createdAt || user.createdAt,
         score: null,
       };
     });
-  }, []);
+
+    setApplicants(apps);
+  }, [mounted, jobs]);
+
+  const handleUpdateStatus = (appId: string, newStatus: string) => {
+    if (appId) {
+      updateApplicationStatus(appId, newStatus);
+
+      // Refresh the list
+      const users = getAllUsers();
+      const applications = getAllApplications();
+      const applicantUsers = users.filter(u => u.role === "APPLICANT");
+
+      const apps = applicantUsers.map((user: UserType) => {
+        const userApps = applications.filter(a => a.applicantId === user.id);
+        const latestApp = userApps[0];
+        let jobTitle = "-";
+        let division = "-";
+        let jobId = "";
+
+        if (latestApp) {
+          const job = getJobById(latestApp.jobPostingId);
+          if (job) {
+            jobTitle = job.title;
+            division = job.division;
+            jobId = job.id;
+          }
+        }
+
+        return {
+          id: user.id,
+          name: user.fullName || user.email.split("@")[0],
+          email: user.email,
+          nik: user.nik || "-",
+          phone: user.phone || "-",
+          education: user.education || "-",
+          position: jobTitle,
+          division: division,
+          jobId: jobId,
+          applicationId: latestApp?.id,
+          status: latestApp?.status || "PENDING",
+          appliedDate: latestApp?.createdAt || user.createdAt,
+          score: null,
+        };
+      });
+
+      setApplicants(apps);
+      setShowStatusModal(false);
+      setSelectedApplicant(null);
+    }
+  };
 
   const filteredApplicants = applicants.filter((app) => {
     const matchSearch =
@@ -94,6 +158,17 @@ export default function ApplicantsPage() {
     const matchDivision = divisionFilter === "all" || app.division === divisionFilter;
     return matchSearch && matchStatus && matchDivision;
   });
+
+  if (!mounted) {
+    return (
+      <div style={{ fontFamily: "Inter, sans-serif", minHeight: "100vh", background: "#f8f9fa", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ width: "40px", height: "40px", border: "4px solid #FF5E00", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
+          <p style={{ color: "#666" }}>Memuat...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ fontFamily: "Inter, system-ui, -apple-system, sans-serif", minHeight: "100vh", background: "#f8f9fa", color: "#111111", margin: 0, padding: 0 }}>
@@ -136,13 +211,9 @@ export default function ApplicantsPage() {
               style={{ padding: "12px 40px 12px 16px", border: "2px solid #eeeeee", borderRadius: "12px", fontSize: "14px", outline: "none", background: "#ffffff", cursor: "pointer", appearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", backgroundSize: "16px" }}
             >
               <option value="all">Semua Status</option>
-              <option value="ADMINISTRATION">Menunggu Administrasi</option>
-              <option value="TEST">Menunggu Tes</option>
-              <option value="TEST_COMPLETED">Tes Selesai</option>
-              <option value="INTERVIEW">Interview</option>
-              <option value="MCU">MCU</option>
-              <option value="OFFERING">Offering</option>
-              <option value="REJECTED">Ditolak</option>
+              {statusOptions.map(s => (
+                <option key={s.value} value={s.value}>{s.label}</option>
+              ))}
             </select>
 
             {/* Division Filter */}
@@ -170,7 +241,7 @@ export default function ApplicantsPage() {
               <path d="M16 3.13a4 4 0 010 7.75"/>
             </svg>
             <h2 style={{ fontSize: "24px", fontWeight: 700, color: "#111", marginBottom: "12px" }}>Belum Ada Pelamar</h2>
-            <p style={{ fontSize: "15px", color: "#666" }}>Belum ada pelamar yang terdaftar dalam sistem.</p>
+            <p style={{ fontSize: "15px", color: "#666" }}>Belum ada pelamar yang sesuai dengan filter.</p>
           </div>
         ) : (
           /* Applicants Table */
@@ -184,7 +255,6 @@ export default function ApplicantsPage() {
                     <th style={{ textAlign: "left", padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "#888888", textTransform: "uppercase", letterSpacing: "0.05em" }}>Pendidikan</th>
                     <th style={{ textAlign: "left", padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "#888888", textTransform: "uppercase", letterSpacing: "0.05em" }}>Tanggal</th>
                     <th style={{ textAlign: "left", padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "#888888", textTransform: "uppercase", letterSpacing: "0.05em" }}>Status</th>
-                    <th style={{ textAlign: "left", padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "#888888", textTransform: "uppercase", letterSpacing: "0.05em" }}>Skor</th>
                     <th style={{ textAlign: "center", padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "#888888", textTransform: "uppercase", letterSpacing: "0.05em" }}>Aksi</th>
                   </tr>
                 </thead>
@@ -221,31 +291,66 @@ export default function ApplicantsPage() {
                         </td>
                         <td style={{ padding: "16px 20px" }}>
                           <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "8px 14px", background: status.bg, color: status.text, borderRadius: "20px", fontSize: "12px", fontWeight: 700 }}>
-                            {status.icon}
                             {status.label}
                           </span>
                         </td>
-                        <td style={{ padding: "16px 20px" }}>
-                          {app.score !== null ? (
-                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                              <div style={{ width: "60px", height: "6px", background: "#f1f5f9", borderRadius: "4px", overflow: "hidden" }}>
-                                <div style={{ height: "100%", width: `${app.score}%`, background: app.score >= 70 ? "#16a34a" : "#ef4444", borderRadius: "4px" }} />
-                              </div>
-                              <span style={{ fontSize: "14px", fontWeight: 700, color: app.score >= 70 ? "#16a34a" : "#ef4444" }}>{app.score}%</span>
-                            </div>
-                          ) : (
-                            <span style={{ fontSize: "14px", color: "#888888" }}>-</span>
-                          )}
-                        </td>
                         <td style={{ padding: "16px 20px", textAlign: "center" }}>
                           <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
-                            <Link href={`/admin/applicants/${app.id}`}>
+                            {/* Quick Accept Button */}
+                            {app.status === "ADMIN_CHECK" && (
+                              <button
+                                onClick={() => handleUpdateStatus(app.applicationId, "TEST_SCHEDULED")}
+                                style={{ padding: "8px", background: "#dcfce7", border: "none", borderRadius: "8px", cursor: "pointer", color: "#16a34a", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                title="Terima ke Tahap Tes"
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                              </button>
+                            )}
+                            {app.status === "TEST_COMPLETED" && (
+                              <button
+                                onClick={() => handleUpdateStatus(app.applicationId, "INTERVIEW")}
+                                style={{ padding: "8px", background: "#dcfce7", border: "none", borderRadius: "8px", cursor: "pointer", color: "#16a34a", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                title="Terima ke Tahap Interview"
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                              </button>
+                            )}
+                            {app.status === "INTERVIEW" && (
+                              <button
+                                onClick={() => handleUpdateStatus(app.applicationId, "OFFERED")}
+                                style={{ padding: "8px", background: "#dcfce7", border: "none", borderRadius: "8px", cursor: "pointer", color: "#16a34a", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                title="Offering"
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                              </button>
+                            )}
+                            {/* Quick Reject Button */}
+                            {(app.status === "ADMIN_CHECK" || app.status === "TEST_SCHEDULED" || app.status === "INTERVIEW") && (
+                              <button
+                                onClick={() => handleUpdateStatus(app.applicationId, "REJECTED")}
+                                style={{ padding: "8px", background: "#fee2e2", border: "none", borderRadius: "8px", cursor: "pointer", color: "#dc2626", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                title="Tolak"
+                              >
+                                <XCircle className="w-4 h-4" />
+                              </button>
+                            )}
+                            {/* View Details */}
+                            <Link href={`/admin/applicants/${app.applicationId}`}>
                               <button style={{ padding: "8px", background: "#f0f4ff", border: "none", borderRadius: "8px", cursor: "pointer", color: "#00205B", display: "flex", alignItems: "center", justifyContent: "center" }}>
                                 <Eye className="w-4 h-4" />
                               </button>
                             </Link>
-                            <button style={{ padding: "8px", background: "#f0f4ff", border: "none", borderRadius: "8px", cursor: "pointer", color: "#00205B", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                              <FileText className="w-4 h-4" />
+                            {/* Change Status Button */}
+                            <button
+                              onClick={() => {
+                                setSelectedApplicant(app);
+                                setSelectedStatus(app.status);
+                                setShowStatusModal(true);
+                              }}
+                              style={{ padding: "8px", background: "#fef3c7", border: "none", borderRadius: "8px", cursor: "pointer", color: "#d97706", display: "flex", alignItems: "center", justifyContent: "center" }}
+                              title="Ubah Status"
+                            >
+                              <ChevronDown className="w-4 h-4" />
                             </button>
                           </div>
                         </td>
@@ -269,6 +374,61 @@ export default function ApplicantsPage() {
           </div>
         )}
       </div>
+
+      {/* Status Update Modal */}
+      {showStatusModal && selectedApplicant && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
+          <div style={{ background: "#ffffff", borderRadius: "20px", maxWidth: "500px", width: "100%", overflow: "hidden" }}>
+            {/* Header */}
+            <div style={{ padding: "24px 28px", borderBottom: "1px solid #eeeeee", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#111111", margin: 0 }}>Ubah Status Pelamar</h2>
+                <p style={{ fontSize: "14px", color: "#666666", margin: "4px 0 0" }}>{selectedApplicant.name}</p>
+              </div>
+              <button onClick={() => setShowStatusModal(false)} style={{ padding: "8px", background: "#f8f9fa", border: "none", borderRadius: "8px", cursor: "pointer" }}>
+                <X className="w-5 h-5" style={{ color: "#666666" }} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: "28px" }}>
+              <p style={{ fontSize: "14px", color: "#666666", marginBottom: "16px" }}>Pilih status baru untuk pelamar:</p>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {statusOptions.map((status) => (
+                  <button
+                    key={status.value}
+                    onClick={() => handleUpdateStatus(selectedApplicant.applicationId, status.value)}
+                    style={{
+                      padding: "16px 20px",
+                      border: selectedStatus === status.value ? `2px solid ${status.text}` : "2px solid #e5e5e5",
+                      borderRadius: "12px",
+                      background: selectedStatus === status.value ? status.bg : "#ffffff",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "12px",
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    <div style={{ width: "12px", height: "12px", borderRadius: "50%", background: status.text }} />
+                    <span style={{ flex: 1, textAlign: "left", fontSize: "14px", fontWeight: 600, color: "#111111" }}>{status.label}</span>
+                    {selectedStatus === status.value && <Check className="w-5 h-5" style={{ color: status.text }} />}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        button:hover { opacity: 0.9; }
+      `}</style>
     </div>
   );
 }

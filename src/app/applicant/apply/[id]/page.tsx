@@ -1,23 +1,58 @@
 "use client";
 
-import { useState, useMemo, use } from "react";
+import { useState, useMemo, use, useRef } from "react";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/auth";
 import { useJobsStore } from "@/stores/jobs";
 import { createApplication } from "@/lib/local-db";
+import { Upload, FileText, Check, X, Camera, CreditCard, BookOpen, File, AlertCircle } from "lucide-react";
 
 export default function ApplyJobPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: jobId } = use(params);
   const user = useAuthStore((state) => state.user);
-  const setUser = useAuthStore((state) => state.setUser);
   const { jobs } = useJobsStore();
 
+  const [step, setStep] = useState<"detail" | "documents" | "success">("detail");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, { name: string; url: string; size: number }>>({});
 
   // Get job from useJobsStore (same as admin uses)
   const job = useMemo(() => jobs.find(j => j.id === jobId), [jobId, jobs]);
+
+  // Document requirements
+  const requiredDocuments = [
+    { id: "pas_foto", name: "Pas Foto 3x4", icon: Camera, required: true, acceptedFormats: ".jpg,.jpeg,.png" },
+    { id: "ktp", name: "KTP (Kartu Tanda Penduduk)", icon: CreditCard, required: true, acceptedFormats: ".jpg,.jpeg,.png,.pdf" },
+    { id: "ijazah", name: "Ijazah Terakhir", icon: BookOpen, required: true, acceptedFormats: ".pdf" },
+    { id: "transkrip", name: "Transkrip Nilai", icon: FileText, required: false, acceptedFormats: ".pdf" },
+    { id: "cv", name: "Curriculum Vitae (CV)", icon: File, required: false, acceptedFormats: ".pdf,.doc,.docx" },
+    { id: "sertifikat", name: "Sertifikat (jika ada)", icon: FileText, required: false, acceptedFormats: ".pdf" },
+  ];
+
+  const handleFileUpload = (docId: string, file: File) => {
+    // Create fake URL for demo (in real app, this would upload to server)
+    const url = URL.createObjectURL(file);
+    setUploadedFiles(prev => ({
+      ...prev,
+      [docId]: {
+        name: file.name,
+        url: url,
+        size: file.size,
+      }
+    }));
+  };
+
+  const handleRemoveFile = (docId: string) => {
+    setUploadedFiles(prev => {
+      const newFiles = { ...prev };
+      if (newFiles[docId]?.url) {
+        URL.revokeObjectURL(newFiles[docId].url);
+      }
+      delete newFiles[docId];
+      return newFiles;
+    });
+  };
 
   const handleApply = async () => {
     if (!user?.id && !user?.applicantId) {
@@ -25,9 +60,18 @@ export default function ApplyJobPage({ params }: { params: Promise<{ id: string 
       return;
     }
 
-    // Check if job is active
     if (!job || job.status !== "ACTIVE") {
       setError("Lowongan tidak tersedia atau sudah ditutup");
+      return;
+    }
+
+    // Check required documents
+    const missingRequired = requiredDocuments
+      .filter(doc => doc.required && !uploadedFiles[doc.id])
+      .map(doc => doc.name);
+
+    if (missingRequired.length > 0) {
+      setError(`Dokumen wajib yang belum diupload: ${missingRequired.join(", ")}`);
       return;
     }
 
@@ -35,21 +79,33 @@ export default function ApplyJobPage({ params }: { params: Promise<{ id: string 
     setError("");
 
     try {
-      // Use user.id or applicantId as the applicant identifier
       const applicantId = user.applicantId || user.id;
 
       createApplication({
         applicantId: applicantId,
         jobPostingId: jobId
       });
-      setSuccess(true);
+
+      // Store uploaded documents info (in real app, would upload files to server)
+      if (typeof window !== "undefined") {
+        localStorage.setItem(`app-docs-${applicantId}-${jobId}`, JSON.stringify(uploadedFiles));
+      }
+
+      setStep("success");
     } catch (err: any) {
       setError(err.message || "Gagal melamar");
     }
     setIsSubmitting(false);
   };
 
-  if (success) {
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+  };
+
+  // Success Step
+  if (step === "success") {
     return (
       <div style={styles.container}>
         <div style={styles.card}>
@@ -67,7 +123,7 @@ export default function ApplyJobPage({ params }: { params: Promise<{ id: string 
 
           <div style={styles.infoBox}>
             <p style={styles.infoText}>
-              Tim HR akan meninjau lamaran Anda dalam 1-3 hari kerja.
+              Tim HR akan meninjau lamaran dan dokumen Anda dalam 1-3 hari kerja.
             </p>
           </div>
 
@@ -84,6 +140,7 @@ export default function ApplyJobPage({ params }: { params: Promise<{ id: string 
     );
   }
 
+  // Job not found
   if (!job) {
     return (
       <div style={styles.container}>
@@ -103,6 +160,145 @@ export default function ApplyJobPage({ params }: { params: Promise<{ id: string 
     );
   }
 
+  // Document Upload Step
+  if (step === "documents") {
+    return (
+      <div style={styles.container}>
+        <header style={styles.header}>
+          <div style={styles.headerContent}>
+            <button onClick={() => setStep("detail")} style={styles.backButton}>
+              ← Kembali
+            </button>
+          </div>
+        </header>
+
+        <div style={styles.content}>
+          <div style={styles.card}>
+            <div style={styles.stepHeader}>
+              <h1 style={styles.stepTitle}>Upload Dokumen Pendukung</h1>
+              <p style={styles.stepSubtitle}>Lengkapi dokumen yang diperlukan untuk melamar posisi {job.title}</p>
+            </div>
+
+            <div style={styles.stepIndicator}>
+              <div style={styles.stepItem}>
+                <div style={styles.stepCircle}>1</div>
+                <span>Detail Lowongan</span>
+              </div>
+              <div style={styles.stepLine} />
+              <div style={{...styles.stepItem, ...styles.stepItemActive}}>
+                <div style={styles.stepCircleActive}>2</div>
+                <span style={{color: "#FF5E00"}}>Upload Dokumen</span>
+              </div>
+              <div style={styles.stepLine} />
+              <div style={styles.stepItem}>
+                <div style={styles.stepCircle}>3</div>
+                <span>Konfirmasi</span>
+              </div>
+            </div>
+
+            {error && (
+              <div style={styles.errorAlert}>
+                <AlertCircle size={18} />
+                {error}
+              </div>
+            )}
+
+            <div style={styles.documentList}>
+              {requiredDocuments.map((doc) => {
+                const Icon = doc.icon;
+                const uploaded = uploadedFiles[doc.id];
+                const isUploaded = !!uploaded;
+
+                return (
+                  <div key={doc.id} style={styles.documentItem}>
+                    <div style={styles.documentHeader}>
+                      <div style={styles.documentInfo}>
+                        <div style={styles.documentIcon}>
+                          <Icon size={20} />
+                        </div>
+                        <div>
+                          <h3 style={styles.documentName}>
+                            {doc.name}
+                            {doc.required && <span style={styles.required}>*</span>}
+                          </h3>
+                          <p style={styles.documentFormats}>
+                            Format: {doc.acceptedFormats}
+                          </p>
+                        </div>
+                      </div>
+                      {isUploaded && (
+                        <div style={styles.uploadedBadge}>
+                          <Check size={14} />
+                          Uploaded
+                        </div>
+                      )}
+                    </div>
+
+                    {isUploaded ? (
+                      <div style={styles.uploadedFile}>
+                        <FileText size={20} style={{ color: "#16a34a" }} />
+                        <div style={styles.uploadedFileInfo}>
+                          <p style={styles.uploadedFileName}>{uploaded.name}</p>
+                          <p style={styles.uploadedFileSize}>{formatFileSize(uploaded.size)}</p>
+                        </div>
+                        <button
+                          onClick={() => handleRemoveFile(doc.id)}
+                          style={styles.removeButton}
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+                    ) : (
+                      <label style={styles.uploadBox}>
+                        <input
+                          type="file"
+                          accept={doc.acceptedFormats}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleFileUpload(doc.id, file);
+                          }}
+                          style={{ display: "none" }}
+                        />
+                        <Upload size={24} style={{ color: "#FF5E00" }} />
+                        <p style={styles.uploadText}>Klik untuk upload</p>
+                        <p style={styles.uploadHint}>atau drag & drop file di sini</p>
+                      </label>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={styles.action}>
+              <button
+                onClick={handleApply}
+                disabled={isSubmitting}
+                style={{
+                  ...styles.applyButton,
+                  opacity: isSubmitting ? 0.7 : 1,
+                  cursor: isSubmitting ? "not-allowed" : "pointer"
+                }}
+              >
+                {isSubmitting ? (
+                  <>
+                    <div style={styles.spinner} />
+                    Mengirim...
+                  </>
+                ) : (
+                  <>
+                    <Check size={20} />
+                    Kirim Lamaran
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Detail Step
   return (
     <div style={styles.container}>
       <header style={styles.header}>
@@ -115,6 +311,23 @@ export default function ApplyJobPage({ params }: { params: Promise<{ id: string 
 
       <div style={styles.content}>
         <div style={styles.card}>
+          <div style={styles.stepIndicator}>
+            <div style={{...styles.stepItem, ...styles.stepItemActive}}>
+              <div style={styles.stepCircleActive}>1</div>
+              <span style={{color: "#FF5E00"}}>Detail Lowongan</span>
+            </div>
+            <div style={styles.stepLine} />
+            <div style={styles.stepItem}>
+              <div style={styles.stepCircle}>2</div>
+              <span>Upload Dokumen</span>
+            </div>
+            <div style={styles.stepLine} />
+            <div style={styles.stepItem}>
+              <div style={styles.stepCircle}>3</div>
+              <span>Konfirmasi</span>
+            </div>
+          </div>
+
           <div style={styles.jobHeader}>
             <div style={styles.badge}>{job.division.replace(/_/g, " ")}</div>
             <h1 style={styles.jobTitle}>{job.title}</h1>
@@ -140,19 +353,23 @@ export default function ApplyJobPage({ params }: { params: Promise<{ id: string 
             </ul>
           </div>
 
-          {error && <div style={styles.errorAlert}>{error}</div>}
+          <div style={styles.importantBox}>
+            <h4 style={styles.importantTitle}>📋 Dokumen yang Diperlukan</h4>
+            <ul style={styles.importantList}>
+              <li>Pas Foto 3x4</li>
+              <li>KTP (Kartu Tanda Penduduk)</li>
+              <li>Ijazah Terakhir</li>
+              <li>Transkrip Nilai</li>
+              <li>CV (Curriculum Vitae)</li>
+            </ul>
+          </div>
 
           <div style={styles.action}>
             <button
-              onClick={handleApply}
-              disabled={isSubmitting}
-              style={{
-                ...styles.applyButton,
-                opacity: isSubmitting ? 0.7 : 1,
-                cursor: isSubmitting ? "not-allowed" : "pointer"
-              }}
+              onClick={() => setStep("documents")}
+              style={styles.applyButton}
             >
-              {isSubmitting ? "Mengirim..." : "Lamar Sekarang"}
+              Upload Dokumen
             </button>
           </div>
         </div>
@@ -166,6 +383,7 @@ const styles: Record<string, React.CSSProperties> = {
   header: { background: "#fff", borderBottom: "1px solid #eee", padding: "20px 32px" },
   headerContent: { maxWidth: "800px", margin: "0 auto" },
   backLink: { color: "#666", textDecoration: "none", fontSize: "14px", fontWeight: 500 },
+  backButton: { background: "none", border: "none", color: "#666", fontSize: "14px", fontWeight: 500, cursor: "pointer" },
   content: { maxWidth: "800px", margin: "0 auto", padding: "32px" },
   card: { background: "#fff", borderRadius: "20px", padding: "32px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" },
   errorCard: { display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "60px", background: "#fff", borderRadius: "20px", margin: "80px auto", maxWidth: "500px" },
@@ -189,7 +407,39 @@ const styles: Record<string, React.CSSProperties> = {
   sectionTitle: { fontSize: "16px", fontWeight: 700, marginBottom: "12px", color: "#111" },
   sectionText: { fontSize: "14px", color: "#666", lineHeight: 1.7, margin: 0 },
   requirementsList: { fontSize: "14px", color: "#666", lineHeight: 2, margin: 0, paddingLeft: "20px" },
-  errorAlert: { padding: "14px 16px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "12px", color: "#dc2626", fontSize: "14px", marginBottom: "24px" },
+  importantBox: { background: "#fff7f0", borderRadius: "12px", padding: "20px", marginBottom: "24px" },
+  importantTitle: { fontSize: "14px", fontWeight: 700, color: "#FF5E00", marginBottom: "12px" },
+  importantList: { fontSize: "14px", color: "#666", lineHeight: 2, margin: 0, paddingLeft: "20px" },
+  errorAlert: { display: "flex", alignItems: "center", gap: "10px", padding: "14px 16px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "12px", color: "#dc2626", fontSize: "14px", marginBottom: "24px" },
   action: { marginTop: "24px" },
-  applyButton: { width: "100%", height: "56px", background: "linear-gradient(135deg, #FF5E00, #ff7a2f)", color: "#fff", border: "none", borderRadius: "12px", fontSize: "16px", fontWeight: 700 },
+  applyButton: { width: "100%", height: "56px", background: "linear-gradient(135deg, #FF5E00, #ff7a2f)", color: "#fff", border: "none", borderRadius: "12px", fontSize: "16px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "10px" },
+  spinner: { width: "20px", height: "20px", border: "3px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 1s linear infinite" },
+  // Step indicator
+  stepHeader: { marginBottom: "24px" },
+  stepTitle: { fontSize: "20px", fontWeight: 700, color: "#111", marginBottom: "8px" },
+  stepSubtitle: { fontSize: "14px", color: "#666" },
+  stepIndicator: { display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "32px", padding: "20px 0" },
+  stepItem: { display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" },
+  stepItemActive: {},
+  stepCircle: { width: "32px", height: "32px", borderRadius: "50%", background: "#e5e5e5", color: "#666", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", fontWeight: 700 },
+  stepCircleActive: { background: "#FF5E00", color: "#fff" },
+  stepLine: { width: "60px", height: "2px", background: "#e5e5e5", margin: "0 8px" },
+  // Document list
+  documentList: { display: "flex", flexDirection: "column", gap: "16px", marginBottom: "24px" },
+  documentItem: { border: "2px solid #e5e5e5", borderRadius: "12px", padding: "16px" },
+  documentHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" },
+  documentInfo: { display: "flex", gap: "12px" },
+  documentIcon: { width: "40px", height: "40px", background: "#f0f4ff", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", color: "#00205B" },
+  documentName: { fontSize: "14px", fontWeight: 600, color: "#111", marginBottom: "4px" },
+  required: { color: "#EF4444", marginLeft: "4px" },
+  documentFormats: { fontSize: "12px", color: "#888" },
+  uploadedBadge: { display: "flex", alignItems: "center", gap: "4px", padding: "4px 10px", background: "#dcfce7", color: "#16a34a", borderRadius: "20px", fontSize: "12px", fontWeight: 600 },
+  uploadedFile: { display: "flex", alignItems: "center", gap: "12px", padding: "12px", background: "#f8f9fa", borderRadius: "8px" },
+  uploadedFileInfo: { flex: 1 },
+  uploadedFileName: { fontSize: "14px", fontWeight: 500, color: "#111" },
+  uploadedFileSize: { fontSize: "12px", color: "#888" },
+  removeButton: { padding: "6px", background: "none", border: "none", cursor: "pointer", color: "#888", borderRadius: "4px" },
+  uploadBox: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "24px", border: "2px dashed #e5e5e5", borderRadius: "8px", cursor: "pointer", transition: "all 0.2s" },
+  uploadText: { fontSize: "14px", fontWeight: 600, color: "#FF5E00", marginTop: "8px" },
+  uploadHint: { fontSize: "12px", color: "#888", marginTop: "4px" },
 };
