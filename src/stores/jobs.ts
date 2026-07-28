@@ -8,6 +8,9 @@ export interface Job {
   jobType: string;
   location: string;
   minEducation: string;
+  minHeight?: number;
+  minAge?: number;
+  maxAge?: number;
   salaryMin: string;
   salaryMax: string;
   description: string;
