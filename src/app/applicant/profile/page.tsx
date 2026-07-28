@@ -4,6 +4,24 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/auth";
 
+// Strict validation - only allow specific characters per field
+const sanitizeInput = (value: string, fieldName: string): string => {
+  switch (fieldName) {
+    case "nik":
+      return value.replace(/\D/g, "").slice(0, 16);
+    case "phone":
+      return value.replace(/\D/g, "").slice(0, 12);
+    case "city":
+      return value.replace(/[^a-zA-Z\s]/g, "").slice(0, 50);
+    case "postalCode":
+      return value.replace(/\D/g, "").slice(0, 5);
+    case "height":
+      return value.replace(/\D/g, "").slice(0, 3);
+    default:
+      return value;
+  }
+};
+
 export default function ProfilePage() {
   const { user } = useAuthStore();
   const [isEditing, setIsEditing] = useState(false);
@@ -23,10 +41,12 @@ export default function ProfilePage() {
     weight: "",
     university: "",
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isLoaded, setIsLoaded] = useState(false);
 
   // Load existing profile data
   useEffect(() => {
-    if (user?.applicantId) {
+    if (user?.applicantId && !isLoaded) {
       fetch(`/api/applicant/profile?userId=${user.id}`)
         .then(res => res.json())
         .then(data => {
@@ -48,29 +68,96 @@ export default function ProfilePage() {
               weight: a.weight?.toString() || "",
               university: a.university || "",
             });
+            setIsLoaded(true);
           }
         })
         .catch(console.error);
     }
-  }, [user]);
+  }, [user, isLoaded]);
+
+  // Enforce validation rules whenever form changes
+  useEffect(() => {
+    setForm(prev => ({
+      ...prev,
+      nik: sanitizeInput(prev.nik, "nik"),
+      phone: sanitizeInput(prev.phone, "phone"),
+      city: sanitizeInput(prev.city, "city"),
+      postalCode: sanitizeInput(prev.postalCode, "postalCode"),
+      height: sanitizeInput(prev.height, "height"),
+    }));
+  }, [form.nik, form.phone, form.city, form.postalCode, form.height]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+
+    // Apply sanitization for validated fields
+    const sanitized = sanitizeInput(value, name);
+
+    setForm(prev => ({ ...prev, [name]: sanitized }));
+
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: "" }));
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!form.nik || form.nik.length !== 16) {
+      newErrors.nik = "NIK harus 16 digit";
+    }
+
+    if (!form.phone || form.phone.length !== 12) {
+      newErrors.phone = "Nomor HP harus 12 digit";
+    }
+
+    if (form.city && !/^[a-zA-Z\s]+$/.test(form.city)) {
+      newErrors.city = "Kota hanya bisa diisi huruf";
+    }
+
+    if (!form.postalCode || form.postalCode.length !== 5) {
+      newErrors.postalCode = "Kode Pos harus 5 digit";
+    }
+
+    if (!form.height || form.height.length !== 3) {
+      newErrors.height = "Tinggi harus 3 digit (cm)";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSave = async () => {
+    // Final sanitization before save
+    const sanitizedForm = {
+      ...form,
+      nik: sanitizeInput(form.nik, "nik"),
+      phone: sanitizeInput(form.phone, "phone"),
+      city: sanitizeInput(form.city, "city"),
+      postalCode: sanitizeInput(form.postalCode, "postalCode"),
+      height: sanitizeInput(form.height, "height"),
+    };
+
+    // Validate
+    if (!validateForm()) {
+      alert("Mohon lengkapi data dengan benar");
+      return;
+    }
+
     try {
       const response = await fetch("/api/applicant/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: user?.id,
-          ...form,
+          ...sanitizedForm,
         }),
       });
 
       if (response.ok) {
         setIsEditing(false);
+        setErrors({});
         alert("Profil berhasil diperbarui!");
       } else {
         alert("Gagal menyimpan profil");
@@ -78,6 +165,13 @@ export default function ProfilePage() {
     } catch (err) {
       alert("Terjadi kesalahan koneksi");
     }
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    setErrors({});
+    // Re-fetch data to reset
+    setIsLoaded(false);
   };
 
   return (
@@ -95,7 +189,7 @@ export default function ProfilePage() {
             </button>
           ) : (
             <div style={{ display: "flex", gap: "12px" }}>
-              <button onClick={() => setIsEditing(false)} style={{ padding: "12px 24px", background: "#fff", color: "#666", border: "2px solid #e5e5e5", borderRadius: "10px", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}>
+              <button onClick={handleCancel} style={{ padding: "12px 24px", background: "#fff", color: "#666", border: "2px solid #e5e5e5", borderRadius: "10px", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}>
                 Batal
               </button>
               <button onClick={handleSave} style={{ padding: "12px 24px", background: "#16a34a", color: "#fff", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 700, cursor: "pointer" }}>
@@ -121,26 +215,205 @@ export default function ProfilePage() {
 
           {/* Form Fields */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
-            {[
-              { label: "Nama Lengkap", name: "fullName", type: "text", value: form.fullName },
-              { label: "NIK", name: "nik", type: "text", value: form.nik },
-              { label: "Nomor HP", name: "phone", type: "tel", value: form.phone },
-              { label: "Email", name: "email", type: "email", value: form.email },
-              { label: "Kota", name: "city", type: "text", value: form.city },
-              { label: "Kode Pos", name: "postalCode", type: "text", value: form.postalCode },
-              { label: "Tinggi (cm)", name: "height", type: "number", value: form.height },
-              { label: "Berat (kg)", name: "weight", type: "number", value: form.weight },
-            ].map((field) => (
-              <div key={field.name}>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>{field.label}</label>
-                {isEditing ? (
-                  <input type={field.type} name={field.name} value={field.value} onChange={handleChange}
-                    style={{ width: "100%", height: "44px", padding: "0 14px", border: "2px solid #e5e5e5", borderRadius: "10px", fontSize: "14px", outline: "none" }} />
-                ) : (
-                  <p style={{ fontSize: "15px", color: "#111" }}>{field.value || "-"}</p>
-                )}
-              </div>
-            ))}
+            {/* NIK */}
+            <div>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
+                NIK <span style={{ color: "#FF5E00" }}>*</span>
+              </label>
+              {isEditing ? (
+                <>
+                  <input
+                    type="text"
+                    name="nik"
+                    value={form.nik}
+                    onChange={handleChange}
+                    placeholder="16 digit angka"
+                    autoComplete="off"
+                    style={{
+                      width: "100%",
+                      height: "44px",
+                      padding: "0 14px",
+                      border: `2px solid ${errors.nik ? "#ef4444" : "#e5e5e5"}`,
+                      borderRadius: "10px",
+                      fontSize: "14px",
+                      outline: "none",
+                      imeMode: "disabled"
+                    }}
+                  />
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: "4px" }}>
+                    <p style={{ fontSize: "11px", color: errors.nik ? "#ef4444" : "#888" }}>
+                      {errors.nik || `${form.nik.length}/16 digit`}
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <p style={{ fontSize: "15px", color: "#111" }}>{form.nik || "-"}</p>
+              )}
+            </div>
+
+            {/* Nomor HP */}
+            <div>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
+                Nomor HP <span style={{ color: "#FF5E00" }}>*</span>
+              </label>
+              {isEditing ? (
+                <>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={form.phone}
+                    onChange={handleChange}
+                    placeholder="12 digit angka"
+                    autoComplete="off"
+                    style={{
+                      width: "100%",
+                      height: "44px",
+                      padding: "0 14px",
+                      border: `2px solid ${errors.phone ? "#ef4444" : "#e5e5e5"}`,
+                      borderRadius: "10px",
+                      fontSize: "14px",
+                      outline: "none"
+                    }}
+                  />
+                  <p style={{ fontSize: "11px", color: errors.phone ? "#ef4444" : "#888", marginTop: "4px" }}>
+                    {errors.phone || `${form.phone.length}/12 digit`}
+                  </p>
+                </>
+              ) : (
+                <p style={{ fontSize: "15px", color: "#111" }}>{form.phone || "-"}</p>
+              )}
+            </div>
+
+            {/* Kota */}
+            <div>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
+                Kota <span style={{ color: "#FF5E00" }}>*</span>
+              </label>
+              {isEditing ? (
+                <>
+                  <input
+                    type="text"
+                    name="city"
+                    value={form.city}
+                    onChange={handleChange}
+                    placeholder="Nama kota (huruf saja)"
+                    autoComplete="off"
+                    style={{
+                      width: "100%",
+                      height: "44px",
+                      padding: "0 14px",
+                      border: `2px solid ${errors.city ? "#ef4444" : "#e5e5e5"}`,
+                      borderRadius: "10px",
+                      fontSize: "14px",
+                      outline: "none"
+                    }}
+                  />
+                  {errors.city && <p style={{ fontSize: "11px", color: "#ef4444", marginTop: "4px" }}>{errors.city}</p>}
+                </>
+              ) : (
+                <p style={{ fontSize: "15px", color: "#111" }}>{form.city || "-"}</p>
+              )}
+            </div>
+
+            {/* Kode Pos */}
+            <div>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
+                Kode Pos <span style={{ color: "#FF5E00" }}>*</span>
+              </label>
+              {isEditing ? (
+                <>
+                  <input
+                    type="text"
+                    name="postalCode"
+                    value={form.postalCode}
+                    onChange={handleChange}
+                    placeholder="5 digit angka"
+                    autoComplete="off"
+                    style={{
+                      width: "100%",
+                      height: "44px",
+                      padding: "0 14px",
+                      border: `2px solid ${errors.postalCode ? "#ef4444" : "#e5e5e5"}`,
+                      borderRadius: "10px",
+                      fontSize: "14px",
+                      outline: "none"
+                    }}
+                  />
+                  <p style={{ fontSize: "11px", color: errors.postalCode ? "#ef4444" : "#888", marginTop: "4px" }}>
+                    {errors.postalCode || `${form.postalCode.length}/5 digit`}
+                  </p>
+                </>
+              ) : (
+                <p style={{ fontSize: "15px", color: "#111" }}>{form.postalCode || "-"}</p>
+              )}
+            </div>
+
+            {/* Tinggi */}
+            <div>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
+                Tinggi (cm) <span style={{ color: "#FF5E00" }}>*</span>
+              </label>
+              {isEditing ? (
+                <>
+                  <input
+                    type="text"
+                    name="height"
+                    value={form.height}
+                    onChange={handleChange}
+                    placeholder="3 digit (contoh: 170)"
+                    autoComplete="off"
+                    style={{
+                      width: "100%",
+                      height: "44px",
+                      padding: "0 14px",
+                      border: `2px solid ${errors.height ? "#ef4444" : "#e5e5e5"}`,
+                      borderRadius: "10px",
+                      fontSize: "14px",
+                      outline: "none"
+                    }}
+                  />
+                  <p style={{ fontSize: "11px", color: errors.height ? "#ef4444" : "#888", marginTop: "4px" }}>
+                    {errors.height || `${form.height.length}/3 digit`}
+                  </p>
+                </>
+              ) : (
+                <p style={{ fontSize: "15px", color: "#111" }}>{form.height ? `${form.height} cm` : "-"}</p>
+              )}
+            </div>
+
+            {/* Berat */}
+            <div>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>Berat (kg)</label>
+              {isEditing ? (
+                <input
+                  type="number"
+                  name="weight"
+                  value={form.weight}
+                  onChange={handleChange}
+                  placeholder="Berat badan (kg)"
+                  style={{ width: "100%", height: "44px", padding: "0 14px", border: "2px solid #e5e5e5", borderRadius: "10px", fontSize: "14px", outline: "none" }}
+                />
+              ) : (
+                <p style={{ fontSize: "15px", color: "#111" }}>{form.weight ? `${form.weight} kg` : "-"}</p>
+              )}
+            </div>
+
+            {/* Nama Lengkap */}
+            <div>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>Nama Lengkap</label>
+              {isEditing ? (
+                <input type="text" name="fullName" value={form.fullName} onChange={handleChange}
+                  style={{ width: "100%", height: "44px", padding: "0 14px", border: "2px solid #e5e5e5", borderRadius: "10px", fontSize: "14px", outline: "none" }} />
+              ) : (
+                <p style={{ fontSize: "15px", color: "#111" }}>{form.fullName || "-"}</p>
+              )}
+            </div>
+
+            {/* Email */}
+            <div>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>Email</label>
+              <p style={{ fontSize: "15px", color: "#111" }}>{form.email}</p>
+            </div>
 
             <div>
               <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>Jenis Kelamin</label>
