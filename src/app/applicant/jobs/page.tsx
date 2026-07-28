@@ -113,8 +113,8 @@ export default function JobsPage() {
                   <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "12px", flexWrap: "wrap", gap: "12px" }}>
                     <div>
                       <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px", flexWrap: "wrap" }}>
-                        {job.isNew && (
-                          <span style={{ padding: "4px 12px", background: "#dcfce7", color: "#16a34a", borderRadius: "20px", fontSize: "12px", fontWeight: 700 }}>Baru</span>
+                        {new Date(job.deadline).getTime() > Date.now() && (
+                          <span style={{ padding: "4px 12px", background: "#dcfce7", color: "#16a34a", borderRadius: "20px", fontSize: "12px", fontWeight: 700 }}>Aktif</span>
                         )}
                         <span style={{ padding: "4px 12px", background: "#f0f4ff", color: "#00205B", borderRadius: "20px", fontSize: "12px", fontWeight: 600 }}>{divisionNames[job.division] || job.division}</span>
                       </div>
@@ -140,7 +140,7 @@ export default function JobsPage() {
                     </span>
                     <span style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "14px", color: "#666666" }}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888888" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                      {job.applicantCount || 0} pelamar
+                      {job.applicants || 0} pelamar
                     </span>
                   </div>
 
