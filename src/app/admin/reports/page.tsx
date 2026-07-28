@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -106,7 +106,6 @@ export default function ReportsPage() {
   const exportMenuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
@@ -117,7 +116,6 @@ export default function ReportsPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Get date range label
   const getDateRangeLabel = () => {
     switch (dateRange) {
       case "week": return "7 Hari Terakhir";
@@ -128,7 +126,6 @@ export default function ReportsPage() {
     }
   };
 
-  // Prepare report data
   const reportData = {
     title: "Laporan Rekrutmen KAI Services",
     dateRange: getDateRangeLabel(),
@@ -143,7 +140,6 @@ export default function ReportsPage() {
     monthlyData: monthlyData,
   };
 
-  // Export handlers
   const handleExportPDF = () => {
     exportToPDF(reportData);
     setShowExportMenu(false);
@@ -161,7 +157,6 @@ export default function ReportsPage() {
 
   return (
     <div style={{ fontFamily: "Inter, system-ui, -apple-system, sans-serif", minHeight: "100vh", background: "#f8f9fa", color: "#111111", margin: 0, padding: 0 }}>
-      {/* Header */}
       <header style={{ background: "#ffffff", borderBottom: "1px solid #eeeeee", padding: "20px 32px", marginBottom: "32px" }}>
         <div style={{ maxWidth: "1400px", margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
           <div>
@@ -172,7 +167,7 @@ export default function ReportsPage() {
             <select
               value={dateRange}
               onChange={(e) => setDateRange(e.target.value)}
-              style={{ padding: "10px 40px 10px 16px", border: "2px solid #eeeeee", borderRadius: "9999px", fontSize: "14px", outline: "none", background: "#ffffff", cursor: "pointer", appearance: "none", color: "#374151", fontWeight: 500, backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", backgroundSize: "16px" }}
+              style={{ padding: "10px 40px 10px 16px", border: "2px solid #eeeeee", borderRadius: "9999px", fontSize: "14px", outline: "none", background: "#ffffff", cursor: "pointer", appearance: "none", color: "#374151", fontWeight: 500, backgroundImage: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"), backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", backgroundSize: "16px" }}
             >
               <option value="week">7 Hari Terakhir</option>
               <option value="month">Bulan Ini</option>
@@ -180,7 +175,6 @@ export default function ReportsPage() {
               <option value="year">Tahun Ini</option>
             </select>
 
-            {/* Export Dropdown */}
             <div style={{ position: "relative" }}>
               <button
                 onClick={() => setShowExportMenu(!showExportMenu)}
@@ -191,102 +185,21 @@ export default function ReportsPage() {
                 <ChevronDown className={`w-4 h-4 transition-transform ${showExportMenu ? "rotate-180" : ""}`} />
               </button>
 
-              {/* Dropdown Menu */}
               {showExportMenu && (
-                <div style={{
-                  position: "absolute",
-                  top: "100%",
-                  right: 0,
-                  marginTop: "8px",
-                  background: "#ffffff",
-                  borderRadius: "12px",
-                  boxShadow: "0 10px 40px rgba(0,0,0,0.15)",
-                  border: "1px solid #eeeeee",
-                  minWidth: "200px",
-                  zIndex: 100,
-                  overflow: "hidden",
-                }}>
+                <div style={{ position: "absolute", top: "100%", right: 0, marginTop: "8px", background: "#ffffff", borderRadius: "12px", boxShadow: "0 10px 40px rgba(0,0,0,0.15)", border: "1px solid #eeeeee", minWidth: "200px", zIndex: 100, overflow: "hidden" }}>
                   <div style={{ padding: "8px 0" }}>
-                    <p style={{ fontSize: "11px", fontWeight: 600, color: "#888888", textTransform: "uppercase", letterSpacing: "0.05em", padding: "8px 16px 4px" }}>
-                      Export Laporan
-                    </p>
-
-                    {/* PDF Option */}
-                    <button
-                      onClick={handleExportPDF}
-                      style={{
-                        width: "100%",
-                        padding: "12px 16px",
-                        background: "transparent",
-                        border: "none",
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "12px",
-                        transition: "background 0.2s",
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = "#fef3c7"}
-                      onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
-                    >
-                      <div style={{ width: "36px", height: "36px", background: "#dc2626", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <FileText className="w-5 h-5" style={{ color: "#ffffff" }} />
-                      </div>
-                      <div style={{ textAlign: "left" }}>
-                        <p style={{ fontSize: "14px", fontWeight: 600, color: "#111111", margin: 0 }}>Export PDF</p>
-                        <p style={{ fontSize: "12px", color: "#888888", margin: 0 }}>Unduh laporan sebagai PDF</p>
-                      </div>
+                    <p style={{ fontSize: "11px", fontWeight: 600, color: "#888888", textTransform: "uppercase", letterSpacing: "0.05em", padding: "8px 16px 4px" }}>Export Laporan</p>
+                    <button onClick={handleExportPDF} style={{ width: "100%", padding: "12px 16px", background: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "12px" }}>
+                      <div style={{ width: "36px", height: "36px", background: "#dc2626", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center" }}><FileText className="w-5 h-5" style={{ color: "#ffffff" }} /></div>
+                      <div style={{ textAlign: "left" }}><p style={{ fontSize: "14px", fontWeight: 600, color: "#111111", margin: 0 }}>Export PDF</p><p style={{ fontSize: "12px", color: "#888888", margin: 0 }}>Unduh laporan sebagai PDF</p></div>
                     </button>
-
-                    {/* Excel Option */}
-                    <button
-                      onClick={handleExportExcel}
-                      style={{
-                        width: "100%",
-                        padding: "12px 16px",
-                        background: "transparent",
-                        border: "none",
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "12px",
-                        transition: "background 0.2s",
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = "#dcfce7"}
-                      onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
-                    >
-                      <div style={{ width: "36px", height: "36px", background: "#16a34a", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <FileSpreadsheet className="w-5 h-5" style={{ color: "#ffffff" }} />
-                      </div>
-                      <div style={{ textAlign: "left" }}>
-                        <p style={{ fontSize: "14px", fontWeight: 600, color: "#111111", margin: 0 }}>Export Excel</p>
-                        <p style={{ fontSize: "12px", color: "#888888", margin: 0 }}>Unduh laporan sebagai XLSX</p>
-                      </div>
+                    <button onClick={handleExportExcel} style={{ width: "100%", padding: "12px 16px", background: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "12px" }}>
+                      <div style={{ width: "36px", height: "36px", background: "#16a34a", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center" }}><FileSpreadsheet className="w-5 h-5" style={{ color: "#ffffff" }} /></div>
+                      <div style={{ textAlign: "left" }}><p style={{ fontSize: "14px", fontWeight: 600, color: "#111111", margin: 0 }}>Export Excel</p><p style={{ fontSize: "12px", color: "#888888", margin: 0 }}>Unduh laporan sebagai XLSX</p></div>
                     </button>
-
-                    {/* CSV Option */}
-                    <button
-                      onClick={handleExportCSV}
-                      style={{
-                        width: "100%",
-                        padding: "12px 16px",
-                        background: "transparent",
-                        border: "none",
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "12px",
-                        transition: "background 0.2s",
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = "#dbeafe"}
-                      onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
-                    >
-                      <div style={{ width: "36px", height: "36px", background: "#2563eb", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <FileCode className="w-5 h-5" style={{ color: "#ffffff" }} />
-                      </div>
-                      <div style={{ textAlign: "left" }}>
-                        <p style={{ fontSize: "14px", fontWeight: 600, color: "#111111", margin: 0 }}>Export CSV</p>
-                        <p style={{ fontSize: "12px", color: "#888888", margin: 0 }}>Unduh laporan sebagai CSV</p>
-                      </div>
+                    <button onClick={handleExportCSV} style={{ width: "100%", padding: "12px 16px", background: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "12px" }}>
+                      <div style={{ width: "36px", height: "36px", background: "#2563eb", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center" }}><FileCode className="w-5 h-5" style={{ color: "#ffffff" }} /></div>
+                      <div style={{ textAlign: "left" }}><p style={{ fontSize: "14px", fontWeight: 600, color: "#111111", margin: 0 }}>Export CSV</p><p style={{ fontSize: "12px", color: "#888888", margin: 0 }}>Unduh laporan sebagai CSV</p></div>
                     </button>
                   </div>
                 </div>
@@ -297,11 +210,10 @@ export default function ReportsPage() {
       </header>
 
       <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "0 32px 60px" }}>
-        {/* Quick Stats */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px", marginBottom: "24px" }}>
           {quickStats.map((stat, i) => (
             <div key={i} style={{ background: "#ffffff", borderRadius: "16px", padding: "20px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: "16px" }}>
-              <div style={{ width: "48px", height: "48px", background: `${stat.color}15`, borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <div style={{ width: "48px", height: "48px", background: stat.color + "15", borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <stat.icon className="w-6 h-6" style={{ color: stat.color }} />
               </div>
               <div>
@@ -312,12 +224,11 @@ export default function ReportsPage() {
           ))}
         </div>
 
-        {/* Main Stats */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "20px", marginBottom: "24px" }}>
           {stats.map((stat, i) => (
             <div key={i} style={{ background: "#ffffff", borderRadius: "16px", padding: "24px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                <div style={{ width: "48px", height: "48px", background: `${stat.color}15`, borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ width: "48px", height: "48px", background: ${stat.color}15, borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <stat.icon className="w-6 h-6" style={{ color: stat.color }} />
                 </div>
                 <div>
@@ -326,11 +237,7 @@ export default function ReportsPage() {
                 </div>
               </div>
               <div style={{ marginTop: "16px", paddingTop: "16px", borderTop: "1px solid #eeeeee", display: "flex", alignItems: "center", gap: "6px" }}>
-                {stat.trend === "up" ? (
-                  <ArrowUpRight className="w-4 h-4" style={{ color: "#10B981" }} />
-                ) : (
-                  <ArrowDownRight className="w-4 h-4" style={{ color: "#EF4444" }} />
-                )}
+                {stat.trend === "up" ? <ArrowUpRight className="w-4 h-4" style={{ color: "#10B981" }} /> : <ArrowDownRight className="w-4 h-4" style={{ color: "#EF4444" }} />}
                 <span style={{ fontSize: "13px", fontWeight: 600, color: stat.trend === "up" ? "#10B981" : "#EF4444" }}>{stat.change}</span>
                 <span style={{ fontSize: "13px", color: "#888888" }}>vs last period</span>
               </div>
@@ -338,37 +245,17 @@ export default function ReportsPage() {
           ))}
         </div>
 
-        {/* Charts Row 1 */}
         <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: "24px", marginBottom: "24px" }}>
-          {/* Monthly Trend Chart */}
           <div style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-              <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#111111" }}>Tren Pelamar Bulanan</h3>
-              <div style={{ display: "flex", gap: "16px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                  <div style={{ width: "12px", height: "12px", background: "#00205B", borderRadius: "3px" }} />
-                  <span style={{ fontSize: "12px", color: "#666666" }}>Total</span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                  <div style={{ width: "12px", height: "12px", background: "#10B981", borderRadius: "3px" }} />
-                  <span style={{ fontSize: "12px", color: "#666666" }}>Lulus</span>
-                </div>
-              </div>
-            </div>
-            {/* Bar Chart */}
+            <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#111111", marginBottom: "24px" }}>Tren Pelamar Bulanan</h3>
             <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", height: "180px", paddingBottom: "40px", position: "relative" }}>
               <div style={{ position: "absolute", left: 0, top: 0, bottom: "40px", display: "flex", flexDirection: "column", justifyContent: "space-between", fontSize: "11px", color: "#888888" }}>
-                <span>250</span>
-                <span>200</span>
-                <span>150</span>
-                <span>100</span>
-                <span>50</span>
-                <span>0</span>
+                <span>250</span><span>200</span><span>150</span><span>100</span><span>50</span><span>0</span>
               </div>
               <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-around", flex: 1, height: "100%", paddingLeft: "40px" }}>
                 {monthlyData.map((data, i) => (
                   <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
-                    <div style={{ display: "flex", gap: "4px", alignItems: "flex-end", height: `${(data.applicants / 250) * 140}px` }}>
+                    <div style={{ display: "flex", gap: "4px", alignItems: "flex-end", height: ${(data.applicants / 250) * 140}px }}>
                       <div style={{ width: "20px", background: "linear-gradient(180deg, #00205B 0%, #003380 100%)", borderRadius: "4px 4px 0 0" }} />
                       <div style={{ width: "20px", background: "linear-gradient(180deg, #10B981 0%, #059669 100%)", borderRadius: "4px 4px 0 0" }} />
                     </div>
@@ -379,10 +266,8 @@ export default function ReportsPage() {
             </div>
           </div>
 
-          {/* Test Type Distribution - Pie Chart Style */}
           <div style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
             <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#111111", marginBottom: "24px" }}>Distribusi Jenis Tes</h3>
-            {/* Simple Pie Representation */}
             <div style={{ display: "flex", gap: "24px", alignItems: "center" }}>
               <div style={{ position: "relative", width: "140px", height: "140px" }}>
                 <svg viewBox="0 0 100 100" style={{ transform: "rotate(-90deg)" }}>
@@ -400,9 +285,7 @@ export default function ReportsPage() {
                 {testTypeStats.map((test, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                     <div style={{ width: "12px", height: "12px", background: test.color, borderRadius: "3px" }} />
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: "13px", fontWeight: 600, color: "#111111" }}>{test.name}</p>
-                    </div>
+                    <div style={{ flex: 1 }}><p style={{ fontSize: "13px", fontWeight: 600, color: "#111111" }}>{test.name}</p></div>
                     <p style={{ fontSize: "13px", fontWeight: 700, color: "#111111" }}>{test.participants}</p>
                   </div>
                 ))}
@@ -411,36 +294,20 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        {/* Candidate Funnel */}
         <div style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", marginBottom: "24px" }}>
           <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#111111", marginBottom: "24px" }}>Funnel Kandidat</h3>
           <div style={{ display: "flex", alignItems: "center", gap: "0", justifyContent: "space-between" }}>
             {candidateFunnel.map((stage, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", flex: 1 }}>
                 <div style={{ textAlign: "center", flex: 1 }}>
-                  <div style={{
-                    height: "48px",
-                    background: stage.color,
-                    borderRadius: "8px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginBottom: "8px",
-                    transition: "transform 0.2s",
-                    cursor: "pointer"
-                  }}
-                    onMouseEnter={(e) => { e.currentTarget.style.transform = "scaleY(1.1)"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.transform = "scaleY(1)"; }}
-                  >
+                  <div style={{ height: "48px", background: stage.color, borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "8px" }}>
                     <span style={{ color: "#ffffff", fontSize: "16px", fontWeight: 700 }}>{stage.count}</span>
                   </div>
                   <p style={{ fontSize: "13px", fontWeight: 600, color: "#111111" }}>{stage.stage}</p>
                 </div>
                 {i < candidateFunnel.length - 1 && (
                   <div style={{ width: "40px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="2">
-                      <path d="M9 18l6-6-6-6" />
-                    </svg>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="2"><path d="M9 18l6-6-6-6" /></svg>
                   </div>
                 )}
               </div>
@@ -448,38 +315,26 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        {/* Charts Row 2 */}
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "24px", marginBottom: "24px" }}>
-          {/* Division Stats Table */}
           <div style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
             <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#111111", marginBottom: "24px" }}>Statistik per Divisi</h3>
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ borderBottom: "2px solid #eeeeee" }}>
-                    <th style={{ textAlign: "left", padding: "12px 16px", fontSize: "12px", fontWeight: 600, color: "#888888", textTransform: "uppercase" }}>Divisi</th>
-                    <th style={{ textAlign: "center", padding: "12px 16px", fontSize: "12px", fontWeight: 600, color: "#888888", textTransform: "uppercase" }}>Total</th>
-                    <th style={{ textAlign: "center", padding: "12px 16px", fontSize: "12px", fontWeight: 600, color: "#888888", textTransform: "uppercase" }}>Lulus</th>
-                    <th style={{ textAlign: "center", padding: "12px 16px", fontSize: "12px", fontWeight: 600, color: "#888888", textTransform: "uppercase" }}>Passing</th>
-                    <th style={{ textAlign: "center", padding: "12px 16px", fontSize: "12px", fontWeight: 600, color: "#888888", textTransform: "uppercase" }}>Progress</th>
-                  </tr>
-                </thead>
+                <thead><tr style={{ borderBottom: "2px solid #eeeeee" }}>
+                  <th style={{ textAlign: "left", padding: "12px 16px", fontSize: "12px", fontWeight: 600, color: "#888888", textTransform: "uppercase" }}>Divisi</th>
+                  <th style={{ textAlign: "center", padding: "12px 16px", fontSize: "12px", fontWeight: 600, color: "#888888", textTransform: "uppercase" }}>Total</th>
+                  <th style={{ textAlign: "center", padding: "12px 16px", fontSize: "12px", fontWeight: 600, color: "#888888", textTransform: "uppercase" }}>Lulus</th>
+                  <th style={{ textAlign: "center", padding: "12px 16px", fontSize: "12px", fontWeight: 600, color: "#888888", textTransform: "uppercase" }}>Passing</th>
+                  <th style={{ textAlign: "center", padding: "12px 16px", fontSize: "12px", fontWeight: 600, color: "#888888", textTransform: "uppercase" }}>Progress</th>
+                </tr></thead>
                 <tbody>
                   {divisionStats.map((div, i) => (
                     <tr key={i} style={{ borderBottom: "1px solid #f1f5f9" }}>
                       <td style={{ padding: "16px", fontSize: "14px", fontWeight: 600, color: "#111111" }}>{div.division}</td>
                       <td style={{ padding: "16px", fontSize: "14px", color: "#666666", textAlign: "center" }}>{div.total}</td>
                       <td style={{ padding: "16px", fontSize: "14px", color: "#666666", textAlign: "center" }}>{div.passed}</td>
-                      <td style={{ padding: "16px", textAlign: "center" }}>
-                        <span style={{ padding: "6px 12px", background: div.rate >= 70 ? "#dcfce7" : "#fef3c7", color: div.rate >= 70 ? "#16a34a" : "#d97706", borderRadius: "9999px", fontSize: "13px", fontWeight: 600 }}>
-                          {div.rate}%
-                        </span>
-                      </td>
-                      <td style={{ padding: "16px", textAlign: "center" }}>
-                        <div style={{ width: "100px", height: "8px", background: "#f1f5f9", borderRadius: "4px", margin: "auto", overflow: "hidden" }}>
-                          <div style={{ height: "100%", width: `${div.rate}%`, background: div.rate >= 70 ? "#10B981" : "#F59E0B", borderRadius: "4px" }} />
-                        </div>
-                      </td>
+                      <td style={{ padding: "16px", textAlign: "center" }}><span style={{ padding: "6px 12px", background: div.rate >= 70 ? "#dcfce7" : "#fef3c7", color: div.rate >= 70 ? "#16a34a" : "#d97706", borderRadius: "9999px", fontSize: "13px", fontWeight: 600 }}>{div.rate}%</span></td>
+                      <td style={{ padding: "16px", textAlign: "center" }}><div style={{ width: "100px", height: "8px", background: "#f1f5f9", borderRadius: "4px", margin: "auto", overflow: "hidden" }}><div style={{ height: "100%", width: ${div.rate}%, background: div.rate >= 70 ? "#10B981" : "#F59E0B", borderRadius: "4px" }} /></div></td>
                     </tr>
                   ))}
                 </tbody>
@@ -487,7 +342,6 @@ export default function ReportsPage() {
             </div>
           </div>
 
-          {/* Category Analysis */}
           <div style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
             <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#111111", marginBottom: "24px" }}>Analisis per Kategori</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
@@ -498,7 +352,7 @@ export default function ReportsPage() {
                     <span style={{ fontSize: "14px", fontWeight: 700, color: "#111111" }}>{cat.avgScore}%</span>
                   </div>
                   <div style={{ height: "10px", background: "#f1f5f9", borderRadius: "5px", overflow: "hidden" }}>
-                    <div style={{ height: "100%", width: `${cat.avgScore}%`, background: i === 0 ? "#00205B" : i === 1 ? "#FF5E00" : i === 2 ? "#10B981" : "#8B5CF6", borderRadius: "5px", transition: "width 0.5s ease" }} />
+                    <div style={{ height: "100%", width: ${cat.avgScore}%, background: i === 0 ? "#00205B" : i === 1 ? "#FF5E00" : i === 2 ? "#10B981" : "#8B5CF6", borderRadius: "5px", transition: "width 0.5s ease" }} />
                   </div>
                   <p style={{ fontSize: "12px", color: "#888888", marginTop: "4px" }}>Pass rate: {cat.passRate}%</p>
                 </div>
@@ -507,57 +361,43 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        {/* Top Candidates */}
         <div style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", marginBottom: "24px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
             <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#111111" }}>Kandidat Terbaik</h3>
-            <button style={{ padding: "8px 16px", background: "#f8f9fa", color: "#00205B", border: "none", borderRadius: "9999px", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
-              Lihat Semua
-            </button>
+            <button style={{ padding: "8px 16px", background: "#f8f9fa", color: "#00205B", border: "none", borderRadius: "9999px", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>Lihat Semua</button>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "16px" }}>
             {topCandidates.map((candidate, i) => (
-              <div key={i} style={{ padding: "20px", background: "#f8f9fa", borderRadius: "12px", textAlign: "center", transition: "all 0.2s", cursor: "pointer" }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = "#f0f4ff"; e.currentTarget.style.transform = "translateY(-4px)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = "#f8f9fa"; e.currentTarget.style.transform = "translateY(0)"; }}>
-                <div style={{ width: "56px", height: "56px", background: `hsl(${i * 60}, 70%, 60%)`, borderRadius: "50%", margin: "0 auto 12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div key={i} style={{ padding: "20px", background: "#f8f9fa", borderRadius: "12px", textAlign: "center" }}>
+                <div style={{ width: "56px", height: "56px", background: hsl(, 70%, 60%), borderRadius: "50%", margin: "0 auto 12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <span style={{ color: "#ffffff", fontSize: "20px", fontWeight: 700 }}>{candidate.name.charAt(0)}</span>
                 </div>
                 <p style={{ fontSize: "14px", fontWeight: 700, color: "#111111", marginBottom: "4px" }}>{candidate.name}</p>
                 <p style={{ fontSize: "12px", color: "#888888", marginBottom: "12px" }}>{candidate.position}</p>
-                <div style={{ display: "flex", justifyContent: "center", gap: "8px", alignItems: "center" }}>
-                  <span style={{ padding: "4px 10px", background: "#00205B", color: "#ffffff", borderRadius: "9999px", fontSize: "12px", fontWeight: 700 }}>{candidate.score}</span>
-                  <span style={{ padding: "4px 10px", background: candidate.status === "Lulus" ? "#dcfce7" : candidate.status === "Interview" ? "#fef3c7" : "#e0e7ff", color: candidate.status === "Lulus" ? "#16a34a" : candidate.status === "Interview" ? "#d97706" : "#6366f1", borderRadius: "9999px", fontSize: "11px", fontWeight: 600 }}>{candidate.status}</span>
-                </div>
+                <span style={{ padding: "4px 10px", background: "#00205B", color: "#ffffff", borderRadius: "9999px", fontSize: "12px", fontWeight: 700 }}>{candidate.score}</span>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Recent Reports */}
         <div style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
             <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#111111" }}>Laporan Tersedia</h3>
             <button onClick={() => router.push("/admin/reports/create")} style={{ padding: "10px 20px", background: "#00205B", color: "#ffffff", border: "none", borderRadius: "9999px", fontSize: "14px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
-              <Plus className="w-4 h-4" />
-              Buat Laporan
+              <Plus className="w-4 h-4" />Buat Laporan
             </button>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
             {recentReports.map((report) => (
-              <div key={report.id} style={{ padding: "20px", background: "#f8f9fa", borderRadius: "12px", display: "flex", alignItems: "center", gap: "16px", cursor: "pointer", transition: "background 0.2s", border: "2px solid transparent" }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = "#f0f4ff"; e.currentTarget.style.borderColor = "#00205B"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = "#f8f9fa"; e.currentTarget.style.borderColor = "transparent"; }}>
+              <div key={report.id} style={{ padding: "20px", background: "#f8f9fa", borderRadius: "12px", display: "flex", alignItems: "center", gap: "16px", cursor: "pointer" }}>
                 <div style={{ width: "48px", height: "48px", background: "#ffffff", borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <FileText className="w-6 h-6" style={{ color: "#00205B" }} />
                 </div>
                 <div style={{ flex: 1 }}>
                   <p style={{ fontSize: "14px", fontWeight: 600, color: "#111111", marginBottom: "4px" }}>{report.title}</p>
-                  <p style={{ fontSize: "12px", color: "#888888" }}>{report.size} • {new Date(report.date).toLocaleDateString("id-ID")}</p>
+                  <p style={{ fontSize: "12px", color: "#888888" }}>{report.size} - {new Date(report.date).toLocaleDateString("id-ID")}</p>
                 </div>
-                <button style={{ padding: "10px", background: "#ffffff", border: "none", borderRadius: "8px", cursor: "pointer", color: "#00205B" }}>
-                  <Eye className="w-4 h-4" />
-                </button>
+                <button style={{ padding: "10px", background: "#ffffff", border: "none", borderRadius: "8px", cursor: "pointer", color: "#00205B" }}><Eye className="w-4 h-4" /></button>
               </div>
             ))}
           </div>
