@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Users,
@@ -21,15 +21,13 @@ import {
   Download,
   Plus,
   ChevronRight,
+  RefreshCw,
 } from "lucide-react";
+import { useJobsStore } from "@/stores/jobs";
+import { getAllApplications, getJobById, getAllUsers, updateApplicationStatus } from "@/lib/local-db";
 
-const stats = [
-  { label: "Total Pelamar", value: "0", change: "+0%", trend: "up", icon: Users, color: "#00205B" },
-  { label: "Tes Diselesaikan", value: "0", change: "+0%", trend: "up", icon: ClipboardCheck, color: "#16a34a" },
-  { label: "Passing Rate", value: "0%", change: "+0%", trend: "up", icon: TrendingUp, color: "#f59e0b" },
-  { label: "Lowongan Aktif", value: "3", change: "+0", trend: "up", icon: Briefcase, color: "#8b5cf6" },
-];
-
+const stats: { label: string; value: string; change: string; trend: "up" | "down"; icon: any; color: string }[] = [];
+const statusDistribution: { name: string; value: number; color: string }[] = [];
 const monthlyTrend = [
   { month: "Jan", pelamar: 0, lulus: 0 },
   { month: "Feb", pelamar: 0, lulus: 0 },
@@ -39,15 +37,6 @@ const monthlyTrend = [
   { month: "Jun", pelamar: 0, lulus: 0 },
   { month: "Jul", pelamar: 0, lulus: 0 },
 ];
-
-const statusDistribution = [
-  { name: "Pending", value: 0, color: "#F59E0B" },
-  { name: "Dalam Tes", value: 0, color: "#8B5CF6" },
-  { name: "Interview", value: 0, color: "#3B82F6" },
-  { name: "Ditolak", value: 0, color: "#EF4444" },
-  { name: "Diterima", value: 0, color: "#10B981" },
-];
-
 const recentApplications: any[] = [];
 
 const getStatusConfig = (status: string) => {
@@ -61,11 +50,90 @@ const getStatusConfig = (status: string) => {
 };
 
 export default function AdminDashboardPage() {
+  const { jobs, _hasHydrated } = useJobsStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [applications, setApplications] = useState<any[]>([]);
+  const [statsData, setStatsData] = useState<typeof stats>([]);
+  const [statusDist, setStatusDist] = useState<typeof statusDistribution>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (_hasHydrated) {
+      loadData();
+    }
+  }, [_hasHydrated, jobs.length]);
+
+  // Reload data periodically or on focus
+  useEffect(() => {
+    const handleFocus = () => loadData();
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
+
+  const loadData = () => {
+    try {
+      // Load applications from local database
+      const allApps = getAllApplications();
+      const users = getAllUsers();
+
+      // Enrich applications with job and user data
+      const enrichedApps = allApps.map(app => {
+        const job = getJobById(app.jobPostingId);
+        const user = users.find(u => u.id === app.applicantId);
+        return {
+          ...app,
+          applicationId: app.id,
+          jobTitle: job?.title || "Lowongan",
+          division: job?.division || "Umum",
+          applicantName: user?.fullName || user?.email?.split("@")[0] || "Pelamar",
+        };
+      });
+
+      setApplications(enrichedApps);
+
+      // Calculate stats
+      const totalApplicants = allApps.length;
+      const activeJobsCount = jobs.filter(j => j.status === "ACTIVE").length;
+      const completedTests = allApps.filter(a => a.status === "TEST_COMPLETED").length;
+      const passedTests = allApps.filter(a => ["ACCEPTED", "INTERVIEW", "MCU", "OFFERED"].includes(a.status)).length;
+      const passingRate = totalApplicants > 0 ? Math.round((passedTests / totalApplicants) * 100) : 0;
+
+      setStatsData([
+        { label: "Total Pelamar", value: totalApplicants.toString(), change: "+0%", trend: totalApplicants > 0 ? "up" : "down", icon: Users, color: "#00205B" },
+        { label: "Tes Diselesaikan", value: completedTests.toString(), change: "+0%", trend: completedTests > 0 ? "up" : "down", icon: ClipboardCheck, color: "#16a34a" },
+        { label: "Passing Rate", value: `${passingRate}%`, change: "+0%", trend: passingRate > 50 ? "up" : "down", icon: TrendingUp, color: "#f59e0b" },
+        { label: "Lowongan Aktif", value: activeJobsCount.toString(), change: "+0%", trend: activeJobsCount > 0 ? "up" : "down", icon: Briefcase, color: "#8b5cf6" },
+      ]);
+
+      // Status distribution
+      const statusCounts = allApps.reduce((acc, app) => {
+        acc[app.status] = (acc[app.status] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      setStatusDist([
+        { name: "Pending", value: statusCounts["PENDING"] || 0, color: "#F59E0B" },
+        { name: "Verifikasi", value: statusCounts["ADMIN_CHECK"] || 0, color: "#d97706" },
+        { name: "Dalam Tes", value: (statusCounts["TEST_SCHEDULED"] || 0) + (statusCounts["IN_TEST"] || 0), color: "#8B5CF6" },
+        { name: "Interview", value: statusCounts["INTERVIEW"] || 0, color: "#3B82F6" },
+        { name: "Ditolak", value: statusCounts["REJECTED"] || 0, color: "#EF4444" },
+        { name: "Diterima", value: (statusCounts["ACCEPTED"] || 0) + (statusCounts["OFFERED"] || 0) + (statusCounts["MCU"] || 0), color: "#10B981" },
+      ]);
+    } catch (err) {
+      console.error("Error loading data:", err);
+    }
+    setIsLoading(false);
+  };
+
+  const handleUpdateStatus = (applicationId: string, newStatus: string) => {
+    if (!applicationId) return;
+    updateApplicationStatus(applicationId, newStatus);
+    loadData(); // Refresh data
+  };
 
   // Filter and sort applications based on search query
-  const filteredApplications = recentApplications
+  const filteredApplications = applications
     .filter((app) => {
       // Filter by status if not "all"
       if (statusFilter !== "all" && app.status !== statusFilter) return false;
@@ -75,25 +143,21 @@ export default function AdminDashboardPage() {
 
       // Search by name (case insensitive)
       const query = searchQuery.toLowerCase();
-      return app.name.toLowerCase().includes(query);
+      return app.applicantName?.toLowerCase().includes(query) || app.jobTitle?.toLowerCase().includes(query);
     })
-    .sort((a, b) => {
-      // If there's a search query, prioritize names that start with the query
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
-        const aStarts = a.name.toLowerCase().startsWith(query);
-        const bStarts = b.name.toLowerCase().startsWith(query);
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-        // Names starting with query come first
-        if (aStarts && !bStarts) return -1;
-        if (!aStarts && bStarts) return 1;
-
-        // Then sort alphabetically
-        return a.name.localeCompare(b.name);
-      }
-      // Default sort by date (newest first)
-      return new Date(b.appliedDate).getTime() - new Date(a.appliedDate).getTime();
-    });
+  // Wait for hydration
+  if (!_hasHydrated || isLoading) {
+    return (
+      <div style={{ fontFamily: "Inter, sans-serif", minHeight: "100vh", background: "#f8f9fa", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ width: "40px", height: "40px", border: "4px solid #FF5E00", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
+          <p style={{ color: "#666" }}>Memuat...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ fontFamily: "Inter, system-ui, -apple-system, sans-serif", minHeight: "100vh", background: "#f8f9fa", color: "#111111", margin: 0, padding: 0 }}>
@@ -105,6 +169,13 @@ export default function AdminDashboardPage() {
             <p style={{ fontSize: "15px", color: "#666666" }}>Ringkasan aktivitas rekrutmen • Juli 2026</p>
           </div>
           <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+            <button
+              onClick={loadData}
+              style={{ padding: "10px", background: "#f1f5f9", border: "none", borderRadius: "12px", cursor: "pointer" }}
+              title="Refresh"
+            >
+              <RefreshCw className="w-5 h-5" style={{ color: "#64748b" }} />
+            </button>
             <button style={{ position: "relative", padding: "10px", background: "#f1f5f9", border: "none", borderRadius: "12px", cursor: "pointer" }}>
               <Bell className="w-5 h-5" style={{ color: "#64748b" }} />
               <span style={{ position: "absolute", top: "8px", right: "8px", width: "8px", height: "8px", background: "#ef4444", borderRadius: "50%" }} />
@@ -122,7 +193,7 @@ export default function AdminDashboardPage() {
       <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "0 32px 60px" }}>
         {/* Stats Cards */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "20px", marginBottom: "32px" }}>
-          {stats.map((stat, i) => (
+          {statsData.map((stat, i) => (
             <div key={i} style={{ background: "#ffffff", borderRadius: "16px", padding: "24px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
                 <div style={{ width: "48px", height: "48px", background: `${stat.color}15`, borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -181,64 +252,94 @@ export default function AdminDashboardPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredApplications.map((app) => {
-                      const status = getStatusConfig(app.status);
-                      return (
-                        <tr key={app.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                          <td style={{ padding: "16px" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                              <div style={{ width: "40px", height: "40px", background: "linear-gradient(135deg, #00205B 0%, #003380 100%)", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", color: "#ffffff", fontSize: "13px", fontWeight: 700 }}>
-                                {app.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2)}
-                              </div>
-                              <div>
-                                <p style={{ fontSize: "14px", fontWeight: 600, color: "#111111" }}>{app.name}</p>
-                                <p style={{ fontSize: "12px", color: "#888888" }}>ID: #{app.id}</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td style={{ padding: "16px" }}>
-                            <p style={{ fontSize: "14px", fontWeight: 500, color: "#111111" }}>{app.job}</p>
-                            <p style={{ fontSize: "12px", color: "#888888" }}>{app.division.replace("_", " ")}</p>
-                          </td>
-                          <td style={{ padding: "16px" }}>
-                            <span style={{ fontSize: "14px", color: "#666666" }}>
-                              {new Date(app.appliedDate).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
-                            </span>
-                          </td>
-                          <td style={{ padding: "16px" }}>
-                            <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "6px 12px", background: status.bg, color: status.text, borderRadius: "20px", fontSize: "12px", fontWeight: 700 }}>
-                              {status.icon}
-                              {status.label}
-                            </span>
-                          </td>
-                          <td style={{ padding: "16px" }}>
-                            {app.score !== null ? (
-                              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                                <div style={{ width: "60px", height: "6px", background: "#f1f5f9", borderRadius: "4px", overflow: "hidden" }}>
-                                  <div style={{ height: "100%", width: `${app.score}%`, background: app.score >= 80 ? "#16a34a" : app.score >= 70 ? "#f59e0b" : "#ef4444", borderRadius: "4px" }} />
+                    {filteredApplications.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} style={{ padding: "40px", textAlign: "center" }}>
+                          <p style={{ color: "#888888", fontSize: "14px" }}>Belum ada lamaran</p>
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredApplications.map((app) => {
+                        const status = getStatusConfig(app.status);
+                        return (
+                          <tr key={app.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                            <td style={{ padding: "16px" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                <div style={{ width: "40px", height: "40px", background: "linear-gradient(135deg, #00205B 0%, #003380 100%)", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", color: "#ffffff", fontSize: "13px", fontWeight: 700 }}>
+                                  {(app.applicantName || "P").split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}
                                 </div>
-                                <span style={{ fontSize: "14px", fontWeight: 700, color: app.score >= 80 ? "#16a34a" : app.score >= 70 ? "#f59e0b" : "#ef4444" }}>{app.score}%</span>
+                                <div>
+                                  <p style={{ fontSize: "14px", fontWeight: 600, color: "#111111" }}>{app.applicantName || "Pelamar"}</p>
+                                  <p style={{ fontSize: "12px", color: "#888888" }}>ID: #{app.id}</p>
+                                </div>
                               </div>
-                            ) : (
+                            </td>
+                            <td style={{ padding: "16px" }}>
+                              <p style={{ fontSize: "14px", fontWeight: 500, color: "#111111" }}>{app.jobTitle}</p>
+                              <p style={{ fontSize: "12px", color: "#888888" }}>{(app.division || "").replace("_", " ")}</p>
+                            </td>
+                            <td style={{ padding: "16px" }}>
+                              <span style={{ fontSize: "14px", color: "#666666" }}>
+                                {new Date(app.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                              </span>
+                            </td>
+                            <td style={{ padding: "16px" }}>
+                              <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "6px 12px", background: status.bg, color: status.text, borderRadius: "20px", fontSize: "12px", fontWeight: 700 }}>
+                                {status.icon}
+                                {status.label}
+                              </span>
+                            </td>
+                            <td style={{ padding: "16px" }}>
                               <span style={{ fontSize: "14px", color: "#888888" }}>-</span>
-                            )}
-                          </td>
-                          <td style={{ padding: "16px", textAlign: "right" }}>
-                            <Link href={`/admin/applicants/${app.id}`}>
-                              <button style={{ padding: "8px", background: "transparent", border: "none", borderRadius: "8px", cursor: "pointer", color: "#888888" }}>
-                                <Eye className="w-4 h-4" />
-                              </button>
-                            </Link>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                            </td>
+                            <td style={{ padding: "16px", textAlign: "right" }}>
+                              <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
+                                {/* Quick Accept Button */}
+                                {app.status === "ADMIN_CHECK" && (
+                                  <button
+                                    onClick={() => handleUpdateStatus(app.applicationId, "TEST_SCHEDULED")}
+                                    style={{ padding: "8px", background: "#dcfce7", border: "none", borderRadius: "8px", cursor: "pointer", color: "#16a34a", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                    title="Terima ke Tahap Tes"
+                                  >
+                                    <CheckCircle2 className="w-4 h-4" />
+                                  </button>
+                                )}
+                                {app.status === "TEST_COMPLETED" && (
+                                  <button
+                                    onClick={() => handleUpdateStatus(app.applicationId, "INTERVIEW")}
+                                    style={{ padding: "8px", background: "#dcfce7", border: "none", borderRadius: "8px", cursor: "pointer", color: "#16a34a", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                    title="Terima ke Tahap Interview"
+                                  >
+                                    <CheckCircle2 className="w-4 h-4" />
+                                  </button>
+                                )}
+                                {/* Quick Reject Button */}
+                                {(app.status === "ADMIN_CHECK" || app.status === "TEST_SCHEDULED" || app.status === "TEST_COMPLETED" || app.status === "INTERVIEW") && (
+                                  <button
+                                    onClick={() => handleUpdateStatus(app.applicationId, "REJECTED")}
+                                    style={{ padding: "8px", background: "#fee2e2", border: "none", borderRadius: "8px", cursor: "pointer", color: "#dc2626", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                    title="Tolak"
+                                  >
+                                    <XCircle className="w-4 h-4" />
+                                  </button>
+                                )}
+                                <Link href={`/admin/applicants/${app.applicationId}`}>
+                                  <button style={{ padding: "8px", background: "transparent", border: "none", borderRadius: "8px", cursor: "pointer", color: "#888888" }}>
+                                    <Eye className="w-4 h-4" />
+                                  </button>
+                                </Link>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
                   </tbody>
                 </table>
               </div>
 
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "20px", paddingTop: "20px", borderTop: "1px solid #eeeeee" }}>
-                <p style={{ fontSize: "14px", color: "#888888" }}>Menampilkan {filteredApplications.length} dari {recentApplications.length} data</p>
+                <p style={{ fontSize: "14px", color: "#888888" }}>Menampilkan {filteredApplications.length} dari {applications.length} data</p>
                 <div style={{ display: "flex", gap: "8px" }}>
                   <button style={{ padding: "8px 16px", border: "2px solid #eeeeee", background: "#ffffff", borderRadius: "8px", fontSize: "13px", fontWeight: 600, color: "#888888", cursor: "pointer" }} disabled>Sebelumnya</button>
                   <button style={{ padding: "8px 16px", border: "2px solid #eeeeee", background: "#ffffff", borderRadius: "8px", fontSize: "13px", fontWeight: 600, color: "#888888", cursor: "pointer" }}>Selanjutnya</button>
@@ -289,10 +390,10 @@ export default function AdminDashboardPage() {
 
               {/* Simple pie chart visualization */}
               <div style={{ display: "flex", justifyContent: "center", marginBottom: "24px" }}>
-                <div style={{ width: "140px", height: "140px", borderRadius: "50%", background: `conic-gradient(#F59E0B 0deg ${(145/892)*360}deg, #8B5CF6 0deg ${(145/892)*360}deg ${((145+89)/892)*360}deg, #3B82F6 0deg ${((145+89+56)/892)*360}deg ${((145+89+56+198)/892)*360}deg, #EF4444 0deg ${((145+89+56+198)/892)*360}deg ${((145+89+56+198+404)/892)*360}deg, #10B981 0deg)`, position: "relative" }}>
+                <div style={{ width: "140px", height: "140px", borderRadius: "50%", background: "#f1f5f9", position: "relative" }}>
                   <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "80px", height: "80px", background: "#ffffff", borderRadius: "50%" }}>
                     <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", textAlign: "center" }}>
-                      <div style={{ fontSize: "24px", fontWeight: 800, color: "#111111" }}>892</div>
+                      <div style={{ fontSize: "24px", fontWeight: 800, color: "#111111" }}>{applications.length}</div>
                       <div style={{ fontSize: "11px", color: "#888888" }}>Total</div>
                     </div>
                   </div>
@@ -300,7 +401,7 @@ export default function AdminDashboardPage() {
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                {statusDistribution.map((item, i) => (
+                {statusDist.map((item, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                       <div style={{ width: "10px", height: "10px", background: item.color, borderRadius: "50%" }} />
@@ -347,21 +448,21 @@ export default function AdminDashboardPage() {
               <div style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
               <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#111111", marginBottom: "20px" }}>Lowongan Aktif</h2>
               <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                {[
-                  { name: "Pramugara Kereta Api", pelamar: 1, color: "#00205B" },
-                  { name: "Staff IT Support", pelamar: 1, color: "#FF5E00" },
-                  { name: "Staff Administrasi", pelamar: 1, color: "#8B5cf6" },
-                ].map((div: any, i: number) => (
-                  <div key={i}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-                      <span style={{ fontSize: "14px", fontWeight: 500, color: "#111111" }}>{div.name}</span>
-                      <span style={{ fontSize: "14px", fontWeight: 700, color: div.color }}>{div.pelamar}</span>
+                {jobs.filter(j => j.status === "ACTIVE").length === 0 ? (
+                  <p style={{ color: "#888888", fontSize: "14px", textAlign: "center", padding: "20px" }}>Belum ada lowongan aktif</p>
+                ) : (
+                  jobs.filter(j => j.status === "ACTIVE").map((div: any, i: number) => (
+                    <div key={div.id || i}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                        <span style={{ fontSize: "14px", fontWeight: 500, color: "#111111" }}>{div.title}</span>
+                        <span style={{ fontSize: "14px", fontWeight: 700, color: "#FF5E00" }}>{applications.filter(a => a.jobPostingId === div.id).length}</span>
+                      </div>
+                      <div style={{ width: "100%", height: "6px", background: "#f1f5f9", borderRadius: "4px", overflow: "hidden" }}>
+                        <div style={{ height: "100%", width: "30%", background: "#FF5E00", borderRadius: "4px" }} />
+                      </div>
                     </div>
-                    <div style={{ width: "100%", height: "6px", background: "#f1f5f9", borderRadius: "4px", overflow: "hidden" }}>
-                      <div style={{ height: "100%", width: `${(div.pelamar / 500) * 100}%`, background: div.color, borderRadius: "4px" }} />
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           </div>

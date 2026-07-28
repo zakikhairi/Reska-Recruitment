@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { getAllJobs } from "@/lib/local-db";
+import { useJobsStore, Job } from "@/stores/jobs";
 
 const filters = ["Semua", "ON_TRAIN_SERVICE", "IT_STAFF", "LOGISTICS", "RES_CLEAN", "ADMIN", "RES_PARKING"];
 
@@ -16,27 +16,39 @@ const divisionNames: Record<string, string> = {
 };
 
 export default function JobsPage() {
-  const [jobs, setJobs] = useState<any[]>([]);
+  const { jobs, _hasHydrated } = useJobsStore();
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("Semua");
   const [isLoading, setIsLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    fetchJobs();
+    setMounted(true);
   }, []);
 
-  const fetchJobs = async () => {
-    try {
-      // Use local database
-      const allJobs = getAllJobs();
-      setJobs(allJobs);
-    } catch (err) {
-      console.error("Failed to fetch jobs:", err);
+  // Wait for hydration before loading jobs
+  useEffect(() => {
+    if (_hasHydrated && mounted) {
+      setIsLoading(false);
     }
-    setIsLoading(false);
-  };
+  }, [_hasHydrated, mounted]);
 
-  const filteredJobs = jobs.filter(job => {
+  // Wait for hydration
+  if (!mounted || !_hasHydrated) {
+    return (
+      <div style={{ fontFamily: "Inter, system-ui, sans-serif", minHeight: "100vh", background: "#f8f9fa", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ width: "40px", height: "40px", border: "4px solid #FF5E00", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
+          <p style={{ color: "#666" }}>Memuat lowongan...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Filter only ACTIVE jobs for applicants
+  const activeJobs = jobs.filter(job => job.status === "ACTIVE");
+
+  const filteredJobs = activeJobs.filter(job => {
     const matchFilter = activeFilter === "Semua" || job.division === activeFilter;
     const matchSearch = job.title.toLowerCase().includes(search.toLowerCase()) ||
                        job.location.toLowerCase().includes(search.toLowerCase());
@@ -101,8 +113,8 @@ export default function JobsPage() {
                   <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "12px", flexWrap: "wrap", gap: "12px" }}>
                     <div>
                       <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px", flexWrap: "wrap" }}>
-                        {job.isNew && (
-                          <span style={{ padding: "4px 12px", background: "#dcfce7", color: "#16a34a", borderRadius: "20px", fontSize: "12px", fontWeight: 700 }}>Baru</span>
+                        {new Date(job.deadline).getTime() > Date.now() && (
+                          <span style={{ padding: "4px 12px", background: "#dcfce7", color: "#16a34a", borderRadius: "20px", fontSize: "12px", fontWeight: 700 }}>Aktif</span>
                         )}
                         <span style={{ padding: "4px 12px", background: "#f0f4ff", color: "#00205B", borderRadius: "20px", fontSize: "12px", fontWeight: 600 }}>{divisionNames[job.division] || job.division}</span>
                       </div>
@@ -128,7 +140,7 @@ export default function JobsPage() {
                     </span>
                     <span style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "14px", color: "#666666" }}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888888" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                      {job.applicantCount || 0} pelamar
+                      {job.applicants || 0} pelamar
                     </span>
                   </div>
 

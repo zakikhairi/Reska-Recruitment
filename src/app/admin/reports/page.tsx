@@ -167,7 +167,7 @@ export default function ReportsPage() {
             <select
               value={dateRange}
               onChange={(e) => setDateRange(e.target.value)}
-              style={{ padding: "10px 40px 10px 16px", border: "2px solid #eeeeee", borderRadius: "9999px", fontSize: "14px", outline: "none", background: "#ffffff", cursor: "pointer", appearance: "none", color: "#374151", fontWeight: 500, backgroundImage: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"), backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", backgroundSize: "16px" }}
+              style={{ padding: "10px 40px 10px 16px", border: "2px solid #eeeeee", borderRadius: "9999px", fontSize: "14px", outline: "none", background: "#ffffff", cursor: "pointer", appearance: "none", color: "#374151", fontWeight: 500 }}
             >
               <option value="week">7 Hari Terakhir</option>
               <option value="month">Bulan Ini</option>
@@ -228,7 +228,7 @@ export default function ReportsPage() {
           {stats.map((stat, i) => (
             <div key={i} style={{ background: "#ffffff", borderRadius: "16px", padding: "24px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                <div style={{ width: "48px", height: "48px", background: ${stat.color}15, borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ width: "48px", height: "48px", background: stat.color + "20", borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <stat.icon className="w-6 h-6" style={{ color: stat.color }} />
                 </div>
                 <div>
@@ -255,7 +255,7 @@ export default function ReportsPage() {
               <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-around", flex: 1, height: "100%", paddingLeft: "40px" }}>
                 {monthlyData.map((data, i) => (
                   <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
-                    <div style={{ display: "flex", gap: "4px", alignItems: "flex-end", height: ${(data.applicants / 250) * 140}px }}>
+                    <div style={{ display: "flex", gap: "4px", alignItems: "flex-end", height: (data.applicants / 250) * 140 + "px" }}>
                       <div style={{ width: "20px", background: "linear-gradient(180deg, #00205B 0%, #003380 100%)", borderRadius: "4px 4px 0 0" }} />
                       <div style={{ width: "20px", background: "linear-gradient(180deg, #10B981 0%, #059669 100%)", borderRadius: "4px 4px 0 0" }} />
                     </div>
@@ -334,7 +334,7 @@ export default function ReportsPage() {
                       <td style={{ padding: "16px", fontSize: "14px", color: "#666666", textAlign: "center" }}>{div.total}</td>
                       <td style={{ padding: "16px", fontSize: "14px", color: "#666666", textAlign: "center" }}>{div.passed}</td>
                       <td style={{ padding: "16px", textAlign: "center" }}><span style={{ padding: "6px 12px", background: div.rate >= 70 ? "#dcfce7" : "#fef3c7", color: div.rate >= 70 ? "#16a34a" : "#d97706", borderRadius: "9999px", fontSize: "13px", fontWeight: 600 }}>{div.rate}%</span></td>
-                      <td style={{ padding: "16px", textAlign: "center" }}><div style={{ width: "100px", height: "8px", background: "#f1f5f9", borderRadius: "4px", margin: "auto", overflow: "hidden" }}><div style={{ height: "100%", width: ${div.rate}%, background: div.rate >= 70 ? "#10B981" : "#F59E0B", borderRadius: "4px" }} /></div></td>
+                      <td style={{ padding: "16px", textAlign: "center" }}><div style={{ width: "100px", height: "8px", background: "#f1f5f9", borderRadius: "4px", margin: "auto", overflow: "hidden" }}><div style={{ height: "100%", width: div.rate + "%", background: div.rate >= 70 ? "#10B981" : "#F59E0B", borderRadius: "4px" }} /></div></td>
                     </tr>
                   ))}
                 </tbody>
@@ -352,7 +352,7 @@ export default function ReportsPage() {
                     <span style={{ fontSize: "14px", fontWeight: 700, color: "#111111" }}>{cat.avgScore}%</span>
                   </div>
                   <div style={{ height: "10px", background: "#f1f5f9", borderRadius: "5px", overflow: "hidden" }}>
-                    <div style={{ height: "100%", width: ${cat.avgScore}%, background: i === 0 ? "#00205B" : i === 1 ? "#FF5E00" : i === 2 ? "#10B981" : "#8B5CF6", borderRadius: "5px", transition: "width 0.5s ease" }} />
+                    <div style={{ height: "100%", width: cat.avgScore + "%", background: i === 0 ? "#00205B" : i === 1 ? "#FF5E00" : i === 2 ? "#10B981" : "#8B5CF6", borderRadius: "5px", transition: "width 0.5s ease" }} />
                   </div>
                   <p style={{ fontSize: "12px", color: "#888888", marginTop: "4px" }}>Pass rate: {cat.passRate}%</p>
                 </div>
@@ -369,7 +369,7 @@ export default function ReportsPage() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "16px" }}>
             {topCandidates.map((candidate, i) => (
               <div key={i} style={{ padding: "20px", background: "#f8f9fa", borderRadius: "12px", textAlign: "center" }}>
-                <div style={{ width: "56px", height: "56px", background: hsl(, 70%, 60%), borderRadius: "50%", margin: "0 auto 12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ width: "56px", height: "56px", background: "hsl(210, 70%, 60%)", borderRadius: "50%", margin: "0 auto 12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <span style={{ color: "#ffffff", fontSize: "20px", fontWeight: 700 }}>{candidate.name.charAt(0)}</span>
                 </div>
                 <p style={{ fontSize: "14px", fontWeight: 700, color: "#111111", marginBottom: "4px" }}>{candidate.name}</p>

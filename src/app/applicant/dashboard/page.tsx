@@ -71,7 +71,7 @@ export default function ApplicantDashboardPage() {
           .filter((app: Application) => app.applicantId === user.id)
           .map((app: Application) => {
             const job = getJobById(app.jobPostingId);
-            return { ...app, job };
+            return { ...app, job: job || undefined };
           });
         setApplications(userApps);
       } catch (err) {

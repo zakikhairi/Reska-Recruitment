@@ -1,17 +1,85 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAuthStore } from "@/stores/auth";
+import { useAuthStore, AuthUser } from "@/stores/auth";
+
+// Demo accounts interface
+interface DemoAccount {
+  id: string;
+  email: string;
+  password: string;
+  role: "APPLICANT" | "HR_ADMIN" | "SUPER_ADMIN";
+  fullName: string;
+  applicantId?: string;
+  nik?: string;
+  phone?: string;
+  education?: string;
+  employeeId?: string;
+  department?: string;
+}
+
+// Demo accounts stored in localStorage
+const DEMO_ACCOUNTS_KEY = "kai-demo-accounts";
+const DEFAULT_DEMO_ACCOUNTS: DemoAccount[] = [
+  {
+    id: "admin-001",
+    email: "admin@admin.co.id",
+    password: "demo123",
+    role: "HR_ADMIN",
+    fullName: "Admin HR",
+    employeeId: "EMP001",
+    department: "Human Resources",
+  },
+  {
+    id: "pelamar-001",
+    email: "pelamar@test.com",
+    password: "demo123",
+    role: "APPLICANT",
+    fullName: "Test Pelamar",
+    applicantId: "pelamar-001",
+    nik: "3201234567890123",
+    phone: "081234567890",
+    education: "SMA",
+  },
+];
+
+// Initialize demo accounts in localStorage
+function initDemoAccounts() {
+  if (typeof window === "undefined") return;
+  const existing = localStorage.getItem(DEMO_ACCOUNTS_KEY);
+  if (!existing) {
+    localStorage.setItem(DEMO_ACCOUNTS_KEY, JSON.stringify(DEFAULT_DEMO_ACCOUNTS));
+  }
+}
+
+// Login with localStorage accounts
+function loginWithLocalStorage(email: string, password: string): AuthUser | null {
+  const accountsJson = localStorage.getItem(DEMO_ACCOUNTS_KEY);
+  if (!accountsJson) return null;
+  const accounts = JSON.parse(accountsJson);
+  const account = accounts.find(
+    (acc: any) => acc.email === email && acc.password === password
+  );
+  if (!account) return null;
+  const { password: _, ...userData } = account;
+  return userData as AuthUser;
+}
 
 export default function LoginPage() {
   const router = useRouter();
   const login = useAuthStore((state) => state.login);
+  const { setUser, setHasHydrated } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+
+  // Initialize demo accounts on mount
+  useEffect(() => {
+    initDemoAccounts();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,6 +89,28 @@ export default function LoginPage() {
     // Minimum loading display time for better UX
     const minLoadingTime = new Promise(resolve => setTimeout(resolve, 800));
 
+    // Try localStorage authentication first (for demo accounts)
+    const localUser = loginWithLocalStorage(email, password);
+
+    if (localUser) {
+      // Ensure hydrated is true before setting user
+      setHasHydrated(true);
+      setUser(localUser);
+
+      await minLoadingTime;
+
+      if (localUser.role === "APPLICANT") {
+        router.push("/applicant/dashboard");
+      } else if (localUser.role === "HR_ADMIN" || localUser.role === "SUPER_ADMIN") {
+        router.push("/admin/dashboard");
+      } else {
+        router.push("/");
+      }
+      setIsLoading(false);
+      return;
+    }
+
+    // Fallback to API authentication
     try {
       const result = await login(email, password);
 
@@ -47,6 +137,16 @@ export default function LoginPage() {
       await minLoadingTime;
       setError("Terjadi kesalahan koneksi");
       setIsLoading(false);
+    }
+  };
+
+  const handleQuickLogin = (role: "admin" | "pelamar") => {
+    if (role === "admin") {
+      setEmail("admin@admin.co.id");
+      setPassword("demo123");
+    } else {
+      setEmail("pelamar@test.com");
+      setPassword("demo123");
     }
   };
 
@@ -288,12 +388,47 @@ export default function LoginPage() {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888888" strokeWidth="2">
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              <span style={{ fontSize: "12px", color: "#888888", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Akun Demo</span>
+              <span style={{ fontSize: "12px", color: "#888888", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Akun Demo (LocalStorage)</span>
+            </div>
+            <div style={{ display: "flex", gap: "10px", marginBottom: "14px" }}>
+              <button
+                type="button"
+                onClick={() => handleQuickLogin("admin")}
+                style={{
+                  flex: 1,
+                  padding: "10px 16px",
+                  background: "#00205B",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                👤 Login Admin
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickLogin("pelamar")}
+                style={{
+                  flex: 1,
+                  padding: "10px 16px",
+                  background: "#FF5E00",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                👤 Login Pelamar
+              </button>
             </div>
             <div style={{ fontSize: "14px", color: "#555555", lineHeight: 2 }}>
-              <div><span style={{ fontWeight: 600, color: "#333333", display: "inline-block", width: "70px" }}>Admin HR</span> admin@admin.co.id</div>
-              <div><span style={{ fontWeight: 600, color: "#333333", display: "inline-block", width: "70px" }}>Pelamar</span> pelamar@test.com</div>
-              <div><span style={{ fontWeight: 600, color: "#333333", display: "inline-block", width: "70px" }}>Password</span> demo123</div>
+              <div><span style={{ fontWeight: 600, color: "#333333", display: "inline-block", width: "70px" }}>Admin HR</span> admin@admin.co.id / demo123</div>
+              <div><span style={{ fontWeight: 600, color: "#333333", display: "inline-block", width: "70px" }}>Pelamar</span> pelamar@test.com / demo123</div>
             </div>
           </div>
 

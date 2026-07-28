@@ -114,7 +114,6 @@ export async function GET(
           status: application.status,
           notes: application.notes,
           createdAt: application.createdAt,
-          updatedAt: application.updatedAt,
         },
         applicant: applicant ? {
           id: applicant.id,
