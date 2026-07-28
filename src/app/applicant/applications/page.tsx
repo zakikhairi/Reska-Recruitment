@@ -3,7 +3,31 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/auth";
-import { getApplicationsByApplicant, getJobById } from "@/lib/local-db";
+import {
+  getAllApplications,
+  getJobById,
+  getAllUsers,
+  type User,
+  type Application,
+  type JobPosting
+} from "@/lib/local-db";
+
+// Format division name for display
+const formatDivision = (division: string | undefined): string => {
+  const divisionLabels: Record<string, string> = {
+    ON_TRAIN_SERVICE: "On-Train Service",
+    RES_CLEAN: "ResClean",
+    RES_PARKING: "ResParking",
+    LOGISTICS: "Logistics",
+    IT_STAFF: "IT Staff",
+    ADMIN: "Administrasi",
+  };
+  return division ? (divisionLabels[division] || division.replace(/_/g, " ")) : "Umum";
+};
+
+interface ApplicationWithJob extends Application {
+  job?: JobPosting;
+}
 
 const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
   ADMIN_CHECK: { bg: "#fef3c7", text: "#d97706", label: "Menunggu Review HR" },
@@ -18,59 +42,33 @@ const statusConfig: Record<string, { bg: string; text: string; label: string }> 
   PENDING: { bg: "#fef3c7", text: "#d97706", label: "Menunggu" },
 };
 
-interface AppWithJob {
-  id: string;
-  applicantId: string;
-  jobPostingId: string;
-  status: string;
-  notes?: string;
-  createdAt: string;
-  jobTitle?: string;
-  jobLocation?: string;
-  jobDivision?: string;
-}
-
 export default function ApplicationsPage() {
-  const [applications, setApplications] = useState<AppWithJob[]>([]);
-  const [selectedApp, setSelectedApp] = useState<AppWithJob | null>(null);
+  const [applications, setApplications] = useState<ApplicationWithJob[]>([]);
+  const [selectedApp, setSelectedApp] = useState<ApplicationWithJob | null>(null);
   const [filter, setFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
-  const [mounted, setMounted] = useState(false);
   const user = useAuthStore((state) => state.user);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    fetchApplications();
+  }, [user]);
 
-  useEffect(() => {
-    if (mounted && user) {
-      fetchApplications();
-    }
-  }, [mounted, user]);
-
-  const fetchApplications = () => {
-    if (!user?.applicantId && !user?.id) {
+  const fetchApplications = async () => {
+    if (!user?.id) {
       setIsLoading(false);
       return;
     }
 
     try {
-      // Use applicantId or user id as the applicant id
-      const appId = user.applicantId || user.id;
-      const apps = getApplicationsByApplicant(appId);
-
-      // Enrich with job data
-      const enrichedApps = apps.map(app => {
-        const job = getJobById(app.jobPostingId);
-        return {
-          ...app,
-          jobTitle: job?.title || "Lowongan",
-          jobLocation: job?.location || "Lokasi tidak disebutkan",
-          jobDivision: job?.division || "Umum",
-        };
-      });
-
-      setApplications(enrichedApps);
+      const allApps = getAllApplications();
+      // Filter applications for this user and enrich with job data
+      const userApps = allApps
+        .filter((app: Application) => app.applicantId === user.id)
+        .map((app: Application) => {
+          const job = getJobById(app.jobPostingId);
+          return { ...app, job: job || undefined };
+        });
+      setApplications(userApps);
     } catch (err) {
       console.error("Failed to fetch applications:", err);
     }
@@ -166,8 +164,10 @@ export default function ApplicationsPage() {
                 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
                     <div>
-                      <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#111", marginBottom: "4px" }}>{app.jobTitle}</h3>
-                      <p style={{ fontSize: "13px", color: "#666" }}>{app.jobLocation}</p>
+                      <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#111", marginBottom: "4px" }}>{app.job?.title || "Lowongan"}</h3>
+                      <p style={{ fontSize: "13px", color: "#666" }}>
+                        {app.job?.location || "Lokasi tidak disebutkan"} • {formatDivision(app.job?.division)}
+                      </p>
                     </div>
                     <span style={{ padding: "6px 12px", background: status.bg, color: status.text, borderRadius: "20px", fontSize: "12px", fontWeight: 700 }}>{status.label}</span>
                   </div>
@@ -183,8 +183,9 @@ export default function ApplicationsPage() {
           <div style={{ background: "#fff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", height: "fit-content", position: "sticky", top: "24px" }}>
             {selectedApp ? (
               <>
-                <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#111", marginBottom: "8px" }}>{selectedApp.jobTitle}</h2>
-                <p style={{ fontSize: "14px", color: "#666", marginBottom: "16px" }}>{selectedApp.jobLocation}</p>
+                <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#111", marginBottom: "8px" }}>{selectedApp.job?.title || "Lowongan"}</h2>
+                <p style={{ fontSize: "14px", color: "#666", marginBottom: "8px" }}>{selectedApp.job?.location || "Lokasi tidak disebutkan"}</p>
+                <p style={{ fontSize: "14px", color: "#888", marginBottom: "16px" }}>{formatDivision(selectedApp.job?.division)}</p>
                 <span style={{ display: "inline-block", padding: "8px 16px", background: statusConfig[selectedApp.status]?.bg, color: statusConfig[selectedApp.status]?.text, borderRadius: "20px", fontSize: "14px", fontWeight: 700, marginBottom: "24px" }}>
                   {statusConfig[selectedApp.status]?.label}
                 </span>
