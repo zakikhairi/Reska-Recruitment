@@ -18,7 +18,7 @@ export default function ApplyJobPage({ params }: { params: { id: string } }) {
   const job = useMemo(() => getJobById(jobId), [jobId]);
 
   const handleApply = async () => {
-    if (!user?.id) {
+    if (!user?.id || !user?.applicantId) {
       setError("Silakan login terlebih dahulu");
       return;
     }
@@ -27,13 +27,38 @@ export default function ApplyJobPage({ params }: { params: { id: string } }) {
     setError("");
 
     try {
-      createApplication({
-        applicantId: user.id,
-        jobPostingId: jobId
+      // Use API to create application (Prisma database)
+      const response = await fetch("/api/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jobId: jobId,
+          applicantId: user.applicantId
+        }),
       });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setError(result.error || "Gagal melamar");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Also save to local-db for local state management
+      try {
+        createApplication({
+          applicantId: user.id,
+          jobPostingId: jobId
+        });
+      } catch (localErr) {
+        // Ignore local storage errors - API is the source of truth
+        console.log("Local storage sync skipped");
+      }
+
       setSuccess(true);
     } catch (err: any) {
-      setError(err.message || "Gagal melamar");
+      setError(err.message || "Terjadi kesalahan saat melamar");
     }
     setIsSubmitting(false);
   };

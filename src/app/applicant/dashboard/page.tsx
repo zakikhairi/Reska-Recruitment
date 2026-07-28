@@ -3,6 +3,27 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/auth";
+import {
+  getAllApplications,
+  getJobById,
+  getAllUsers,
+  type User,
+  type Application,
+  type JobPosting
+} from "@/lib/local-db";
+
+// Format division name for display
+const formatDivision = (division: string | undefined): string => {
+  const divisionLabels: Record<string, string> = {
+    ON_TRAIN_SERVICE: "On-Train Service",
+    RES_CLEAN: "ResClean",
+    RES_PARKING: "ResParking",
+    LOGISTICS: "Logistics",
+    IT_STAFF: "IT Staff",
+    ADMIN: "Administrasi",
+  };
+  return division ? (divisionLabels[division] || division.replace(/_/g, " ")) : "Umum";
+};
 
 const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
   ADMIN_CHECK: { bg: "#fef3c7", text: "#d97706", label: "Menunggu Review HR" },
@@ -17,9 +38,13 @@ const statusConfig: Record<string, { bg: string; text: string; label: string }> 
   PENDING: { bg: "#f1f5f9", text: "#64748b", label: "Menunggu" },
 };
 
+interface ApplicationWithJob extends Application {
+  job?: JobPosting;
+}
+
 export default function ApplicantDashboardPage() {
   const { user } = useAuthStore();
-  const [applications, setApplications] = useState<any[]>([]);
+  const [applications, setApplications] = useState<ApplicationWithJob[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userName, setUserName] = useState("Pelamar");
 
@@ -28,31 +53,29 @@ export default function ApplicantDashboardPage() {
   }, [user]);
 
   const fetchData = async () => {
-    // Fetch profile
+    // Get user profile from local-db
     if (user?.id) {
-      try {
-        const profileRes = await fetch("/api/applicant/profile?userId=" + user.id);
-        if (profileRes.ok) {
-          const profileData = await profileRes.json();
-          if (profileData.applicant?.fullName) {
-            setUserName(profileData.applicant.fullName);
-          }
-        }
-      } catch (err) {
-        console.log("Could not fetch profile");
+      const users = getAllUsers();
+      const currentUser = users.find((u: User) => u.id === user.id);
+      if (currentUser?.fullName) {
+        setUserName(currentUser.fullName);
       }
     }
 
-    // Fetch applications
-    if (user?.applicantId) {
+    // Fetch applications from local-db with job data
+    if (user?.id) {
       try {
-        const appRes = await fetch("/api/applications?applicantId=" + user.applicantId);
-        if (appRes.ok) {
-          const appData = await appRes.json();
-          setApplications(appData.applications || []);
-        }
+        const allApps = getAllApplications();
+        // Filter applications for this user and enrich with job data
+        const userApps = allApps
+          .filter((app: Application) => app.applicantId === user.id)
+          .map((app: Application) => {
+            const job = getJobById(app.jobPostingId);
+            return { ...app, job };
+          });
+        setApplications(userApps);
       } catch (err) {
-        console.log("Could not fetch applications");
+        console.log("Could not fetch applications from local-db");
       }
     }
     setIsLoading(false);
@@ -147,11 +170,11 @@ export default function ApplicantDashboardPage() {
                     <div key={app.id} style={{ padding: "20px", borderRadius: "14px", border: "2px solid #eee", cursor: "pointer", transition: "all 0.2s" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                         <div>
-                          <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#111", marginBottom: "6px" }}>{app.jobTitle}</h3>
+                          <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#111", marginBottom: "6px" }}>{app.job?.title || "Lowongan"}</h3>
                           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                            <span style={{ padding: "4px 12px", background: "#f0f4ff", color: "#00205B", borderRadius: "20px", fontSize: "12px", fontWeight: 600 }}>{app.jobDivision || "Umum"}</span>
+                            <span style={{ padding: "4px 12px", background: "#f0f4ff", color: "#00205B", borderRadius: "20px", fontSize: "12px", fontWeight: 600 }}>{formatDivision(app.job?.division)}</span>
                             <span style={{ fontSize: "13px", color: "#888" }}>
-                              {new Date(app.appliedAt).toLocaleDateString("id-ID")}
+                              {new Date(app.createdAt).toLocaleDateString("id-ID")}
                             </span>
                           </div>
                         </div>

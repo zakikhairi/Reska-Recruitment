@@ -136,6 +136,7 @@ export default function ApplicantsPage() {
               style={{ padding: "12px 40px 12px 16px", border: "2px solid #eeeeee", borderRadius: "12px", fontSize: "14px", outline: "none", background: "#ffffff", cursor: "pointer", appearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", backgroundSize: "16px" }}
             >
               <option value="all">Semua Status</option>
+              <option value="ADMIN_CHECK">Verifikasi Dokumen</option>
               <option value="ADMINISTRATION">Menunggu Administrasi</option>
               <option value="TEST">Menunggu Tes</option>
               <option value="TEST_COMPLETED">Tes Selesai</option>

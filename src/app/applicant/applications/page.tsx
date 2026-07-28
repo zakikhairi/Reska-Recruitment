@@ -3,6 +3,31 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/auth";
+import {
+  getAllApplications,
+  getJobById,
+  getAllUsers,
+  type User,
+  type Application,
+  type JobPosting
+} from "@/lib/local-db";
+
+// Format division name for display
+const formatDivision = (division: string | undefined): string => {
+  const divisionLabels: Record<string, string> = {
+    ON_TRAIN_SERVICE: "On-Train Service",
+    RES_CLEAN: "ResClean",
+    RES_PARKING: "ResParking",
+    LOGISTICS: "Logistics",
+    IT_STAFF: "IT Staff",
+    ADMIN: "Administrasi",
+  };
+  return division ? (divisionLabels[division] || division.replace(/_/g, " ")) : "Umum";
+};
+
+interface ApplicationWithJob extends Application {
+  job?: JobPosting;
+}
 
 const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
   ADMIN_CHECK: { bg: "#fef3c7", text: "#d97706", label: "Menunggu Review HR" },
@@ -18,8 +43,8 @@ const statusConfig: Record<string, { bg: string; text: string; label: string }> 
 };
 
 export default function ApplicationsPage() {
-  const [applications, setApplications] = useState<any[]>([]);
-  const [selectedApp, setSelectedApp] = useState<any>(null);
+  const [applications, setApplications] = useState<ApplicationWithJob[]>([]);
+  const [selectedApp, setSelectedApp] = useState<ApplicationWithJob | null>(null);
   const [filter, setFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
   const user = useAuthStore((state) => state.user);
@@ -29,17 +54,21 @@ export default function ApplicationsPage() {
   }, [user]);
 
   const fetchApplications = async () => {
-    if (!user?.applicantId) {
+    if (!user?.id) {
       setIsLoading(false);
       return;
     }
 
     try {
-      const response = await fetch("/api/applications?applicantId=" + user.applicantId);
-      const data = await response.json();
-      if (data.applications) {
-        setApplications(data.applications);
-      }
+      const allApps = getAllApplications();
+      // Filter applications for this user and enrich with job data
+      const userApps = allApps
+        .filter((app: Application) => app.applicantId === user.id)
+        .map((app: Application) => {
+          const job = getJobById(app.jobPostingId);
+          return { ...app, job };
+        });
+      setApplications(userApps);
     } catch (err) {
       console.error("Failed to fetch applications:", err);
     }
@@ -135,13 +164,15 @@ export default function ApplicationsPage() {
                 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
                     <div>
-                      <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#111", marginBottom: "4px" }}>{app.jobTitle}</h3>
-                      <p style={{ fontSize: "13px", color: "#666" }}>{app.jobLocation || "Lokasi tidak disebutkan"}</p>
+                      <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#111", marginBottom: "4px" }}>{app.job?.title || "Lowongan"}</h3>
+                      <p style={{ fontSize: "13px", color: "#666" }}>
+                        {app.job?.location || "Lokasi tidak disebutkan"} • {formatDivision(app.job?.division)}
+                      </p>
                     </div>
                     <span style={{ padding: "6px 12px", background: status.bg, color: status.text, borderRadius: "20px", fontSize: "12px", fontWeight: 700 }}>{status.label}</span>
                   </div>
                   <p style={{ fontSize: "12px", color: "#888" }}>
-                    Dilamar: {new Date(app.appliedAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
+                    Dilamar: {new Date(app.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
                   </p>
                 </div>
               );
@@ -152,8 +183,9 @@ export default function ApplicationsPage() {
           <div style={{ background: "#fff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", height: "fit-content", position: "sticky", top: "24px" }}>
             {selectedApp ? (
               <>
-                <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#111", marginBottom: "8px" }}>{selectedApp.jobTitle}</h2>
-                <p style={{ fontSize: "14px", color: "#666", marginBottom: "16px" }}>{selectedApp.jobLocation}</p>
+                <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#111", marginBottom: "8px" }}>{selectedApp.job?.title || "Lowongan"}</h2>
+                <p style={{ fontSize: "14px", color: "#666", marginBottom: "8px" }}>{selectedApp.job?.location || "Lokasi tidak disebutkan"}</p>
+                <p style={{ fontSize: "14px", color: "#888", marginBottom: "16px" }}>{formatDivision(selectedApp.job?.division)}</p>
                 <span style={{ display: "inline-block", padding: "8px 16px", background: statusConfig[selectedApp.status]?.bg, color: statusConfig[selectedApp.status]?.text, borderRadius: "20px", fontSize: "14px", fontWeight: 700, marginBottom: "24px" }}>
                   {statusConfig[selectedApp.status]?.label}
                 </span>
@@ -164,7 +196,7 @@ export default function ApplicationsPage() {
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
                       <span style={{ fontSize: "14px", color: "#666" }}>Tanggal Lamar</span>
                       <span style={{ fontSize: "14px", fontWeight: 600, color: "#111" }}>
-                        {new Date(selectedApp.appliedAt).toLocaleDateString("id-ID")}
+                        {new Date(selectedApp.createdAt).toLocaleDateString("id-ID")}
                       </span>
                     </div>
                   </div>
