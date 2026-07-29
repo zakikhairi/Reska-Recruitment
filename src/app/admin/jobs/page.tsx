@@ -43,7 +43,7 @@ const divisionLabels: Record<string, string> = {
 
 export default function JobsPage() {
   const router = useRouter();
-  const { jobs, deleteJob, _hasHydrated } = useJobsStore();
+  const { jobs, fetchJobs, deleteJob, _hasHydrated } = useJobsStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [divisionFilter, setDivisionFilter] = useState("all");
@@ -52,6 +52,7 @@ export default function JobsPage() {
 
   useEffect(() => {
     setMounted(true);
+    fetchJobs(); // Fetch jobs from API on mount
   }, []);
 
   const handleDeleteClick = (job: Job) => {
@@ -193,7 +194,7 @@ export default function JobsPage() {
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", color: "#666666" }}>
                     <Users className="w-4 h-4" style={{ color: "#888888" }} />
-                    {job.applicants || 0} pelamar
+                    {job.applicantCount || 0} pelamar
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", color: "#666666" }}>
                     <Calendar className="w-4 h-4" style={{ color: "#888888" }} />
@@ -205,18 +206,6 @@ export default function JobsPage() {
                   </div>
                 </div>
 
-                {/* Salary */}
-                <div style={{ padding: "12px 16px", background: "#fff7f0", borderRadius: "12px", marginBottom: "16px" }}>
-                  <p style={{ fontSize: "12px", color: "#888888", marginBottom: "4px" }}>Kisaran Gaji</p>
-                  <p style={{ fontSize: "15px", fontWeight: 700, color: "#FF5E00" }}>
-                    {job.salaryMin && job.salaryMax
-                      ? `Rp ${job.salaryMin} - Rp ${job.salaryMax}`
-                      : job.salaryMin
-                      ? `Rp ${job.salaryMin}+`
-                      : "-"}
-                  </p>
-                </div>
-
                 {/* Actions */}
                 <div style={{ display: "flex", gap: "8px" }}>
                   <Link href={`/admin/jobs/${job.id}`} style={{ flex: 1 }}>
@@ -226,7 +215,7 @@ export default function JobsPage() {
                   </Link>
                   <Link href={`/admin/jobs/${job.id}/applicants`}>
                     <button style={{ padding: "12px 16px", background: "#FF5E00", color: "#ffffff", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}>
-                      Pelamar
+                      {job.applicantCount || 0} Pelamar
                     </button>
                   </Link>
                 </div>

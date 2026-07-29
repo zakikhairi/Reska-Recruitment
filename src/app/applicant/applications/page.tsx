@@ -3,14 +3,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/auth";
-import {
-  getAllApplications,
-  getJobById,
-  getAllUsers,
-  type User,
-  type Application,
-  type JobPosting
-} from "@/lib/local-db";
 
 // Format division name for display
 const formatDivision = (division: string | undefined): string => {
@@ -25,10 +17,6 @@ const formatDivision = (division: string | undefined): string => {
   return division ? (divisionLabels[division] || division.replace(/_/g, " ")) : "Umum";
 };
 
-interface ApplicationWithJob extends Application {
-  job?: JobPosting;
-}
-
 const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
   ADMIN_CHECK: { bg: "#fef3c7", text: "#d97706", label: "Menunggu Review HR" },
   TEST_SCHEDULED: { bg: "#dbeafe", text: "#2563eb", label: "Menunggu Tes" },
@@ -36,15 +24,29 @@ const statusConfig: Record<string, { bg: string; text: string; label: string }> 
   TEST_COMPLETED: { bg: "#dcfce7", text: "#16a34a", label: "Tes Selesai" },
   INTERVIEW: { bg: "#fce7f3", text: "#be185d", label: "Interview" },
   MCU: { bg: "#d1fae5", text: "#059669", label: "Medical Check-Up" },
+  OFFERING: { bg: "#fef3c7", text: "#d97706", label: "Offering" },
   OFFERED: { bg: "#fef3c7", text: "#d97706", label: "Offering" },
   ACCEPTED: { bg: "#dcfce7", text: "#16a34a", label: "Diterima" },
   REJECTED: { bg: "#fee2e2", text: "#dc2626", label: "Ditolak" },
   PENDING: { bg: "#fef3c7", text: "#d97706", label: "Menunggu" },
 };
 
+interface ApplicationData {
+  id: string;
+  status: string;
+  notes?: string;
+  createdAt: string;
+  job?: {
+    id: string;
+    title: string;
+    division: string;
+    location: string;
+  };
+}
+
 export default function ApplicationsPage() {
-  const [applications, setApplications] = useState<ApplicationWithJob[]>([]);
-  const [selectedApp, setSelectedApp] = useState<ApplicationWithJob | null>(null);
+  const [applications, setApplications] = useState<ApplicationData[]>([]);
+  const [selectedApp, setSelectedApp] = useState<ApplicationData | null>(null);
   const [filter, setFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
   const user = useAuthStore((state) => state.user);
@@ -60,15 +62,15 @@ export default function ApplicationsPage() {
     }
 
     try {
-      const allApps = getAllApplications();
-      // Filter applications for this user and enrich with job data
-      const userApps = allApps
-        .filter((app: Application) => app.applicantId === user.id)
-        .map((app: Application) => {
-          const job = getJobById(app.jobPostingId);
-          return { ...app, job: job || undefined };
-        });
-      setApplications(userApps);
+      const response = await fetch(`/api/apply?userId=${user.id}`);
+      const result = await response.json();
+
+      if (result.success) {
+        setApplications(result.applications || []);
+        if (result.applications?.length > 0 && !selectedApp) {
+          setSelectedApp(result.applications[0]);
+        }
+      }
     } catch (err) {
       console.error("Failed to fetch applications:", err);
     }
@@ -132,7 +134,7 @@ export default function ApplicationsPage() {
           {/* Left - Application List */}
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-              {["all", "ADMIN_CHECK", "TEST_SCHEDULED", "TEST_COMPLETED", "INTERVIEW", "ACCEPTED", "REJECTED"].map((f) => (
+              {["all", "PENDING", "ADMIN_CHECK", "TEST_SCHEDULED", "TEST_COMPLETED", "INTERVIEW", "MCU", "OFFERING", "ACCEPTED", "REJECTED"].map((f) => (
                 <button key={f} onClick={() => setFilter(f)} style={{
                   padding: "8px 16px",
                   background: filter === f ? "#00205B" : "#fff",

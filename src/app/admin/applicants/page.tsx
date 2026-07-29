@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -13,19 +13,20 @@ import {
   AlertCircle,
   User,
   GraduationCap,
+  RefreshCw,
+  UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui";
-import { getAllUsers, getAllApplications, getJobById, type User as UserType } from "@/lib/local-db";
 
 const getStatusConfig = (status: string) => {
   switch (status) {
     case "PENDING":
-    case "ADMINISTRATION":
       return { bg: "#fef3c7", text: "#d97706", label: "Menunggu", icon: <Clock className="w-4 h-4" /> };
     case "ADMIN_CHECK":
       return { bg: "#dbeafe", text: "#2563eb", label: "Verifikasi", icon: <AlertCircle className="w-4 h-4" /> };
     case "TEST":
     case "IN_TEST":
+    case "TEST_SCHEDULED":
       return { bg: "#fef3c7", text: "#d97706", label: "Sedang Tes", icon: <Clock className="w-4 h-4" /> };
     case "TEST_COMPLETED":
       return { bg: "#d1fae5", text: "#059669", label: "Tes Selesai", icon: <CheckCircle className="w-4 h-4" /> };
@@ -34,7 +35,10 @@ const getStatusConfig = (status: string) => {
     case "MCU":
       return { bg: "#e0e7ff", text: "#4f46e5", label: "MCU", icon: <User className="w-4 h-4" /> };
     case "OFFERING":
+    case "OFFERED":
       return { bg: "#d1fae5", text: "#059669", label: "Offering", icon: <CheckCircle className="w-4 h-4" /> };
+    case "ACCEPTED":
+      return { bg: "#d1fae5", text: "#059669", label: "Diterima", icon: <CheckCircle className="w-4 h-4" /> };
     case "REJECTED":
       return { bg: "#fee2e2", text: "#dc2626", label: "Ditolak", icon: <XCircle className="w-4 h-4" /> };
     default:
@@ -42,56 +46,64 @@ const getStatusConfig = (status: string) => {
   }
 };
 
+interface ApplicantData {
+  id: string;
+  userId: string;
+  fullName: string;
+  email: string;
+  nik: string;
+  phone: string;
+  education: string;
+  createdAt: string;
+  applications: Array<{
+    id: string;
+    status: string;
+    jobTitle: string;
+    division: string;
+    appliedAt: string;
+  }>;
+  hasApplied: boolean;
+}
+
 export default function ApplicantsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [divisionFilter, setDivisionFilter] = useState("all");
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Get applicants from local database
-  const applicants = useMemo(() => {
-    const users = getAllUsers();
-    const applications = getAllApplications();
+  const [applicants, setApplicants] = useState<ApplicantData[]>([]);
 
-    // Filter only APPLICANT users
-    const applicantUsers = users.filter(u => u.role === "APPLICANT");
-
-    // Combine user data with application data
-    return applicantUsers.map((user: UserType) => {
-      const userApps = applications.filter(a => a.applicantId === user.id);
-      const latestApp = userApps[0];
-      let jobTitle = "-";
-      let division = "-";
-
-      if (latestApp) {
-        const job = getJobById(latestApp.jobPostingId);
-        if (job) {
-          jobTitle = job.title;
-          division = job.division;
-        }
-      }
-
-      return {
-        id: user.id,
-        name: user.fullName || user.email.split("@")[0],
-        email: user.email,
-        nik: user.nik || "-",
-        phone: user.phone || "-",
-        education: user.education || "-",
-        position: jobTitle,
-        division: division,
-        status: latestApp?.status || "PENDING",
-        appliedDate: latestApp?.createdAt || user.createdAt,
-        score: null,
-      };
-    });
+  useEffect(() => {
+    loadApplicants();
   }, []);
+
+  const loadApplicants = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/admin/pelamar');
+      const result = await response.json();
+
+      if (result.success) {
+        setApplicants(result.applicants || []);
+      }
+    } catch (err) {
+      console.error("Error loading applicants:", err);
+    }
+    setIsLoading(false);
+  };
 
   const filteredApplicants = applicants.filter((app) => {
     const matchSearch =
-      app.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      app.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchStatus = statusFilter === "all" || app.status === statusFilter;
-    const matchDivision = divisionFilter === "all" || app.division === divisionFilter;
+      app.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      app.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      app.nik.includes(searchQuery);
+    const matchDivision = divisionFilter === "all" ||
+      app.applications.some(a => a.division === divisionFilter);
+    const matchStatus = statusFilter === "all" ||
+      statusFilter === "BELUM_MELAMAR" && !app.hasApplied ||
+      app.applications.some(a => a.status === statusFilter);
+
+    if (statusFilter === "BELUM_MELAR") return !app.hasApplied && matchSearch && matchDivision;
     return matchSearch && matchStatus && matchDivision;
   });
 
@@ -102,9 +114,13 @@ export default function ApplicantsPage() {
         <div style={{ maxWidth: "1400px", margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <h1 style={{ fontSize: "28px", fontWeight: 800, color: "#00205B", marginBottom: "4px", letterSpacing: "-0.02em" }}>Manajemen Pelamar</h1>
-            <p style={{ fontSize: "15px", color: "#666666" }}>Kelola dan pantau seluruh pelamar</p>
+            <p style={{ fontSize: "15px", color: "#666666" }}>{filteredApplicants.length} pelamar terdaftar</p>
           </div>
           <div style={{ display: "flex", gap: "12px" }}>
+            <Button variant="outline" size="sm" onClick={loadApplicants}>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Refresh
+            </Button>
             <Button variant="outline" size="sm">
               <Download className="w-4 h-4 mr-2" />
               Export Data
@@ -122,7 +138,7 @@ export default function ApplicantsPage() {
               <Search className="w-4 h-4" style={{ position: "absolute", left: "16px", top: "50%", transform: "translateY(-50%)", color: "#888888" }} />
               <input
                 type="text"
-                placeholder="Cari nama atau email..."
+                placeholder="Cari nama, email, atau NIK..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{ width: "100%", padding: "12px 16px 12px 48px", border: "2px solid #eeeeee", borderRadius: "12px", fontSize: "14px", outline: "none" }}
@@ -136,13 +152,15 @@ export default function ApplicantsPage() {
               style={{ padding: "12px 40px 12px 16px", border: "2px solid #eeeeee", borderRadius: "12px", fontSize: "14px", outline: "none", background: "#ffffff", cursor: "pointer", appearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", backgroundSize: "16px" }}
             >
               <option value="all">Semua Status</option>
+              <option value="BELUM_MELAR">Belum Lamar</option>
+              <option value="PENDING">Menunggu</option>
               <option value="ADMIN_CHECK">Verifikasi Dokumen</option>
-              <option value="ADMINISTRATION">Menunggu Administrasi</option>
-              <option value="TEST">Menunggu Tes</option>
+              <option value="TEST_SCHEDULED">Menunggu Tes</option>
               <option value="TEST_COMPLETED">Tes Selesai</option>
               <option value="INTERVIEW">Interview</option>
               <option value="MCU">MCU</option>
               <option value="OFFERING">Offering</option>
+              <option value="ACCEPTED">Diterima</option>
               <option value="REJECTED">Ditolak</option>
             </select>
 
@@ -158,18 +176,19 @@ export default function ApplicantsPage() {
               <option value="IT_STAFF">IT Staff</option>
               <option value="LOGISTICS">Logistics</option>
               <option value="ADMIN">Admin</option>
+              <option value="RES_PARKING">ResParking</option>
             </select>
           </div>
         </div>
 
-        {filteredApplicants.length === 0 ? (
+        {isLoading ? (
+          <div style={{ background: "#ffffff", borderRadius: "16px", padding: "60px", textAlign: "center" }}>
+            <div style={{ width: "40px", height: "40px", border: "4px solid #eeeeee", borderTopColor: "#FF5E00", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
+            <p style={{ color: "#666666" }}>Memuat...</p>
+          </div>
+        ) : filteredApplicants.length === 0 ? (
           <div style={{ background: "#ffffff", borderRadius: "16px", padding: "80px 40px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", textAlign: "center" }}>
-            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#e5e5e5" strokeWidth="1.5" style={{ margin: "0 auto 24px" }}>
-              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-              <circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 00-3-3.87"/>
-              <path d="M16 3.13a4 4 0 010 7.75"/>
-            </svg>
+            <UserPlus style={{ width: "80px", height: "80px", margin: "0 auto 24px", color: "#e5e5e5" }} />
             <h2 style={{ fontSize: "24px", fontWeight: 700, color: "#111", marginBottom: "12px" }}>Belum Ada Pelamar</h2>
             <p style={{ fontSize: "15px", color: "#666" }}>Belum ada pelamar yang terdaftar dalam sistem.</p>
           </div>
@@ -181,33 +200,35 @@ export default function ApplicantsPage() {
                 <thead>
                   <tr style={{ background: "#f8f9fa", borderBottom: "2px solid #eeeeee" }}>
                     <th style={{ textAlign: "left", padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "#888888", textTransform: "uppercase", letterSpacing: "0.05em" }}>Pelamar</th>
-                    <th style={{ textAlign: "left", padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "#888888", textTransform: "uppercase", letterSpacing: "0.05em" }}>Posisi</th>
+                    <th style={{ textAlign: "left", padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "#888888", textTransform: "uppercase", letterSpacing: "0.05em" }}>NIK</th>
                     <th style={{ textAlign: "left", padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "#888888", textTransform: "uppercase", letterSpacing: "0.05em" }}>Pendidikan</th>
-                    <th style={{ textAlign: "left", padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "#888888", textTransform: "uppercase", letterSpacing: "0.05em" }}>Tanggal</th>
+                    <th style={{ textAlign: "left", padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "#888888", textTransform: "uppercase", letterSpacing: "0.05em" }}>Lowongan</th>
+                    <th style={{ textAlign: "left", padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "#888888", textTransform: "uppercase", letterSpacing: "0.05em" }}>Tanggal Daftar</th>
                     <th style={{ textAlign: "left", padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "#888888", textTransform: "uppercase", letterSpacing: "0.05em" }}>Status</th>
-                    <th style={{ textAlign: "left", padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "#888888", textTransform: "uppercase", letterSpacing: "0.05em" }}>Skor</th>
                     <th style={{ textAlign: "center", padding: "16px 20px", fontSize: "12px", fontWeight: 600, color: "#888888", textTransform: "uppercase", letterSpacing: "0.05em" }}>Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredApplicants.map((app) => {
-                    const status = getStatusConfig(app.status);
+                    const latestApp = app.applications[0];
+                    const status = latestApp ? getStatusConfig(latestApp.status) : { bg: "#f1f5f9", text: "#64748b", label: "Belum Lamar", icon: <Clock className="w-4 h-4" /> };
+                    const divisionLabel = latestApp?.division?.replace(/_/g, " ") || "-";
+
                     return (
                       <tr key={app.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
                         <td style={{ padding: "16px 20px" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                             <div style={{ width: "44px", height: "44px", background: "linear-gradient(135deg, #00205B 0%, #003380 100%)", borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", color: "#ffffff", fontSize: "14px", fontWeight: 700 }}>
-                              {app.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}
+                              {app.fullName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
                             </div>
                             <div>
-                              <p style={{ fontSize: "14px", fontWeight: 600, color: "#111111", marginBottom: "2px" }}>{app.name}</p>
+                              <p style={{ fontSize: "14px", fontWeight: 600, color: "#111111", marginBottom: "2px" }}>{app.fullName}</p>
                               <p style={{ fontSize: "12px", color: "#888888" }}>{app.email}</p>
                             </div>
                           </div>
                         </td>
                         <td style={{ padding: "16px 20px" }}>
-                          <p style={{ fontSize: "14px", fontWeight: 500, color: "#111111" }}>{app.position}</p>
-                          <p style={{ fontSize: "12px", color: "#888888" }}>{app.division?.replace(/_/g, " ")}</p>
+                          <span style={{ fontSize: "14px", color: "#666666" }}>{app.nik}</span>
                         </td>
                         <td style={{ padding: "16px 20px" }}>
                           <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "6px 12px", background: "#f0f4ff", color: "#00205B", borderRadius: "20px", fontSize: "12px", fontWeight: 600 }}>
@@ -216,8 +237,18 @@ export default function ApplicantsPage() {
                           </span>
                         </td>
                         <td style={{ padding: "16px 20px" }}>
+                          {app.hasApplied ? (
+                            <div>
+                              <p style={{ fontSize: "14px", fontWeight: 500, color: "#111111" }}>{latestApp?.jobTitle || "-"}</p>
+                              <p style={{ fontSize: "12px", color: "#888888" }}>{divisionLabel}</p>
+                            </div>
+                          ) : (
+                            <span style={{ fontSize: "14px", color: "#888888" }}>-</span>
+                          )}
+                        </td>
+                        <td style={{ padding: "16px 20px" }}>
                           <span style={{ fontSize: "14px", color: "#666666" }}>
-                            {new Date(app.appliedDate).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                            {new Date(app.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
                           </span>
                         </td>
                         <td style={{ padding: "16px 20px" }}>
@@ -226,25 +257,19 @@ export default function ApplicantsPage() {
                             {status.label}
                           </span>
                         </td>
-                        <td style={{ padding: "16px 20px" }}>
-                          {app.score !== null ? (
-                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                              <div style={{ width: "60px", height: "6px", background: "#f1f5f9", borderRadius: "4px", overflow: "hidden" }}>
-                                <div style={{ height: "100%", width: `${app.score}%`, background: app.score >= 70 ? "#16a34a" : "#ef4444", borderRadius: "4px" }} />
-                              </div>
-                              <span style={{ fontSize: "14px", fontWeight: 700, color: app.score >= 70 ? "#16a34a" : "#ef4444" }}>{app.score}%</span>
-                            </div>
-                          ) : (
-                            <span style={{ fontSize: "14px", color: "#888888" }}>-</span>
-                          )}
-                        </td>
                         <td style={{ padding: "16px 20px", textAlign: "center" }}>
                           <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
-                            <Link href={`/admin/applicants/${app.id}`}>
-                              <button style={{ padding: "8px", background: "#f0f4ff", border: "none", borderRadius: "8px", cursor: "pointer", color: "#00205B", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            {app.hasApplied ? (
+                              <Link href={`/admin/applicants/${latestApp.id}`}>
+                                <button style={{ padding: "8px", background: "#f0f4ff", border: "none", borderRadius: "8px", cursor: "pointer", color: "#00205B", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                  <Eye className="w-4 h-4" />
+                                </button>
+                              </Link>
+                            ) : (
+                              <button style={{ padding: "8px", background: "#f1f5f9", border: "none", borderRadius: "8px", cursor: "not-allowed", color: "#888888", display: "flex", alignItems: "center", justifyContent: "center" }}>
                                 <Eye className="w-4 h-4" />
                               </button>
-                            </Link>
+                            )}
                             <button style={{ padding: "8px", background: "#f0f4ff", border: "none", borderRadius: "8px", cursor: "pointer", color: "#00205B", display: "flex", alignItems: "center", justifyContent: "center" }}>
                               <FileText className="w-4 h-4" />
                             </button>
@@ -270,6 +295,13 @@ export default function ApplicantsPage() {
           </div>
         )}
       </div>
+
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }

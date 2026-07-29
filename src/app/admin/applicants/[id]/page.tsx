@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui";
 
+const DB_KEY = "kai_recruitment_db";
+
 interface ApplicantData {
   application: {
     id: string;
@@ -51,6 +53,25 @@ interface ApplicantData {
     division: string;
     location: string;
   };
+}
+
+// Helper functions for localStorage sync
+function getLocalDB() {
+  if (typeof window === "undefined") return null;
+  const stored = localStorage.getItem(DB_KEY);
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+function saveLocalDB(db: any) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(DB_KEY, JSON.stringify(db));
 }
 
 const getStatusConfig = (status: string) => {
@@ -106,11 +127,24 @@ export default function ApplicantDetailPage() {
 
   const fetchApplicantData = async () => {
     try {
-      const response = await fetch(`/api/admin/applications/${applicantId}/verify`);
+      // Get local database to sync with server
+      const localDB = getLocalDB();
+
+      const response = await fetch(`/api/admin/applications/${applicantId}/verify`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
       const result = await response.json();
 
       if (result.success) {
         setData(result.data);
+        // If server returned updated database, save to localStorage
+        if (result.db) {
+          saveLocalDB(result.db);
+        }
       } else {
         setError(result.error || "Gagal memuat data");
       }
@@ -129,23 +163,65 @@ export default function ApplicantDetailPage() {
 
     setActionLoading(true);
     try {
+      // Get local database to send to server
+      const localDB = getLocalDB();
+
       const response = await fetch(`/api/admin/applications/${applicantId}/verify`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action,
           notes: action === "reject" ? rejectNotes : undefined,
+          db: localDB, // Send local database to server
         }),
       });
 
       const result = await response.json();
 
       if (result.success) {
+        // Save updated database from server to localStorage
+        if (result.db) {
+          saveLocalDB(result.db);
+        }
         // Refresh data
         await fetchApplicantData();
         setShowRejectModal(false);
         setRejectNotes("");
         alert(result.message);
+      } else {
+        alert(result.error || "Terjadi kesalahan");
+      }
+    } catch (err) {
+      alert("Terjadi kesalahan saat memproses");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleAdvanceStatus = async (newStatus: string) => {
+    setActionLoading(true);
+    try {
+      // Get local database to send to server
+      const localDB = getLocalDB();
+
+      const response = await fetch(`/api/admin/applications/${applicantId}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: newStatus,
+          db: localDB, // Send local database to server
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Save updated database from server to localStorage
+        if (result.db) {
+          saveLocalDB(result.db);
+        }
+        await fetchApplicantData();
+        alert(`Status berhasil diubah ke: ${getStatusConfig(newStatus).label}`);
       } else {
         alert(result.error || "Terjadi kesalahan");
       }
@@ -237,8 +313,106 @@ export default function ApplicantDetailPage() {
               </div>
             </div>
 
-            {/* Action Buttons - hanya tampil jika status ADMIN_CHECK */}
-            {application.status === "ADMIN_CHECK" && (
+            {/* Action Buttons - tampil sesuai dengan status aplikasi */}
+            {(application.status === "ADMIN_CHECK" || application.status === "TEST_COMPLETED" || application.status === "INTERVIEW") && (
+              <div style={{ display: "flex", gap: "12px" }}>
+                <button
+                  onClick={() => handleVerify("reject")}
+                  disabled={actionLoading}
+                  style={{
+                    padding: "12px 24px",
+                    background: "#ffffff",
+                    color: "#dc2626",
+                    border: "2px solid #dc2626",
+                    borderRadius: "12px",
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    cursor: actionLoading ? "not-allowed" : "pointer",
+                    opacity: actionLoading ? 0.6 : 1,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
+                  <XCircle className="w-5 h-5" />
+                  Tolak
+                </button>
+                {application.status === "ADMIN_CHECK" && (
+                  <button
+                    onClick={() => handleVerify("approve")}
+                    disabled={actionLoading}
+                    style={{
+                      padding: "12px 24px",
+                      background: "#16a34a",
+                      color: "#ffffff",
+                      border: "none",
+                      borderRadius: "12px",
+                      fontSize: "14px",
+                      fontWeight: 700,
+                      cursor: actionLoading ? "not-allowed" : "pointer",
+                      opacity: actionLoading ? 0.6 : 1,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      boxShadow: "0 4px 12px rgba(22, 163, 74, 0.3)",
+                    }}
+                  >
+                    <CheckCircle className="w-5 h-5" />
+                    Verifikasi Lulus
+                  </button>
+                )}
+                {application.status === "TEST_COMPLETED" && (
+                  <button
+                    onClick={() => handleAdvanceStatus("INTERVIEW")}
+                    disabled={actionLoading}
+                    style={{
+                      padding: "12px 24px",
+                      background: "#7c3aed",
+                      color: "#ffffff",
+                      border: "none",
+                      borderRadius: "12px",
+                      fontSize: "14px",
+                      fontWeight: 700,
+                      cursor: actionLoading ? "not-allowed" : "pointer",
+                      opacity: actionLoading ? 0.6 : 1,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      boxShadow: "0 4px 12px rgba(124, 58, 237, 0.3)",
+                    }}
+                  >
+                    <User className="w-5 h-5" />
+                    Lanjut ke Interview
+                  </button>
+                )}
+                {application.status === "INTERVIEW" && (
+                  <button
+                    onClick={() => handleAdvanceStatus("MCU")}
+                    disabled={actionLoading}
+                    style={{
+                      padding: "12px 24px",
+                      background: "#0891b2",
+                      color: "#ffffff",
+                      border: "none",
+                      borderRadius: "12px",
+                      fontSize: "14px",
+                      fontWeight: 700,
+                      cursor: actionLoading ? "not-allowed" : "pointer",
+                      opacity: actionLoading ? 0.6 : 1,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      boxShadow: "0 4px 12px rgba(8, 145, 178, 0.3)",
+                    }}
+                  >
+                    <CheckCircle className="w-5 h-5" />
+                    Lanjut ke MCU
+                  </button>
+                )}
+              </div>
+            )}
+            {/* MCU -> Offering */}
+            {application.status === "MCU" && (
               <div style={{ display: "flex", gap: "12px" }}>
                 <button
                   onClick={() => handleVerify("reject")}
@@ -262,7 +436,55 @@ export default function ApplicantDetailPage() {
                   Tolak
                 </button>
                 <button
-                  onClick={() => handleVerify("approve")}
+                  onClick={() => handleAdvanceStatus("OFFERING")}
+                  disabled={actionLoading}
+                  style={{
+                    padding: "12px 24px",
+                    background: "#059669",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: "12px",
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    cursor: actionLoading ? "not-allowed" : "pointer",
+                    opacity: actionLoading ? 0.6 : 1,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    boxShadow: "0 4px 12px rgba(5, 150, 105, 0.3)",
+                  }}
+                >
+                  <CheckCircle className="w-5 h-5" />
+                  Lanjut ke Offering
+                </button>
+              </div>
+            )}
+            {/* Offering -> Accepted */}
+            {application.status === "OFFERING" && (
+              <div style={{ display: "flex", gap: "12px" }}>
+                <button
+                  onClick={() => handleVerify("reject")}
+                  disabled={actionLoading}
+                  style={{
+                    padding: "12px 24px",
+                    background: "#ffffff",
+                    color: "#dc2626",
+                    border: "2px solid #dc2626",
+                    borderRadius: "12px",
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    cursor: actionLoading ? "not-allowed" : "pointer",
+                    opacity: actionLoading ? 0.6 : 1,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
+                  <XCircle className="w-5 h-5" />
+                  Tolak
+                </button>
+                <button
+                  onClick={() => handleAdvanceStatus("ACCEPTED")}
                   disabled={actionLoading}
                   style={{
                     padding: "12px 24px",
@@ -281,7 +503,7 @@ export default function ApplicantDetailPage() {
                   }}
                 >
                   <CheckCircle className="w-5 h-5" />
-                  Verifikasi Lulus
+                  Terima Pelamar
                 </button>
               </div>
             )}

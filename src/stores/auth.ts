@@ -1,13 +1,5 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import {
-  findUserByEmail,
-  findUserById,
-  verifyPassword,
-  createUser,
-  updateUser,
-  type User
-} from "@/lib/local-db";
 
 export type UserRole = "APPLICANT" | "HR_ADMIN" | "SUPER_ADMIN";
 
@@ -61,32 +53,31 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true });
 
         try {
-          // Find user in local database
-          const user = findUserByEmail(email);
+          const response = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password }),
+          });
 
-          if (!user) {
-            set({ isLoading: false });
-            return { success: false, error: "Email atau password salah" };
-          }
+          const result = await response.json();
 
-          // Verify password
-          if (!verifyPassword(user, password)) {
+          if (!result.success) {
             set({ isLoading: false });
-            return { success: false, error: "Email atau password salah" };
+            return { success: false, error: result.error || "Login gagal" };
           }
 
           // Build auth user object
           const authUser: AuthUser = {
-            id: user.id,
-            email: user.email,
-            role: user.role as UserRole,
-            fullName: user.fullName || user.email.split("@")[0],
-            nik: user.nik,
-            phone: user.phone,
-            education: user.education,
-            applicantId: user.role === "APPLICANT" ? user.id : undefined,
-            employeeId: user.role !== "APPLICANT" ? user.employeeId : undefined,
-            department: user.department,
+            id: result.user.id,
+            email: result.user.email,
+            role: result.user.role,
+            fullName: result.user.fullName || result.user.email.split("@")[0],
+            employeeId: result.user.employeeId,
+            department: result.user.department,
+            applicantId: result.user.applicantId,
+            nik: result.user.fullProfile?.nik,
+            phone: result.user.fullProfile?.phone,
+            education: result.user.fullProfile?.education,
           };
 
           set({
@@ -98,7 +89,7 @@ export const useAuthStore = create<AuthState>()(
           return { success: true };
         } catch (error) {
           set({ isLoading: false });
-          return { success: false, error: "Terjadi kesalahan" };
+          return { success: false, error: "Terjadi kesalahan koneksi" };
         }
       },
 
@@ -106,32 +97,36 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true });
 
         try {
-          // Check if email exists
-          const existingUser = findUserByEmail(data.email);
-          if (existingUser) {
-            set({ isLoading: false });
-            return { success: false, error: "Email sudah terdaftar" };
-          }
-
-          // Create user in local database
-          const newUser = createUser({
-            email: data.email,
-            password: data.password,
-            role: "APPLICANT",
-            fullName: data.fullName,
-            nik: data.nik,
-            phone: data.phone,
+          const response = await fetch("/api/auth/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: data.email,
+              password: data.password,
+              confirmPassword: data.password,
+              fullName: data.fullName,
+              nik: data.nik || "0000000000000000",
+              phone: data.phone || "0000000000000",
+            }),
           });
 
-          // Build auth user object
+          const result = await response.json();
+
+          if (!result.success) {
+            set({ isLoading: false });
+            return { success: false, error: result.error || "Registrasi gagal" };
+          }
+
+          // Build auth user object from response
           const authUser: AuthUser = {
-            id: newUser.id,
-            email: newUser.email,
-            role: newUser.role as UserRole,
-            fullName: newUser.fullName || newUser.email.split("@")[0],
-            nik: newUser.nik,
-            phone: newUser.phone,
-            applicantId: newUser.id,
+            id: result.user.id,
+            email: result.user.email,
+            role: result.user.role,
+            fullName: result.user.fullName || data.fullName,
+            applicantId: result.user.applicantId,
+            nik: data.nik,
+            phone: data.phone,
+            education: "SMA",
           };
 
           set({
@@ -141,9 +136,9 @@ export const useAuthStore = create<AuthState>()(
           });
 
           return { success: true };
-        } catch (error: any) {
+        } catch (error) {
           set({ isLoading: false });
-          return { success: false, error: error.message || "Terjadi kesalahan" };
+          return { success: false, error: "Terjadi kesalahan koneksi" };
         }
       },
 
@@ -154,23 +149,28 @@ export const useAuthStore = create<AuthState>()(
         }
 
         try {
-          const updated = updateUser(user.id, data);
-          if (!updated) {
-            return { success: false, error: "Gagal update profil" };
+          const response = await fetch("/api/auth/profile", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+          });
+
+          const result = await response.json();
+
+          if (!result.success) {
+            return { success: false, error: result.error || "Gagal update profil" };
           }
 
-          const authUser: AuthUser = {
-            ...user,
-            fullName: updated.fullName || user.fullName,
-            nik: updated.nik || user.nik,
-            phone: updated.phone || user.phone,
-            education: updated.education || user.education,
-          };
+          set({
+            user: {
+              ...user,
+              ...data,
+            },
+          });
 
-          set({ user: authUser });
           return { success: true };
         } catch (error) {
-          return { success: false, error: "Terjadi kesalahan" };
+          return { success: false, error: "Terjadi kesalahan koneksi" };
         }
       },
 

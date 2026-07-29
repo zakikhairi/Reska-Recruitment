@@ -1,25 +1,70 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/auth";
-import { getJobById, createApplication } from "@/lib/local-db";
 
-export default function ApplyJobPage({ params }: { params: { id: string } }) {
-  const jobId = params.id;
+interface Job {
+  id: string;
+  title: string;
+  division: string;
+  location: string;
+  minEducation: string;
+  minHeight?: number;
+  minAge?: number;
+  maxAge?: number;
+  description: string;
+  requirements: string;
+  deadline: string;
+  status: string;
+}
+
+export default function ApplyJobPage({ params }: { params: Promise<{ id: string }> }) {
+  const [jobId, setJobId] = useState<string | null>(null);
   const user = useAuthStore((state) => state.user);
-  const setUser = useAuthStore((state) => state.setUser);
 
+  const [job, setJob] = useState<Job | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
-  // Get job from local database
-  const job = useMemo(() => getJobById(jobId), [jobId]);
+  // Resolve params promise
+  useEffect(() => {
+    params.then((p) => setJobId(p.id));
+  }, [params]);
+
+  useEffect(() => {
+    if (jobId) {
+      fetchJob(jobId);
+    }
+  }, [jobId]);
+
+  const fetchJob = async (id: string) => {
+    try {
+      const response = await fetch(`/api/jobs/${id}`);
+      const result = await response.json();
+
+      if (result.job) {
+        setJob(result.job);
+      } else {
+        setError(result.error || "Lowongan tidak ditemukan");
+      }
+    } catch (err) {
+      console.error("Failed to fetch job:", err);
+      setError("Gagal memuat data lowongan");
+    }
+    setIsLoading(false);
+  };
 
   const handleApply = async () => {
-    if (!user?.id || !user?.applicantId) {
+    if (!user?.id) {
       setError("Silakan login terlebih dahulu");
+      return;
+    }
+
+    if (!jobId) {
+      setError("ID lowongan tidak valid");
       return;
     }
 
@@ -27,36 +72,22 @@ export default function ApplyJobPage({ params }: { params: { id: string } }) {
     setError("");
 
     try {
-      // Use API to create application (Prisma database)
-      const response = await fetch("/api/applications", {
+      const response = await fetch("/api/apply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          jobId: jobId,
-          applicantId: user.applicantId
+          jobPostingId: jobId,
+          userId: user.id
         }),
       });
 
       const result = await response.json();
 
-      if (!response.ok) {
+      if (result.success) {
+        setSuccess(true);
+      } else {
         setError(result.error || "Gagal melamar");
-        setIsSubmitting(false);
-        return;
       }
-
-      // Also save to local-db for local state management
-      try {
-        createApplication({
-          applicantId: user.id,
-          jobPostingId: jobId
-        });
-      } catch (localErr) {
-        // Ignore local storage errors - API is the source of truth
-        console.log("Local storage sync skipped");
-      }
-
-      setSuccess(true);
     } catch (err: any) {
       setError(err.message || "Terjadi kesalahan saat melamar");
     }
@@ -94,6 +125,18 @@ export default function ApplyJobPage({ params }: { params: { id: string } }) {
             </Link>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (!jobId || isLoading) {
+    return (
+      <div style={styles.container}>
+        <div style={{ textAlign: "center", padding: "80px" }}>
+          <div style={{ width: "40px", height: "40px", border: "4px solid #eeeeee", borderTopColor: "#FF5E00", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
+          <p style={{ color: "#666" }}>Memuat...</p>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }

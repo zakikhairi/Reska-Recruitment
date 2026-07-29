@@ -24,7 +24,6 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { useJobsStore } from "@/stores/jobs";
-import { getAllApplications, getJobById, getAllUsers, updateApplicationStatus } from "@/lib/local-db";
 
 const stats: { label: string; value: string; change: string; trend: "up" | "down"; icon: any; color: string }[] = [];
 const statusDistribution: { name: string; value: number; color: string }[] = [];
@@ -45,6 +44,10 @@ const getStatusConfig = (status: string) => {
     case "TEST_COMPLETED": return { bg: "#dcfce7", text: "#16a34a", label: "Tes Selesai", icon: <CheckCircle2 className="w-3 h-3" /> };
     case "ADMIN_CHECK": return { bg: "#fef3c7", text: "#d97706", label: "Verifikasi", icon: <AlertCircle className="w-3 h-3" /> };
     case "REJECTED": return { bg: "#fee2e2", text: "#dc2626", label: "Ditolak", icon: <XCircle className="w-3 h-3" /> };
+    case "TEST_SCHEDULED": return { bg: "#e0e7ff", text: "#4f46e5", label: "Tes Terjadwal", icon: <Clock className="w-3 h-3" /> };
+    case "MCU": return { bg: "#fae8ff", text: "#c026d3", label: "MCU", icon: <CheckCircle2 className="w-3 h-3" /> };
+    case "OFFERING": return { bg: "#fef3c7", text: "#d97706", label: "Offering", icon: <CheckCircle2 className="w-3 h-3" /> };
+    case "ACCEPTED": return { bg: "#dcfce7", text: "#16a34a", label: "Diterima", icon: <CheckCircle2 className="w-3 h-3" /> };
     default: return { bg: "#f1f5f9", text: "#64748b", label: "Pending", icon: <Clock className="w-3 h-3" /> };
   }
 };
@@ -59,9 +62,7 @@ export default function AdminDashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (_hasHydrated) {
-      loadData();
-    }
+    loadData();
   }, [_hasHydrated, jobs.length]);
 
   // Reload data periodically or on focus
@@ -71,65 +72,79 @@ export default function AdminDashboardPage() {
     return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
-  const loadData = () => {
+  const loadData = async () => {
     try {
-      // Load applications from local database
-      const allApps = getAllApplications();
-      const users = getAllUsers();
+      // Fetch applications from API
+      const response = await fetch('/api/admin/applications');
+      const result = await response.json();
 
-      // Enrich applications with job and user data
-      const enrichedApps = allApps.map(app => {
-        const job = getJobById(app.jobPostingId);
-        const user = users.find(u => u.id === app.applicantId);
-        return {
+      if (result.success) {
+        const apps = result.applications.map((app: any) => ({
           ...app,
           applicationId: app.id,
-          jobTitle: job?.title || "Lowongan",
-          division: job?.division || "Umum",
-          applicantName: user?.fullName || user?.email?.split("@")[0] || "Pelamar",
-        };
-      });
+          jobTitle: app.job?.title || "Lowongan",
+          division: app.job?.division || "Umum",
+          applicantName: app.applicant?.fullName || app.applicant?.email?.split("@")[0] || "Pelamar",
+        }));
 
-      setApplications(enrichedApps);
+        setApplications(apps);
 
-      // Calculate stats
-      const totalApplicants = allApps.length;
-      const activeJobsCount = jobs.filter(j => j.status === "ACTIVE").length;
-      const completedTests = allApps.filter(a => a.status === "TEST_COMPLETED").length;
-      const passedTests = allApps.filter(a => ["ACCEPTED", "INTERVIEW", "MCU", "OFFERED"].includes(a.status)).length;
-      const passingRate = totalApplicants > 0 ? Math.round((passedTests / totalApplicants) * 100) : 0;
+        // Calculate stats
+        const totalApplicants = apps.length;
+        const activeJobsCount = jobs.filter((j: any) => j.status === "ACTIVE").length;
+        const completedTests = apps.filter((a: any) => a.status === "TEST_COMPLETED").length;
+        const passedTests = apps.filter((a: any) => ["ACCEPTED", "INTERVIEW", "MCU", "OFFERED"].includes(a.status)).length;
+        const passingRate = totalApplicants > 0 ? Math.round((passedTests / totalApplicants) * 100) : 0;
 
-      setStatsData([
-        { label: "Total Pelamar", value: totalApplicants.toString(), change: "+0%", trend: totalApplicants > 0 ? "up" : "down", icon: Users, color: "#00205B" },
-        { label: "Tes Diselesaikan", value: completedTests.toString(), change: "+0%", trend: completedTests > 0 ? "up" : "down", icon: ClipboardCheck, color: "#16a34a" },
-        { label: "Passing Rate", value: `${passingRate}%`, change: "+0%", trend: passingRate > 50 ? "up" : "down", icon: TrendingUp, color: "#f59e0b" },
-        { label: "Lowongan Aktif", value: activeJobsCount.toString(), change: "+0%", trend: activeJobsCount > 0 ? "up" : "down", icon: Briefcase, color: "#8b5cf6" },
-      ]);
+        setStatsData([
+          { label: "Total Pelamar", value: totalApplicants.toString(), change: "+0%", trend: totalApplicants > 0 ? "up" : "down", icon: Users, color: "#00205B" },
+          { label: "Tes Diselesaikan", value: completedTests.toString(), change: "+0%", trend: completedTests > 0 ? "up" : "down", icon: ClipboardCheck, color: "#16a34a" },
+          { label: "Passing Rate", value: `${passingRate}%`, change: "+0%", trend: passingRate > 50 ? "up" : "down", icon: TrendingUp, color: "#f59e0b" },
+          { label: "Lowongan Aktif", value: activeJobsCount.toString(), change: "+0%", trend: activeJobsCount > 0 ? "up" : "down", icon: Briefcase, color: "#8b5cf6" },
+        ]);
 
-      // Status distribution
-      const statusCounts = allApps.reduce((acc, app) => {
-        acc[app.status] = (acc[app.status] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
+        // Status distribution
+        const statusCounts = apps.reduce((acc: any, app: any) => {
+          acc[app.status] = (acc[app.status] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
 
-      setStatusDist([
-        { name: "Pending", value: statusCounts["PENDING"] || 0, color: "#F59E0B" },
-        { name: "Verifikasi", value: statusCounts["ADMIN_CHECK"] || 0, color: "#d97706" },
-        { name: "Dalam Tes", value: (statusCounts["TEST_SCHEDULED"] || 0) + (statusCounts["IN_TEST"] || 0), color: "#8B5CF6" },
-        { name: "Interview", value: statusCounts["INTERVIEW"] || 0, color: "#3B82F6" },
-        { name: "Ditolak", value: statusCounts["REJECTED"] || 0, color: "#EF4444" },
-        { name: "Diterima", value: (statusCounts["ACCEPTED"] || 0) + (statusCounts["OFFERED"] || 0) + (statusCounts["MCU"] || 0), color: "#10B981" },
-      ]);
+        setStatusDist([
+          { name: "Pending", value: statusCounts["PENDING"] || 0, color: "#F59E0B" },
+          { name: "Verifikasi", value: statusCounts["ADMIN_CHECK"] || 0, color: "#d97706" },
+          { name: "Dalam Tes", value: (statusCounts["TEST_SCHEDULED"] || 0) + (statusCounts["IN_TEST"] || 0), color: "#8B5CF6" },
+          { name: "Interview", value: statusCounts["INTERVIEW"] || 0, color: "#3B82F6" },
+          { name: "Ditolak", value: statusCounts["REJECTED"] || 0, color: "#EF4444" },
+          { name: "Diterima", value: (statusCounts["ACCEPTED"] || 0) + (statusCounts["OFFERED"] || 0) + (statusCounts["MCU"] || 0), color: "#10B981" },
+        ]);
+      }
     } catch (err) {
       console.error("Error loading data:", err);
     }
     setIsLoading(false);
   };
 
-  const handleUpdateStatus = (applicationId: string, newStatus: string) => {
+  const handleUpdateStatus = async (applicationId: string, newStatus: string) => {
     if (!applicationId) return;
-    updateApplicationStatus(applicationId, newStatus);
-    loadData(); // Refresh data
+
+    try {
+      const response = await fetch(`/api/admin/applications/${applicationId}/update`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        loadData(); // Refresh data
+        alert(`Status berhasil diubah ke: ${getStatusConfig(newStatus).label}`);
+      } else {
+        alert(result.error || "Terjadi kesalahan");
+      }
+    } catch (err) {
+      alert("Terjadi kesalahan saat mengupdate status");
+    }
   };
 
   // Filter and sort applications based on search query

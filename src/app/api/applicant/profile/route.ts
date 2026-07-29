@@ -1,35 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-import { PrismaLibSql } from "@prisma/adapter-libsql";
-import path from "path";
+import prisma from "@/lib/db";
 
-// Create Prisma client with LibSQL adapter
-const dbPath = path.join(process.cwd(), "prisma", "dev.db");
-const adapter = new PrismaLibSql({ url: `file:${dbPath}` });
-const prisma = new PrismaClient({ adapter });
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get("userId");
 
-export async function PUT(request: NextRequest) {
+    if (!userId) {
+      return NextResponse.json({ error: "User ID diperlukan" }, { status: 400 });
+    }
+
+    const applicant = await prisma.applicant.findFirst({ where: { userId } });
+
+    if (!applicant) {
+      return NextResponse.json({ error: "Profil tidak ditemukan" }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, profile: applicant });
+  } catch (error) {
+    console.error("Get profile error:", error);
+    return NextResponse.json({ error: "Terjadi kesalahan server" }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
     const { userId, ...profileData } = body;
 
     if (!userId) {
-      return NextResponse.json(
-        { error: "User ID diperlukan" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "User ID diperlukan" }, { status: 400 });
     }
 
-    // Update applicant profile
-    const applicant = await prisma.applicant.findFirst({
-      where: { userId },
-    });
+    const applicant = await prisma.applicant.findFirst({ where: { userId } });
 
     if (!applicant) {
-      return NextResponse.json(
-        { error: "Profil pelamar tidak ditemukan" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Profil tidak ditemukan" }, { status: 404 });
     }
 
     const updated = await prisma.applicant.update({
@@ -51,52 +57,9 @@ export async function PUT(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({
-      success: true,
-      message: "Profil berhasil diperbarui",
-      applicant: updated,
-    });
+    return NextResponse.json({ success: true, profile: updated });
   } catch (error) {
     console.error("Update profile error:", error);
-    return NextResponse.json(
-      { error: "Terjadi kesalahan server" },
-      { status: 500 }
-    );
-  }
-}
-
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: "User ID diperlukan" },
-        { status: 400 }
-      );
-    }
-
-    const applicant = await prisma.applicant.findFirst({
-      where: { userId },
-    });
-
-    if (!applicant) {
-      return NextResponse.json(
-        { error: "Profil pelamar tidak ditemukan" },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      applicant,
-    });
-  } catch (error) {
-    console.error("Get profile error:", error);
-    return NextResponse.json(
-      { error: "Terjadi kesalahan server" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Terjadi kesalahan server" }, { status: 500 });
   }
 }
