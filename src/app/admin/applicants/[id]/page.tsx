@@ -128,7 +128,116 @@ export default function ApplicantDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [showAcceptModal, setShowAcceptModal] = useState(false);
   const [rejectNotes, setRejectNotes] = useState("");
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [isEditingPersonal, setIsEditingPersonal] = useState(false);
+  const [isEditingEducation, setIsEditingEducation] = useState(false);
+  const [editedPersonal, setEditedPersonal] = useState({
+    fullName: "",
+    nik: "",
+    phone: "",
+    placeOfBirth: "",
+    dateOfBirth: "",
+    gender: "",
+    address: "",
+    city: "",
+  });
+  const [editedEducation, setEditedEducation] = useState({
+    education: "",
+    university: "",
+    height: "",
+    weight: "",
+  });
+
+  const showToast = (message: string, type: "success" | "error") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const startEditPersonal = () => {
+    setEditedPersonal({
+      fullName: applicant.fullName || "",
+      nik: applicant.nik || "",
+      phone: applicant.phone || "",
+      placeOfBirth: applicant.placeOfBirth || "",
+      dateOfBirth: applicant.dateOfBirth ? applicant.dateOfBirth.split("T")[0] : "",
+      gender: applicant.gender || "",
+      address: applicant.address || "",
+      city: applicant.city || "",
+    });
+    setIsEditingPersonal(true);
+  };
+
+  const startEditEducation = () => {
+    setEditedEducation({
+      education: applicant.education || "",
+      university: applicant.university || "",
+      height: applicant.height?.toString() || "",
+      weight: applicant.weight?.toString() || "",
+    });
+    setIsEditingEducation(true);
+  };
+
+  const savePersonalData = async () => {
+    setActionLoading(true);
+    try {
+      const localDB = getLocalDB();
+      const response = await fetch(`/api/admin/applications/${applicantId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "personal",
+          data: editedPersonal,
+          db: localDB,
+        }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        if (result.db) saveLocalDB(result.db);
+        await fetchApplicantData();
+        setIsEditingPersonal(false);
+        showToast("Data pribadi berhasil diperbarui", "success");
+      } else {
+        showToast(result.error || "Gagal memperbarui data", "error");
+      }
+    } catch (err) {
+      showToast("Terjadi kesalahan saat menyimpan", "error");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const saveEducationData = async () => {
+    setActionLoading(true);
+    try {
+      const localDB = getLocalDB();
+      const response = await fetch(`/api/admin/applications/${applicantId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "education",
+          data: editedEducation,
+          db: localDB,
+        }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        if (result.db) saveLocalDB(result.db);
+        await fetchApplicantData();
+        setIsEditingEducation(false);
+        showToast("Data pendidikan berhasil diperbarui", "success");
+      } else {
+        showToast(result.error || "Gagal memperbarui data", "error");
+      }
+    } catch (err) {
+      showToast("Terjadi kesalahan saat menyimpan", "error");
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchApplicantData();
@@ -196,12 +305,12 @@ export default function ApplicantDetailPage() {
         await fetchApplicantData();
         setShowRejectModal(false);
         setRejectNotes("");
-        alert(result.message);
+        showToast(result.message, "success");
       } else {
-        alert(result.error || "Terjadi kesalahan");
+        showToast(result.error || "Terjadi kesalahan", "error");
       }
     } catch (err) {
-      alert("Terjadi kesalahan saat memproses");
+      showToast("Terjadi kesalahan saat memproses", "error");
     } finally {
       setActionLoading(false);
     }
@@ -230,12 +339,12 @@ export default function ApplicantDetailPage() {
           saveLocalDB(result.db);
         }
         await fetchApplicantData();
-        alert(`Status berhasil diubah ke: ${getStatusConfig(newStatus).label}`);
+        showToast(`Status berhasil diubah ke: ${getStatusConfig(newStatus).label}`, "success");
       } else {
-        alert(result.error || "Terjadi kesalahan");
+        showToast(result.error || "Terjadi kesalahan", "error");
       }
     } catch (err) {
-      alert("Terjadi kesalahan saat memproses");
+      showToast("Terjadi kesalahan saat memproses", "error");
     } finally {
       setActionLoading(false);
     }
@@ -543,7 +652,7 @@ export default function ApplicantDetailPage() {
                   Tolak
                 </button>
                 <button
-                  onClick={() => handleAdvanceStatus("ACCEPTED")}
+                  onClick={() => setShowAcceptModal(true)}
                   disabled={actionLoading}
                   style={{
                     padding: "12px 24px",
@@ -605,18 +714,90 @@ export default function ApplicantDetailPage() {
 
             {/* Data Pribadi */}
             <div style={{ background: "#ffffff", borderRadius: "16px", padding: "24px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-              <h2 style={{ fontSize: "18px", fontWeight: 700, color: "#111111", marginBottom: "16px", display: "flex", alignItems: "center", gap: "10px" }}>
-                <User className="w-5 h-5" style={{ color: "#FF5E00" }} />
-                Data Pribadi
-              </h2>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                <h2 style={{ fontSize: "18px", fontWeight: 700, color: "#111111", display: "flex", alignItems: "center", gap: "10px", margin: 0 }}>
+                  <User className="w-5 h-5" style={{ color: "#FF5E00" }} />
+                  Data Pribadi
+                </h2>
+                {!isEditingPersonal ? (
+                  <button
+                    onClick={startEditPersonal}
+                    style={{
+                      padding: "8px 16px",
+                      background: "#f0f4ff",
+                      color: "#00205B",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Edit
+                  </button>
+                ) : (
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <button
+                      onClick={() => setIsEditingPersonal(false)}
+                      style={{
+                        padding: "8px 16px",
+                        background: "#ffffff",
+                        color: "#666666",
+                        border: "2px solid #e5e7eb",
+                        borderRadius: "8px",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Batal
+                    </button>
+                    <button
+                      onClick={savePersonalData}
+                      disabled={actionLoading}
+                      style={{
+                        padding: "8px 16px",
+                        background: "#00205B",
+                        color: "#ffffff",
+                        border: "none",
+                        borderRadius: "8px",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                        cursor: actionLoading ? "not-allowed" : "pointer",
+                        opacity: actionLoading ? 0.6 : 1,
+                      }}
+                    >
+                      {actionLoading ? "Menyimpan..." : "Simpan"}
+                    </button>
+                  </div>
+                )}
+              </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                 <div>
                   <p style={{ fontSize: "12px", color: "#888888", marginBottom: "4px", textTransform: "uppercase" }}>Nama Lengkap</p>
-                  <p style={{ fontSize: "15px", fontWeight: 500, color: "#111111" }}>{applicant.fullName || "-"}</p>
+                  {isEditingPersonal ? (
+                    <input
+                      type="text"
+                      value={editedPersonal.fullName}
+                      onChange={(e) => setEditedPersonal({ ...editedPersonal, fullName: e.target.value })}
+                      style={{ width: "100%", padding: "10px 14px", border: "2px solid #e5e7eb", borderRadius: "10px", fontSize: "14px", outline: "none" }}
+                    />
+                  ) : (
+                    <p style={{ fontSize: "15px", fontWeight: 500, color: "#111111" }}>{applicant.fullName || "-"}</p>
+                  )}
                 </div>
                 <div>
                   <p style={{ fontSize: "12px", color: "#888888", marginBottom: "4px", textTransform: "uppercase" }}>NIK</p>
-                  <p style={{ fontSize: "15px", fontWeight: 500, color: "#111111" }}>{applicant.nik || "-"}</p>
+                  {isEditingPersonal ? (
+                    <input
+                      type="text"
+                      value={editedPersonal.nik}
+                      onChange={(e) => setEditedPersonal({ ...editedPersonal, nik: e.target.value })}
+                      style={{ width: "100%", padding: "10px 14px", border: "2px solid #e5e7eb", borderRadius: "10px", fontSize: "14px", outline: "none" }}
+                    />
+                  ) : (
+                    <p style={{ fontSize: "15px", fontWeight: 500, color: "#111111" }}>{applicant.nik || "-"}</p>
+                  )}
                 </div>
                 <div>
                   <p style={{ fontSize: "12px", color: "#888888", marginBottom: "4px", textTransform: "uppercase" }}>Email</p>
@@ -624,47 +805,207 @@ export default function ApplicantDetailPage() {
                 </div>
                 <div>
                   <p style={{ fontSize: "12px", color: "#888888", marginBottom: "4px", textTransform: "uppercase" }}>No. Telepon</p>
-                  <p style={{ fontSize: "15px", fontWeight: 500, color: "#111111" }}>{applicant.phone || "-"}</p>
+                  {isEditingPersonal ? (
+                    <input
+                      type="text"
+                      value={editedPersonal.phone}
+                      onChange={(e) => setEditedPersonal({ ...editedPersonal, phone: e.target.value })}
+                      style={{ width: "100%", padding: "10px 14px", border: "2px solid #e5e7eb", borderRadius: "10px", fontSize: "14px", outline: "none" }}
+                    />
+                  ) : (
+                    <p style={{ fontSize: "15px", fontWeight: 500, color: "#111111" }}>{applicant.phone || "-"}</p>
+                  )}
                 </div>
                 <div>
-                  <p style={{ fontSize: "12px", color: "#888888", marginBottom: "4px", textTransform: "uppercase" }}>Tempat, Tanggal Lahir</p>
-                  <p style={{ fontSize: "15px", fontWeight: 500, color: "#111111" }}>
-                    {applicant.placeOfBirth || "-"}, {applicant.dateOfBirth ? new Date(applicant.dateOfBirth).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-"}
-                  </p>
+                  <p style={{ fontSize: "12px", color: "#888888", marginBottom: "4px", textTransform: "uppercase" }}>Tempat Lahir</p>
+                  {isEditingPersonal ? (
+                    <input
+                      type="text"
+                      value={editedPersonal.placeOfBirth}
+                      onChange={(e) => setEditedPersonal({ ...editedPersonal, placeOfBirth: e.target.value })}
+                      style={{ width: "100%", padding: "10px 14px", border: "2px solid #e5e7eb", borderRadius: "10px", fontSize: "14px", outline: "none" }}
+                    />
+                  ) : (
+                    <p style={{ fontSize: "15px", fontWeight: 500, color: "#111111" }}>{applicant.placeOfBirth || "-"}</p>
+                  )}
+                </div>
+                <div>
+                  <p style={{ fontSize: "12px", color: "#888888", marginBottom: "4px", textTransform: "uppercase" }}>Tanggal Lahir</p>
+                  {isEditingPersonal ? (
+                    <input
+                      type="date"
+                      value={editedPersonal.dateOfBirth}
+                      onChange={(e) => setEditedPersonal({ ...editedPersonal, dateOfBirth: e.target.value })}
+                      style={{ width: "100%", padding: "10px 14px", border: "2px solid #e5e7eb", borderRadius: "10px", fontSize: "14px", outline: "none" }}
+                    />
+                  ) : (
+                    <p style={{ fontSize: "15px", fontWeight: 500, color: "#111111" }}>
+                      {applicant.dateOfBirth ? new Date(applicant.dateOfBirth).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-"}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <p style={{ fontSize: "12px", color: "#888888", marginBottom: "4px", textTransform: "uppercase" }}>Jenis Kelamin</p>
-                  <p style={{ fontSize: "15px", fontWeight: 500, color: "#111111" }}>{genderLabels[applicant.gender || ""] || applicant.gender || "-"}</p>
+                  {isEditingPersonal ? (
+                    <select
+                      value={editedPersonal.gender}
+                      onChange={(e) => setEditedPersonal({ ...editedPersonal, gender: e.target.value })}
+                      style={{ width: "100%", padding: "10px 14px", border: "2px solid #e5e7eb", borderRadius: "10px", fontSize: "14px", outline: "none", background: "#ffffff" }}
+                    >
+                      <option value="">Pilih</option>
+                      <option value="MALE">Laki-laki</option>
+                      <option value="FEMALE">Perempuan</option>
+                    </select>
+                  ) : (
+                    <p style={{ fontSize: "15px", fontWeight: 500, color: "#111111" }}>{genderLabels[applicant.gender || ""] || applicant.gender || "-"}</p>
+                  )}
                 </div>
                 <div style={{ gridColumn: "1 / -1" }}>
                   <p style={{ fontSize: "12px", color: "#888888", marginBottom: "4px", textTransform: "uppercase" }}>Alamat</p>
-                  <p style={{ fontSize: "15px", fontWeight: 500, color: "#111111" }}>{applicant.address || "-"}, {applicant.city || "-"}</p>
+                  {isEditingPersonal ? (
+                    <input
+                      type="text"
+                      value={editedPersonal.address}
+                      onChange={(e) => setEditedPersonal({ ...editedPersonal, address: e.target.value })}
+                      style={{ width: "100%", padding: "10px 14px", border: "2px solid #e5e7eb", borderRadius: "10px", fontSize: "14px", outline: "none" }}
+                    />
+                  ) : (
+                    <p style={{ fontSize: "15px", fontWeight: 500, color: "#111111" }}>{applicant.address || "-"}, {applicant.city || "-"}</p>
+                  )}
+                </div>
+                <div>
+                  <p style={{ fontSize: "12px", color: "#888888", marginBottom: "4px", textTransform: "uppercase" }}>Kota</p>
+                  {isEditingPersonal ? (
+                    <input
+                      type="text"
+                      value={editedPersonal.city}
+                      onChange={(e) => setEditedPersonal({ ...editedPersonal, city: e.target.value })}
+                      style={{ width: "100%", padding: "10px 14px", border: "2px solid #e5e7eb", borderRadius: "10px", fontSize: "14px", outline: "none" }}
+                    />
+                  ) : (
+                    <p style={{ fontSize: "15px", fontWeight: 500, color: "#111111" }}>{applicant.city || "-"}</p>
+                  )}
                 </div>
               </div>
             </div>
 
             {/* Data Pendidikan */}
             <div style={{ background: "#ffffff", borderRadius: "16px", padding: "24px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-              <h2 style={{ fontSize: "18px", fontWeight: 700, color: "#111111", marginBottom: "16px", display: "flex", alignItems: "center", gap: "10px" }}>
-                <GraduationCap className="w-5 h-5" style={{ color: "#FF5E00" }} />
-                Data Pendidikan
-              </h2>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                <h2 style={{ fontSize: "18px", fontWeight: 700, color: "#111111", display: "flex", alignItems: "center", gap: "10px", margin: 0 }}>
+                  <GraduationCap className="w-5 h-5" style={{ color: "#FF5E00" }} />
+                  Data Pendidikan
+                </h2>
+                {!isEditingEducation ? (
+                  <button
+                    onClick={startEditEducation}
+                    style={{
+                      padding: "8px 16px",
+                      background: "#f0f4ff",
+                      color: "#00205B",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Edit
+                  </button>
+                ) : (
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <button
+                      onClick={() => setIsEditingEducation(false)}
+                      style={{
+                        padding: "8px 16px",
+                        background: "#ffffff",
+                        color: "#666666",
+                        border: "2px solid #e5e7eb",
+                        borderRadius: "8px",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Batal
+                    </button>
+                    <button
+                      onClick={saveEducationData}
+                      disabled={actionLoading}
+                      style={{
+                        padding: "8px 16px",
+                        background: "#00205B",
+                        color: "#ffffff",
+                        border: "none",
+                        borderRadius: "8px",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                        cursor: actionLoading ? "not-allowed" : "pointer",
+                        opacity: actionLoading ? 0.6 : 1,
+                      }}
+                    >
+                      {actionLoading ? "Menyimpan..." : "Simpan"}
+                    </button>
+                  </div>
+                )}
+              </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                 <div>
                   <p style={{ fontSize: "12px", color: "#888888", marginBottom: "4px", textTransform: "uppercase" }}>Pendidikan Terakhir</p>
-                  <p style={{ fontSize: "15px", fontWeight: 500, color: "#111111" }}>{educationLabels[applicant.education || ""] || applicant.education || "-"}</p>
+                  {isEditingEducation ? (
+                    <select
+                      value={editedEducation.education}
+                      onChange={(e) => setEditedEducation({ ...editedEducation, education: e.target.value })}
+                      style={{ width: "100%", padding: "10px 14px", border: "2px solid #e5e7eb", borderRadius: "10px", fontSize: "14px", outline: "none", background: "#ffffff" }}
+                    >
+                      <option value="">Pilih</option>
+                      <option value="SMA">SMA/SMK</option>
+                      <option value="D3">Diploma 3</option>
+                      <option value="S1">Sarjana (S1)</option>
+                      <option value="S2">Magister (S2)</option>
+                    </select>
+                  ) : (
+                    <p style={{ fontSize: "15px", fontWeight: 500, color: "#111111" }}>{educationLabels[applicant.education || ""] || applicant.education || "-"}</p>
+                  )}
                 </div>
                 <div>
                   <p style={{ fontSize: "12px", color: "#888888", marginBottom: "4px", textTransform: "uppercase" }}>Universitas (jika ada)</p>
-                  <p style={{ fontSize: "15px", fontWeight: 500, color: "#111111" }}>{applicant.university || "-"}</p>
+                  {isEditingEducation ? (
+                    <input
+                      type="text"
+                      value={editedEducation.university}
+                      onChange={(e) => setEditedEducation({ ...editedEducation, university: e.target.value })}
+                      style={{ width: "100%", padding: "10px 14px", border: "2px solid #e5e7eb", borderRadius: "10px", fontSize: "14px", outline: "none" }}
+                    />
+                  ) : (
+                    <p style={{ fontSize: "15px", fontWeight: 500, color: "#111111" }}>{applicant.university || "-"}</p>
+                  )}
                 </div>
                 <div>
-                  <p style={{ fontSize: "12px", color: "#888888", marginBottom: "4px", textTransform: "uppercase" }}>Tinggi Badan</p>
-                  <p style={{ fontSize: "15px", fontWeight: 500, color: "#111111" }}>{applicant.height ? `${applicant.height} cm` : "-"}</p>
+                  <p style={{ fontSize: "12px", color: "#888888", marginBottom: "4px", textTransform: "uppercase" }}>Tinggi Badan (cm)</p>
+                  {isEditingEducation ? (
+                    <input
+                      type="number"
+                      value={editedEducation.height}
+                      onChange={(e) => setEditedEducation({ ...editedEducation, height: e.target.value })}
+                      style={{ width: "100%", padding: "10px 14px", border: "2px solid #e5e7eb", borderRadius: "10px", fontSize: "14px", outline: "none" }}
+                    />
+                  ) : (
+                    <p style={{ fontSize: "15px", fontWeight: 500, color: "#111111" }}>{applicant.height ? `${applicant.height} cm` : "-"}</p>
+                  )}
                 </div>
                 <div>
-                  <p style={{ fontSize: "12px", color: "#888888", marginBottom: "4px", textTransform: "uppercase" }}>Berat Badan</p>
-                  <p style={{ fontSize: "15px", fontWeight: 500, color: "#111111" }}>{applicant.weight ? `${applicant.weight} kg` : "-"}</p>
+                  <p style={{ fontSize: "12px", color: "#888888", marginBottom: "4px", textTransform: "uppercase" }}>Berat Badan (kg)</p>
+                  {isEditingEducation ? (
+                    <input
+                      type="number"
+                      value={editedEducation.weight}
+                      onChange={(e) => setEditedEducation({ ...editedEducation, weight: e.target.value })}
+                      style={{ width: "100%", padding: "10px 14px", border: "2px solid #e5e7eb", borderRadius: "10px", fontSize: "14px", outline: "none" }}
+                    />
+                  ) : (
+                    <p style={{ fontSize: "15px", fontWeight: 500, color: "#111111" }}>{applicant.weight ? `${applicant.weight} kg` : "-"}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -829,6 +1170,162 @@ export default function ApplicantDetailPage() {
         </div>
       </div>
 
+      {/* Accept Confirmation Modal */}
+      {showAcceptModal && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0,0,0,0.6)",
+          backdropFilter: "blur(4px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
+          padding: "20px",
+        }}>
+          <div style={{
+            background: "#ffffff",
+            borderRadius: "20px",
+            padding: "32px",
+            width: "100%",
+            maxWidth: "440px",
+            boxShadow: "0 25px 80px rgba(0,0,0,0.25)",
+            animation: "modalSlideIn 0.3s ease",
+          }}>
+            {/* Success Icon */}
+            <div style={{
+              width: "72px",
+              height: "72px",
+              background: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 24px",
+            }}>
+              <CheckCircle className="w-10 h-10" style={{ color: "#ffffff" }} />
+            </div>
+
+            <h2 style={{
+              fontSize: "22px",
+              fontWeight: 800,
+              color: "#111111",
+              marginBottom: "8px",
+              textAlign: "center"
+            }}>
+              Terima Pelamar Ini?
+            </h2>
+
+            {/* Candidate Info Card */}
+            <div style={{
+              background: "#f8f9fa",
+              borderRadius: "12px",
+              padding: "16px",
+              marginBottom: "20px",
+              display: "flex",
+              alignItems: "center",
+              gap: "14px"
+            }}>
+              <div style={{
+                width: "48px",
+                height: "48px",
+                background: "linear-gradient(135deg, #00205B 0%, #003380 100%)",
+                borderRadius: "12px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#ffffff",
+                fontSize: "16px",
+                fontWeight: 700,
+                flexShrink: 0
+              }}>
+                {applicant.fullName?.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() || "AP"}
+              </div>
+              <div>
+                <p style={{ fontSize: "15px", fontWeight: 700, color: "#111111", marginBottom: "2px" }}>
+                  {applicant.fullName || "Nama Tidak Diketahui"}
+                </p>
+                <p style={{ fontSize: "13px", color: "#666666" }}>
+                  {job.title || "Posisi"}
+                </p>
+              </div>
+            </div>
+
+            {/* Warning Message */}
+            <div style={{
+              background: "#fef3c7",
+              border: "1px solid #f59e0b",
+              borderRadius: "10px",
+              padding: "12px 16px",
+              marginBottom: "24px",
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "10px"
+            }}>
+              <AlertCircle className="w-5 h-5" style={{ color: "#d97706", flexShrink: 0, marginTop: "2px" }} />
+              <p style={{ fontSize: "13px", color: "#92400e", lineHeight: 1.5 }}>
+                Pelamar akan menerima notifikasi bahwa mereka <strong>diterima</strong>. Pastikan semua data sudah benar sebelum melanjutkan.
+              </p>
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ display: "flex", gap: "12px" }}>
+              <button
+                onClick={() => setShowAcceptModal(false)}
+                style={{
+                  flex: 1,
+                  padding: "14px 24px",
+                  background: "#ffffff",
+                  color: "#666666",
+                  border: "2px solid #e5e7eb",
+                  borderRadius: "12px",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "#f9fafb";
+                  e.currentTarget.style.borderColor = "#d1d5db";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "#ffffff";
+                  e.currentTarget.style.borderColor = "#e5e7eb";
+                }}
+              >
+                Batal
+              </button>
+              <button
+                onClick={() => {
+                  setShowAcceptModal(false);
+                  handleAdvanceStatus("ACCEPTED");
+                }}
+                disabled={actionLoading}
+                style={{
+                  flex: 1,
+                  padding: "14px 24px",
+                  background: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "12px",
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  cursor: actionLoading ? "not-allowed" : "pointer",
+                  opacity: actionLoading ? 0.6 : 1,
+                  boxShadow: "0 4px 14px rgba(16, 185, 129, 0.4)",
+                  transition: "all 0.2s",
+                }}
+              >
+                {actionLoading ? "Memproses..." : "Terima Pelamar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Reject Modal */}
       {showRejectModal && (
         <div style={{
@@ -837,16 +1334,84 @@ export default function ApplicantDetailPage() {
           left: 0,
           right: 0,
           bottom: 0,
-          background: "rgba(0,0,0,0.5)",
+          background: "rgba(0,0,0,0.6)",
+          backdropFilter: "blur(4px)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           zIndex: 1000,
+          padding: "20px",
         }}>
-          <div style={{ background: "#ffffff", borderRadius: "16px", padding: "32px", width: "100%", maxWidth: "480px", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
-            <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#111111", marginBottom: "8px" }}>Tolak Lamaran</h2>
-            <p style={{ fontSize: "14px", color: "#666666", marginBottom: "20px" }}>
-              Berikan alasan penolakan agar pelamar dapat mengetahui причину.
+          <div style={{
+            background: "#ffffff",
+            borderRadius: "20px",
+            padding: "32px",
+            width: "100%",
+            maxWidth: "440px",
+            boxShadow: "0 25px 80px rgba(0,0,0,0.25)",
+            animation: "modalSlideIn 0.3s ease",
+          }}>
+            {/* Warning Icon */}
+            <div style={{
+              width: "72px",
+              height: "72px",
+              background: "linear-gradient(135deg, #EF4444 0%, #DC2626 100%)",
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 24px",
+            }}>
+              <XCircle className="w-10 h-10" style={{ color: "#ffffff" }} />
+            </div>
+
+            <h2 style={{
+              fontSize: "22px",
+              fontWeight: 800,
+              color: "#111111",
+              marginBottom: "8px",
+              textAlign: "center"
+            }}>
+              Tolak Lamaran?
+            </h2>
+
+            {/* Candidate Info Card */}
+            <div style={{
+              background: "#f8f9fa",
+              borderRadius: "12px",
+              padding: "16px",
+              marginBottom: "20px",
+              display: "flex",
+              alignItems: "center",
+              gap: "14px"
+            }}>
+              <div style={{
+                width: "48px",
+                height: "48px",
+                background: "linear-gradient(135deg, #00205B 0%, #003380 100%)",
+                borderRadius: "12px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#ffffff",
+                fontSize: "16px",
+                fontWeight: 700,
+                flexShrink: 0
+              }}>
+                {applicant.fullName?.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() || "AP"}
+              </div>
+              <div>
+                <p style={{ fontSize: "15px", fontWeight: 700, color: "#111111", marginBottom: "2px" }}>
+                  {applicant.fullName || "Nama Tidak Diketahui"}
+                </p>
+                <p style={{ fontSize: "13px", color: "#666666" }}>
+                  {job.title || "Posisi"}
+                </p>
+              </div>
+            </div>
+
+            <p style={{ fontSize: "14px", color: "#666666", marginBottom: "16px" }}>
+              Berikan alasan penolakan agar pelamar dapat mengetahui penyebabnya.
             </p>
             <textarea
               value={rejectNotes}
@@ -854,29 +1419,42 @@ export default function ApplicantDetailPage() {
               placeholder="Contoh: Data tidak sesuai persyaratan, dokumen tidak lengkap, dll..."
               style={{
                 width: "100%",
-                minHeight: "120px",
+                minHeight: "100px",
                 padding: "14px",
-                border: "2px solid #eeeeee",
+                border: "2px solid #e5e7eb",
                 borderRadius: "12px",
                 fontSize: "14px",
                 fontFamily: "inherit",
                 resize: "vertical",
-                marginBottom: "20px",
+                marginBottom: "24px",
                 outline: "none",
+                transition: "border-color 0.2s",
               }}
+              onFocus={(e) => e.currentTarget.style.borderColor = "#EF4444"}
+              onBlur={(e) => e.currentTarget.style.borderColor = "#e5e7eb"}
             />
-            <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
+            <div style={{ display: "flex", gap: "12px" }}>
               <button
                 onClick={() => setShowRejectModal(false)}
                 style={{
-                  padding: "12px 24px",
+                  flex: 1,
+                  padding: "14px 24px",
                   background: "#ffffff",
                   color: "#666666",
-                  border: "2px solid #eeeeee",
+                  border: "2px solid #e5e7eb",
                   borderRadius: "12px",
                   fontSize: "14px",
                   fontWeight: 600,
                   cursor: "pointer",
+                  transition: "all 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "#f9fafb";
+                  e.currentTarget.style.borderColor = "#d1d5db";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "#ffffff";
+                  e.currentTarget.style.borderColor = "#e5e7eb";
                 }}
               >
                 Batal
@@ -885,8 +1463,9 @@ export default function ApplicantDetailPage() {
                 onClick={() => handleVerify("reject")}
                 disabled={actionLoading}
                 style={{
-                  padding: "12px 24px",
-                  background: "#dc2626",
+                  flex: 1,
+                  padding: "14px 24px",
+                  background: "linear-gradient(135deg, #EF4444 0%, #DC2626 100%)",
                   color: "#ffffff",
                   border: "none",
                   borderRadius: "12px",
@@ -894,16 +1473,74 @@ export default function ApplicantDetailPage() {
                   fontWeight: 700,
                   cursor: actionLoading ? "not-allowed" : "pointer",
                   opacity: actionLoading ? 0.6 : 1,
+                  boxShadow: "0 4px 14px rgba(239, 68, 68, 0.4)",
+                  transition: "all 0.2s",
                 }}
               >
-                Konfirmasi Tolak
+                {actionLoading ? "Memproses..." : "Konfirmasi Tolak"}
               </button>
             </div>
           </div>
         </div>
       )}
 
+      {/* Toast Notification */}
+      {toast && (
+        <div style={{
+          position: "fixed",
+          top: "24px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          zIndex: 9999,
+          animation: "toastSlideIn 0.3s ease",
+        }}>
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+            padding: "16px 24px",
+            background: toast.type === "success" ? "#10B981" : "#EF4444",
+            color: "#ffffff",
+            borderRadius: "12px",
+            boxShadow: "0 10px 40px rgba(0,0,0,0.2)",
+            fontSize: "14px",
+            fontWeight: 600,
+          }}>
+            {toast.type === "success" ? (
+              <CheckCircle className="w-5 h-5" />
+            ) : (
+              <XCircle className="w-5 h-5" />
+            )}
+            {toast.message}
+          </div>
+        </div>
+      )}
+
       <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes modalSlideIn {
+          from {
+            opacity: 0;
+            transform: translateY(-20px) scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        @keyframes toastSlideIn {
+          from {
+            opacity: 0;
+            transform: translateX(-50%) translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+          }
+        }
         @media (max-width: 900px) {
           .main-grid { grid-template-columns: 1fr !important; }
         }
