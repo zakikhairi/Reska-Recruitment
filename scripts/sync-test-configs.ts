@@ -1,24 +1,24 @@
-// Script to sync test configs from store to database
+// Script to sync test configs from store to database (Drizzle ORM)
 import "dotenv/config";
-import prisma from "../src/lib/db";
+import { db, jobPostings, testConfigs } from "../src/lib/db";
+import { eq } from "drizzle-orm";
 
-const testConfigs = [
-  { division: "ON_TRAIN_SERVICE", categories: ["AKHLAK", "HOSPITALITY", "TECHNICAL", "APTITUDE"], passingGrade: 65, duration: 90, questionsPerCategory: 5 },
-  { division: "RES_CLEAN", categories: ["AKHLAK", "HOSPITALITY"], passingGrade: 60, duration: 60, questionsPerCategory: 5 },
-  { division: "LOGISTICS", categories: ["AKHLAK", "TECHNICAL"], passingGrade: 65, duration: 90, questionsPerCategory: 5 },
-  { division: "IT_STAFF", categories: ["AKHLAK", "TECHNICAL", "APTITUDE"], passingGrade: 70, duration: 90, questionsPerCategory: 5 },
-  { division: "ADMIN", categories: ["AKHLAK", "APTITUDE"], passingGrade: 65, duration: 60, questionsPerCategory: 5 },
-  { division: "RES_PARKING", categories: ["AKHLAK", "HOSPITALITY"], passingGrade: 60, duration: 60, questionsPerCategory: 5 },
+const testConfigsData = [
+  { division: "ON_TRAIN_SERVICE" as const, categories: ["AKHLAK", "HOSPITALITY", "TECHNICAL", "APTITUDE"], passingGrade: 65, duration: 90, questionsPerCategory: 5 },
+  { division: "RES_CLEAN" as const, categories: ["AKHLAK", "HOSPITALITY"], passingGrade: 60, duration: 60, questionsPerCategory: 5 },
+  { division: "LOGISTICS" as const, categories: ["AKHLAK", "TECHNICAL"], passingGrade: 65, duration: 90, questionsPerCategory: 5 },
+  { division: "IT_STAFF" as const, categories: ["AKHLAK", "TECHNICAL", "APTITUDE"], passingGrade: 70, duration: 90, questionsPerCategory: 5 },
+  { division: "ADMIN" as const, categories: ["AKHLAK", "APTITUDE"], passingGrade: 65, duration: 60, questionsPerCategory: 5 },
+  { division: "RES_PARKING" as const, categories: ["AKHLAK", "HOSPITALITY"], passingGrade: 60, duration: 60, questionsPerCategory: 5 },
 ];
 
 async function syncTestConfigs() {
   console.log("Starting test config sync...");
 
-  for (const config of testConfigs) {
+  for (const config of testConfigsData) {
     // Find job by division
-    const job = await prisma.jobPosting.findFirst({
-      where: { division: config.division, status: "ACTIVE" },
-    });
+    const jobs = await db.select().from(jobPostings).where(eq(jobPostings.division, config.division));
+    const job = jobs.find(j => j.status === "ACTIVE");
 
     if (!job) {
       console.log(`No active job found for division: ${config.division}`);
@@ -27,34 +27,40 @@ async function syncTestConfigs() {
 
     const weightPerCategory = Math.round(100 / config.categories.length);
     const weights: Record<string, number> = {};
-    const passingGrades: Record<string, number> = {};
+    const passingGradesData: Record<string, number> = {};
 
     config.categories.forEach(cat => {
       weights[cat] = weightPerCategory;
-      passingGrades[cat] = config.passingGrade;
+      passingGradesData[cat] = config.passingGrade;
     });
 
-    // Upsert test config
-    await prisma.testConfig.upsert({
-      where: { jobPostingId: job.id },
-      update: {
-        categories: config.categories.join(","),
-        categoryWeights: JSON.stringify(weights),
-        passingGrades: JSON.stringify(passingGrades),
-        overallPassingGrade: config.passingGrade,
-        totalDurationMinutes: config.duration,
-        questionsPerCategory: config.questionsPerCategory,
-        shuffleQuestions: true,
-        shuffleAnswers: true,
-        allowTabSwitch: false,
-        maxTabSwitches: 3,
-        isActive: true,
-      },
-      create: {
+    // Check if config exists
+    const existingConfigs = await db.select().from(testConfigs).where(eq(testConfigs.jobPostingId, job.id));
+
+    if (existingConfigs.length > 0) {
+      // Update
+      await db.update(testConfigs)
+        .set({
+          categories: config.categories.join(","),
+          categoryWeights: JSON.stringify(weights),
+          passingGrades: JSON.stringify(passingGradesData),
+          overallPassingGrade: config.passingGrade,
+          totalDurationMinutes: config.duration,
+          questionsPerCategory: config.questionsPerCategory,
+          shuffleQuestions: true,
+          shuffleAnswers: true,
+          allowTabSwitch: false,
+          maxTabSwitches: 3,
+          isActive: true,
+        })
+        .where(eq(testConfigs.jobPostingId, job.id));
+    } else {
+      // Create
+      await db.insert(testConfigs).values({
         jobPostingId: job.id,
         categories: config.categories.join(","),
         categoryWeights: JSON.stringify(weights),
-        passingGrades: JSON.stringify(passingGrades),
+        passingGrades: JSON.stringify(passingGradesData),
         overallPassingGrade: config.passingGrade,
         totalDurationMinutes: config.duration,
         questionsPerCategory: config.questionsPerCategory,
@@ -63,8 +69,8 @@ async function syncTestConfigs() {
         allowTabSwitch: false,
         maxTabSwitches: 3,
         isActive: true,
-      },
-    });
+      });
+    }
 
     console.log(`Synced test config for job: ${job.title} (${job.division})`);
   }

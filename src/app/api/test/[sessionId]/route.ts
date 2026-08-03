@@ -85,6 +85,12 @@ export async function GET(
     }
 
     // Parse config
+    if (!session) {
+      return NextResponse.json(
+        { success: false, error: "Session tidak ditemukan" },
+        { status: 400 }
+      );
+    }
     const application = session.application;
     if (!application?.jobPosting.testConfig) {
       return NextResponse.json(
@@ -104,7 +110,11 @@ export async function GET(
       });
       // Sort by the order in session.questions
       const orderMap = new Map(questionIds.map((id: string, idx: number) => [id, idx]));
-      questions.sort((a, b) => (orderMap.get(a.id) || 0) - (orderMap.get(b.id) || 0));
+      questions.sort((a: any, b: any) => {
+        const aIdx = Number(orderMap.get(String(a.id))) || 0;
+        const bIdx = Number(orderMap.get(String(b.id))) || 0;
+        return aIdx - bIdx;
+      });
     }
 
     // Remove correct answers from questions for client

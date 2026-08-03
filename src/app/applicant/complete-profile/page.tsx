@@ -215,7 +215,7 @@ export default function CompleteProfilePage() {
             <div>
               <label style={{ display: "block", fontWeight: 600, marginBottom: "8px", color: "#222" }}>Kode Pos</label>
               <input name="postalCode" value={form.postalCode} onChange={handleChange}
-                style={{ width: "100%", height: 50px, padding: "0 16px", border: "2px solid #e5e5e5", borderRadius: "12px", fontSize: "15px", outline: "none" }} />
+                style={{ width: "100%", height: "50px", padding: "0 16px", border: "2px solid #e5e5e5", borderRadius: "12px", fontSize: "15px", outline: "none" }} />
             </div>
           </div>
 

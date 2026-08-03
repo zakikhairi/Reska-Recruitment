@@ -6,17 +6,10 @@ import { useRouter } from "next/navigation";
 import {
   Briefcase,
   MapPin,
-  DollarSign,
   Calendar,
-  Users,
   FileText,
   Save,
   ArrowLeft,
-  Plus,
-  Trash2,
-  CheckCircle,
-  AlertCircle,
-  X,
 } from "lucide-react";
 import { useJobsStore } from "@/stores/jobs";
 
@@ -36,13 +29,6 @@ const educationLevels = [
   { value: "S2", label: "Magister (S2)" },
 ];
 
-const jobTypes = [
-  { value: "FULL_TIME", label: "Penuh Waktu" },
-  { value: "PART_TIME", label: "Paruh Waktu" },
-  { value: "KONTRAK", label: "Kontrak" },
-  { value: "MAGANG", label: "Magang" },
-];
-
 export default function EditJobPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
@@ -52,38 +38,25 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
   const [formData, setFormData] = useState({
     title: "",
     division: "",
-    jobType: "FULL_TIME",
     location: "",
     minEducation: "",
-    salaryMin: "",
-    salaryMax: "",
     description: "",
-    responsibilities: "",
     requirements: "",
-    benefits: "",
     deadline: "",
-    vacancies: "",
   });
   const [status, setStatus] = useState("DRAFT");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Initialize form data when job is loaded
   useEffect(() => {
     if (job) {
       setFormData({
         title: job.title || "",
         division: job.division || "",
-        jobType: job.jobType || "FULL_TIME",
         location: job.location || "",
         minEducation: job.minEducation || "",
-        salaryMin: job.salaryMin || "",
-        salaryMax: job.salaryMax || "",
         description: job.description || "",
-        responsibilities: job.responsibilities || "",
         requirements: job.requirements || "",
-        benefits: job.benefits || "",
-        deadline: job.deadline || "",
-        vacancies: job.vacancies || "",
+        deadline: job.deadline ? new Date(job.deadline).toISOString().split('T')[0] : "",
       });
       setStatus(job.status || "DRAFT");
     }
@@ -96,8 +69,6 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
   const handleSubmit = (publish: boolean) => {
     setIsSubmitting(true);
     const newStatus = publish ? "ACTIVE" : "DRAFT";
-
-    // Update job in store (persisted to localStorage)
     updateJob(id, { ...formData, status: newStatus });
 
     setTimeout(() => {
@@ -135,7 +106,6 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
 
   return (
     <div style={{ fontFamily: "Inter, system-ui, -apple-system, sans-serif", minHeight: "100vh", background: "#f8f9fa", color: "#111111", margin: 0, padding: 0 }}>
-      {/* Header */}
       <header style={{ background: "#ffffff", borderBottom: "1px solid #eeeeee", padding: "20px 32px", marginBottom: "32px" }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
@@ -154,9 +124,7 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
 
       <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "0 32px 60px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 400px", gap: "32px" }}>
-          {/* Left Column - Form */}
           <div>
-            {/* Basic Information */}
             <div style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", marginBottom: "24px" }}>
               <h2 style={{ fontSize: "18px", fontWeight: 700, color: "#111111", marginBottom: "8px", display: "flex", alignItems: "center", gap: "10px" }}>
                 <Briefcase className="w-5 h-5" style={{ color: "#FF5E00" }} />
@@ -192,21 +160,6 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
                 </div>
 
                 <div>
-                  <label style={{ fontSize: "14px", fontWeight: 600, color: "#111111", marginBottom: "8px", display: "block" }}>Tipe Pekerjaan</label>
-                  <select
-                    value={formData.jobType}
-                    onChange={(e) => handleInputChange("jobType", e.target.value)}
-                    style={{ width: "100%", padding: "12px 16px", border: "2px solid #e5e7eb", borderRadius: "12px", fontSize: "14px", outline: "none", background: "#ffffff", cursor: "pointer", color: "#374151" }}
-                  >
-                    {jobTypes.map((j) => (
-                      <option key={j.value} value={j.value}>{j.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginTop: "20px" }}>
-                <div>
                   <label style={{ fontSize: "14px", fontWeight: 600, color: "#111111", marginBottom: "8px", display: "block" }}>Lokasi</label>
                   <input
                     type="text"
@@ -215,7 +168,9 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
                     style={{ width: "100%", padding: "12px 16px", border: "2px solid #e5e7eb", borderRadius: "12px", fontSize: "14px", outline: "none", color: "#374151" }}
                   />
                 </div>
+              </div>
 
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginTop: "20px" }}>
                 <div>
                   <label style={{ fontSize: "14px", fontWeight: 600, color: "#111111", marginBottom: "8px", display: "block" }}>Pendidikan Min.</label>
                   <select
@@ -229,45 +184,7 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
                     ))}
                   </select>
                 </div>
-              </div>
-            </div>
 
-            {/* Salary & Deadline */}
-            <div style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", marginBottom: "24px" }}>
-              <h2 style={{ fontSize: "18px", fontWeight: 700, color: "#111111", marginBottom: "8px", display: "flex", alignItems: "center", gap: "10px" }}>
-                <DollarSign className="w-5 h-5" style={{ color: "#FF5E00" }} />
-                Gaji & Waktu
-              </h2>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
-                <div>
-                  <label style={{ fontSize: "14px", fontWeight: 600, color: "#111111", marginBottom: "8px", display: "block" }}>Gaji Minimal</label>
-                  <div style={{ position: "relative" }}>
-                    <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#888888" }}>Rp</span>
-                    <input
-                      type="text"
-                      value={formData.salaryMin}
-                      onChange={(e) => handleInputChange("salaryMin", e.target.value)}
-                      style={{ width: "100%", padding: "12px 16px 12px 40px", border: "2px solid #e5e7eb", borderRadius: "12px", fontSize: "14px", outline: "none", color: "#374151" }}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label style={{ fontSize: "14px", fontWeight: 600, color: "#111111", marginBottom: "8px", display: "block" }}>Gaji Maksimal</label>
-                  <div style={{ position: "relative" }}>
-                    <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#888888" }}>Rp</span>
-                    <input
-                      type="text"
-                      value={formData.salaryMax}
-                      onChange={(e) => handleInputChange("salaryMax", e.target.value)}
-                      style={{ width: "100%", padding: "12px 16px 12px 40px", border: "2px solid #e5e7eb", borderRadius: "12px", fontSize: "14px", outline: "none", color: "#374151" }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginTop: "20px" }}>
                 <div>
                   <label style={{ fontSize: "14px", fontWeight: 600, color: "#111111", marginBottom: "8px", display: "block" }}>Batas Waktu</label>
                   <input
@@ -277,21 +194,9 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
                     style={{ width: "100%", padding: "12px 16px", border: "2px solid #e5e7eb", borderRadius: "12px", fontSize: "14px", outline: "none", color: "#374151" }}
                   />
                 </div>
-
-                <div>
-                  <label style={{ fontSize: "14px", fontWeight: 600, color: "#111111", marginBottom: "8px", display: "block" }}>Jumlah Posisi</label>
-                  <input
-                    type="number"
-                    value={formData.vacancies}
-                    onChange={(e) => handleInputChange("vacancies", e.target.value)}
-                    min="1"
-                    style={{ width: "100%", padding: "12px 16px", border: "2px solid #e5e7eb", borderRadius: "12px", fontSize: "14px", outline: "none", color: "#374151" }}
-                  />
-                </div>
               </div>
             </div>
 
-            {/* Description */}
             <div style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
               <h2 style={{ fontSize: "18px", fontWeight: 700, color: "#111111", marginBottom: "8px", display: "flex", alignItems: "center", gap: "10px" }}>
                 <FileText className="w-5 h-5" style={{ color: "#FF5E00" }} />
@@ -308,17 +213,7 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
                 />
               </div>
 
-              <div style={{ marginBottom: "20px" }}>
-                <label style={{ fontSize: "14px", fontWeight: 600, color: "#111111", marginBottom: "8px", display: "block" }}>Tanggung Jawab</label>
-                <textarea
-                  value={formData.responsibilities}
-                  onChange={(e) => handleInputChange("responsibilities", e.target.value)}
-                  rows={3}
-                  style={{ width: "100%", padding: "12px 16px", border: "2px solid #e5e7eb", borderRadius: "12px", fontSize: "14px", outline: "none", color: "#374151", resize: "vertical", fontFamily: "inherit" }}
-                />
-              </div>
-
-              <div style={{ marginBottom: "20px" }}>
+              <div>
                 <label style={{ fontSize: "14px", fontWeight: 600, color: "#111111", marginBottom: "8px", display: "block" }}>Persyaratan (satu per baris)</label>
                 <textarea
                   value={formData.requirements}
@@ -327,20 +222,9 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
                   style={{ width: "100%", padding: "12px 16px", border: "2px solid #e5e7eb", borderRadius: "12px", fontSize: "14px", outline: "none", color: "#374151", resize: "vertical", fontFamily: "inherit" }}
                 />
               </div>
-
-              <div>
-                <label style={{ fontSize: "14px", fontWeight: 600, color: "#111111", marginBottom: "8px", display: "block" }}>Benefit & Keuntungan</label>
-                <textarea
-                  value={formData.benefits}
-                  onChange={(e) => handleInputChange("benefits", e.target.value)}
-                  rows={4}
-                  style={{ width: "100%", padding: "12px 16px", border: "2px solid #e5e7eb", borderRadius: "12px", fontSize: "14px", outline: "none", color: "#374151", resize: "vertical", fontFamily: "inherit" }}
-                />
-              </div>
             </div>
           </div>
 
-          {/* Right Column */}
           <div>
             <div style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", position: "sticky", top: "24px" }}>
               <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#111111", marginBottom: "20px" }}>Status</h3>
@@ -388,32 +272,34 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
                   }}
                 >
                   {isSubmitting ? (
-                    <>
-                      <div style={{ width: "20px", height: "20px", border: "2px solid #ffffff", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
-                      Menyimpan...
-                    </>
+                    <div style={{ width: "20px", height: "20px", border: "3px solid #ffffff", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
                   ) : (
                     <>
                       <Save className="w-5 h-5" />
-                      Simpan Perubahan
+                      Simpan & Publikasikan
                     </>
                   )}
                 </button>
                 <button
-                  onClick={() => router.push(`/admin/jobs/${id}`)}
+                  onClick={() => handleSubmit(false)}
+                  disabled={isSubmitting}
                   style={{
                     width: "100%",
-                    padding: "14px",
+                    padding: "16px",
                     background: "#ffffff",
-                    color: "#00205B",
-                    border: "2px solid #00205B",
+                    color: "#374151",
+                    border: "2px solid #e5e7eb",
                     borderRadius: "12px",
-                    fontSize: "14px",
+                    fontSize: "15px",
                     fontWeight: 600,
                     cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "10px",
                   }}
                 >
-                  Batal
+                  Simpan sebagai Draft
                 </button>
               </div>
             </div>
@@ -421,9 +307,8 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
         </div>
       </div>
 
-      <style>{`
+      <style jsx global>{`
         @keyframes spin {
-          from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
       `}</style>
