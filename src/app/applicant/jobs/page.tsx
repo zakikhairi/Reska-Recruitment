@@ -16,22 +16,15 @@ const divisionNames: Record<string, string> = {
 };
 
 export default function JobsPage() {
-  const { jobs, _hasHydrated } = useJobsStore();
+  const { jobs, _hasHydrated, fetchJobs, isLoading } = useJobsStore();
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("Semua");
-  const [isLoading, setIsLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    fetchJobs(); // Fetch jobs from API
   }, []);
-
-  // Wait for hydration before loading jobs
-  useEffect(() => {
-    if (_hasHydrated && mounted) {
-      setIsLoading(false);
-    }
-  }, [_hasHydrated, mounted]);
 
   // Wait for hydration
   if (!mounted || !_hasHydrated) {
@@ -140,7 +133,7 @@ export default function JobsPage() {
                     </span>
                     <span style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "14px", color: "#666666" }}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888888" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                      {job.applicants || 0} pelamar
+                      {job.applicantCount || 0} pelamar
                     </span>
                   </div>
 

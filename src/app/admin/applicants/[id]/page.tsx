@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui";
 
+const DB_KEY = "kai_recruitment_db";
+
 interface ApplicantData {
   application: {
     id: string;
@@ -44,6 +46,14 @@ interface ApplicantData {
     university?: string;
     height?: number;
     weight?: number;
+    documents: Array<{
+      id: string;
+      type: string;
+      fileName: string;
+      fileUrl: string;
+      fileSize: number;
+      uploadedAt: string;
+    }>;
   };
   job: {
     id: string;
@@ -53,14 +63,33 @@ interface ApplicantData {
   };
 }
 
+// Helper functions for localStorage sync
+function getLocalDB() {
+  if (typeof window === "undefined") return null;
+  const stored = localStorage.getItem(DB_KEY);
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+function saveLocalDB(db: any) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(DB_KEY, JSON.stringify(db));
+}
+
 const getStatusConfig = (status: string) => {
   switch (status) {
     case "PENDING":
-    case "ADMINISTRATION":
       return { bg: "#fef3c7", text: "#d97706", label: "Menunggu", icon: Clock };
     case "ADMIN_CHECK":
       return { bg: "#dbeafe", text: "#2563eb", label: "Verifikasi", icon: AlertCircle };
-    case "TEST":
+    case "TEST_SCHEDULED":
+      return { bg: "#e0e7ff", text: "#4f46e5", label: "Tes Terjadwal", icon: Clock };
     case "IN_TEST":
       return { bg: "#fef3c7", text: "#d97706", label: "Sedang Tes", icon: Clock };
     case "TEST_COMPLETED":
@@ -69,7 +98,8 @@ const getStatusConfig = (status: string) => {
       return { bg: "#fae8ff", text: "#c026d3", label: "Interview", icon: User };
     case "MCU":
       return { bg: "#e0e7ff", text: "#4f46e5", label: "MCU", icon: CheckCircle };
-    case "OFFERED":
+    case "OFFERING":
+      return { bg: "#fef3c7", text: "#d97706", label: "Offering", icon: CheckCircle };
     case "ACCEPTED":
       return { bg: "#d1fae5", text: "#059669", label: "Diterima", icon: CheckCircle };
     case "REJECTED":
@@ -80,12 +110,12 @@ const getStatusConfig = (status: string) => {
 };
 
 const documentTypes = [
-  { key: "photo", label: "Pas Foto 3x4", icon: Image },
-  { key: "cv", label: "Curriculum Vitae (CV)", icon: FileText },
-  { key: "ijazah", label: "Ijazah", icon: GraduationCap },
-  { key: "transkrip", label: "Transkrip Nilai", icon: FileText },
-  { key: "ktp", label: "KTP", icon: FileText },
-  { key: "sertifikat", label: "Sertifikat (jika ada)", icon: FileText },
+  { key: "CV", label: "Curriculum Vitae (CV)", icon: FileText },
+  { key: "KTPCARD", label: "KTP", icon: FileText },
+  { key: "IJAZAH", label: "Ijazah", icon: GraduationCap },
+  { key: "TRANSCRIPT", label: "Transkrip Nilai", icon: FileText },
+  { key: "SKCK", label: "Pas Foto 3x4", icon: Image },
+  { key: "CERTIFICATE", label: "Sertifikat", icon: FileText },
 ];
 
 export default function ApplicantDetailPage() {
@@ -106,11 +136,24 @@ export default function ApplicantDetailPage() {
 
   const fetchApplicantData = async () => {
     try {
-      const response = await fetch(`/api/admin/applications/${applicantId}/verify`);
+      // Get local database to sync with server
+      const localDB = getLocalDB();
+
+      const response = await fetch(`/api/admin/applications/${applicantId}/verify`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
       const result = await response.json();
 
       if (result.success) {
         setData(result.data);
+        // If server returned updated database, save to localStorage
+        if (result.db) {
+          saveLocalDB(result.db);
+        }
       } else {
         setError(result.error || "Gagal memuat data");
       }
@@ -129,23 +172,65 @@ export default function ApplicantDetailPage() {
 
     setActionLoading(true);
     try {
+      // Get local database to send to server
+      const localDB = getLocalDB();
+
       const response = await fetch(`/api/admin/applications/${applicantId}/verify`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action,
           notes: action === "reject" ? rejectNotes : undefined,
+          db: localDB, // Send local database to server
         }),
       });
 
       const result = await response.json();
 
       if (result.success) {
+        // Save updated database from server to localStorage
+        if (result.db) {
+          saveLocalDB(result.db);
+        }
         // Refresh data
         await fetchApplicantData();
         setShowRejectModal(false);
         setRejectNotes("");
         alert(result.message);
+      } else {
+        alert(result.error || "Terjadi kesalahan");
+      }
+    } catch (err) {
+      alert("Terjadi kesalahan saat memproses");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleAdvanceStatus = async (newStatus: string) => {
+    setActionLoading(true);
+    try {
+      // Get local database to send to server
+      const localDB = getLocalDB();
+
+      const response = await fetch(`/api/admin/applications/${applicantId}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: newStatus,
+          db: localDB, // Send local database to server
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Save updated database from server to localStorage
+        if (result.db) {
+          saveLocalDB(result.db);
+        }
+        await fetchApplicantData();
+        alert(`Status berhasil diubah ke: ${getStatusConfig(newStatus).label}`);
       } else {
         alert(result.error || "Terjadi kesalahan");
       }
@@ -237,8 +322,10 @@ export default function ApplicantDetailPage() {
               </div>
             </div>
 
-            {/* Action Buttons - hanya tampil jika status ADMIN_CHECK */}
-            {application.status === "ADMIN_CHECK" && (
+            {/* Action Buttons - tampil sesuai dengan status aplikasi */}
+
+            {/* Status PENDING - Tombol untuk mulai verifikasi */}
+            {application.status === "PENDING" && (
               <div style={{ display: "flex", gap: "12px" }}>
                 <button
                   onClick={() => handleVerify("reject")}
@@ -262,7 +349,201 @@ export default function ApplicantDetailPage() {
                   Tolak
                 </button>
                 <button
-                  onClick={() => handleVerify("approve")}
+                  onClick={() => handleAdvanceStatus("ADMIN_CHECK")}
+                  disabled={actionLoading}
+                  style={{
+                    padding: "12px 24px",
+                    background: "#f59e0b",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: "12px",
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    cursor: actionLoading ? "not-allowed" : "pointer",
+                    opacity: actionLoading ? 0.6 : 1,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    boxShadow: "0 4px 12px rgba(245, 158, 11, 0.3)",
+                  }}
+                >
+                  <CheckCircle className="w-5 h-5" />
+                  Mulai Verifikasi
+                </button>
+              </div>
+            )}
+
+            {(application.status === "ADMIN_CHECK" || application.status === "TEST_COMPLETED" || application.status === "INTERVIEW") && (
+              <div style={{ display: "flex", gap: "12px" }}>
+                <button
+                  onClick={() => handleVerify("reject")}
+                  disabled={actionLoading}
+                  style={{
+                    padding: "12px 24px",
+                    background: "#ffffff",
+                    color: "#dc2626",
+                    border: "2px solid #dc2626",
+                    borderRadius: "12px",
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    cursor: actionLoading ? "not-allowed" : "pointer",
+                    opacity: actionLoading ? 0.6 : 1,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
+                  <XCircle className="w-5 h-5" />
+                  Tolak
+                </button>
+                {application.status === "ADMIN_CHECK" && (
+                  <button
+                    onClick={() => handleVerify("approve")}
+                    disabled={actionLoading}
+                    style={{
+                      padding: "12px 24px",
+                      background: "#16a34a",
+                      color: "#ffffff",
+                      border: "none",
+                      borderRadius: "12px",
+                      fontSize: "14px",
+                      fontWeight: 700,
+                      cursor: actionLoading ? "not-allowed" : "pointer",
+                      opacity: actionLoading ? 0.6 : 1,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      boxShadow: "0 4px 12px rgba(22, 163, 74, 0.3)",
+                    }}
+                  >
+                    <CheckCircle className="w-5 h-5" />
+                    Verifikasi Lulus
+                  </button>
+                )}
+                {application.status === "TEST_COMPLETED" && (
+                  <button
+                    onClick={() => handleAdvanceStatus("INTERVIEW")}
+                    disabled={actionLoading}
+                    style={{
+                      padding: "12px 24px",
+                      background: "#7c3aed",
+                      color: "#ffffff",
+                      border: "none",
+                      borderRadius: "12px",
+                      fontSize: "14px",
+                      fontWeight: 700,
+                      cursor: actionLoading ? "not-allowed" : "pointer",
+                      opacity: actionLoading ? 0.6 : 1,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      boxShadow: "0 4px 12px rgba(124, 58, 237, 0.3)",
+                    }}
+                  >
+                    <User className="w-5 h-5" />
+                    Lanjut ke Interview
+                  </button>
+                )}
+                {application.status === "INTERVIEW" && (
+                  <button
+                    onClick={() => handleAdvanceStatus("MCU")}
+                    disabled={actionLoading}
+                    style={{
+                      padding: "12px 24px",
+                      background: "#0891b2",
+                      color: "#ffffff",
+                      border: "none",
+                      borderRadius: "12px",
+                      fontSize: "14px",
+                      fontWeight: 700,
+                      cursor: actionLoading ? "not-allowed" : "pointer",
+                      opacity: actionLoading ? 0.6 : 1,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      boxShadow: "0 4px 12px rgba(8, 145, 178, 0.3)",
+                    }}
+                  >
+                    <CheckCircle className="w-5 h-5" />
+                    Lanjut ke MCU
+                  </button>
+                )}
+              </div>
+            )}
+            {/* MCU -> Offering */}
+            {application.status === "MCU" && (
+              <div style={{ display: "flex", gap: "12px" }}>
+                <button
+                  onClick={() => handleVerify("reject")}
+                  disabled={actionLoading}
+                  style={{
+                    padding: "12px 24px",
+                    background: "#ffffff",
+                    color: "#dc2626",
+                    border: "2px solid #dc2626",
+                    borderRadius: "12px",
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    cursor: actionLoading ? "not-allowed" : "pointer",
+                    opacity: actionLoading ? 0.6 : 1,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
+                  <XCircle className="w-5 h-5" />
+                  Tolak
+                </button>
+                <button
+                  onClick={() => handleAdvanceStatus("OFFERING")}
+                  disabled={actionLoading}
+                  style={{
+                    padding: "12px 24px",
+                    background: "#059669",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: "12px",
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    cursor: actionLoading ? "not-allowed" : "pointer",
+                    opacity: actionLoading ? 0.6 : 1,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    boxShadow: "0 4px 12px rgba(5, 150, 105, 0.3)",
+                  }}
+                >
+                  <CheckCircle className="w-5 h-5" />
+                  Lanjut ke Offering
+                </button>
+              </div>
+            )}
+            {/* Offering -> Accepted */}
+            {application.status === "OFFERING" && (
+              <div style={{ display: "flex", gap: "12px" }}>
+                <button
+                  onClick={() => handleVerify("reject")}
+                  disabled={actionLoading}
+                  style={{
+                    padding: "12px 24px",
+                    background: "#ffffff",
+                    color: "#dc2626",
+                    border: "2px solid #dc2626",
+                    borderRadius: "12px",
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    cursor: actionLoading ? "not-allowed" : "pointer",
+                    opacity: actionLoading ? 0.6 : 1,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
+                  <XCircle className="w-5 h-5" />
+                  Tolak
+                </button>
+                <button
+                  onClick={() => handleAdvanceStatus("ACCEPTED")}
                   disabled={actionLoading}
                   style={{
                     padding: "12px 24px",
@@ -281,7 +562,7 @@ export default function ApplicantDetailPage() {
                   }}
                 >
                   <CheckCircle className="w-5 h-5" />
-                  Verifikasi Lulus
+                  Terima Pelamar
                 </button>
               </div>
             )}
@@ -397,8 +678,8 @@ export default function ApplicantDetailPage() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 {documentTypes.map((doc) => {
                   const DocIcon = doc.icon;
-                  // Simulasi dokumen - dalam implementasi nyata, ini akan berisi URL file
-                  const hasDocument = applicant.nik && doc.key !== "sertifikat"; // Demo:假装有文件
+                  const uploadedDoc = data?.applicant?.documents?.find(d => d.type === doc.key);
+                  const hasDocument = !!uploadedDoc;
                   return (
                     <div
                       key={doc.key}
@@ -426,11 +707,14 @@ export default function ApplicantDetailPage() {
                       <div style={{ flex: 1 }}>
                         <p style={{ fontSize: "14px", fontWeight: 600, color: "#111111", marginBottom: "2px" }}>{doc.label}</p>
                         <p style={{ fontSize: "12px", color: hasDocument ? "#16a34a" : "#888888" }}>
-                          {hasDocument ? "Tersedia" : "Belum diupload"}
+                          {hasDocument ? uploadedDoc.fileName : "Belum diupload"}
                         </p>
                       </div>
                       {hasDocument && (
-                        <button
+                        <a
+                          href={uploadedDoc.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           style={{
                             padding: "8px 12px",
                             background: "#ffffff",
@@ -440,10 +724,11 @@ export default function ApplicantDetailPage() {
                             fontWeight: 600,
                             color: "#16a34a",
                             cursor: "pointer",
+                            textDecoration: "none",
                           }}
                         >
                           Lihat
-                        </button>
+                        </a>
                       )}
                     </div>
                   );
@@ -460,11 +745,11 @@ export default function ApplicantDetailPage() {
               <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
                 {[
                   { label: "Pendaftaran", status: "completed" },
-                  { label: "Verifikasi Admin", status: application.status === "ADMIN_CHECK" ? "current" : ["TEST", "IN_TEST", "TEST_COMPLETED", "INTERVIEW", "MCU", "OFFERED", "ACCEPTED"].includes(application.status) ? "completed" : "pending" },
-                  { label: "Tes Kompetensi", status: ["TEST", "IN_TEST"].includes(application.status) ? "current" : ["TEST_COMPLETED", "INTERVIEW", "MCU", "OFFERED", "ACCEPTED"].includes(application.status) ? "completed" : "pending" },
-                  { label: "Interview", status: application.status === "INTERVIEW" ? "current" : ["MCU", "OFFERED", "ACCEPTED"].includes(application.status) ? "completed" : "pending" },
-                  { label: "MCU", status: application.status === "MCU" ? "current" : ["OFFERED", "ACCEPTED"].includes(application.status) ? "completed" : "pending" },
-                  { label: "Offering", status: ["OFFERED", "ACCEPTED"].includes(application.status) ? "completed" : "pending" },
+                  { label: "Verifikasi Admin", status: application.status === "ADMIN_CHECK" ? "current" : ["TEST_SCHEDULED", "IN_TEST", "TEST_COMPLETED", "INTERVIEW", "MCU", "OFFERING", "ACCEPTED"].includes(application.status) ? "completed" : "pending" },
+                  { label: "Tes Kompetensi", status: ["TEST_SCHEDULED", "IN_TEST"].includes(application.status) ? "current" : ["TEST_COMPLETED", "INTERVIEW", "MCU", "OFFERING", "ACCEPTED"].includes(application.status) ? "completed" : "pending" },
+                  { label: "Interview", status: application.status === "INTERVIEW" ? "current" : ["MCU", "OFFERING", "ACCEPTED"].includes(application.status) ? "completed" : "pending" },
+                  { label: "MCU", status: application.status === "MCU" ? "current" : ["OFFERING", "ACCEPTED"].includes(application.status) ? "completed" : "pending" },
+                  { label: "Offering", status: ["OFFERING", "ACCEPTED"].includes(application.status) ? "completed" : "pending" },
                 ].map((item, index) => (
                   <div key={index} style={{ display: "flex", gap: "12px", position: "relative" }}>
                     {/* Line connector */}

@@ -54,7 +54,7 @@ const requirements = [
 
 export default function CreateJobPage() {
   const router = useRouter();
-  const addJob = useJobsStore((state) => state.addJob);
+  const fetchJobs = useJobsStore((state) => state.fetchJobs);
   const [formData, setFormData] = useState({
     title: "",
     division: "",
@@ -99,7 +99,7 @@ export default function CreateJobPage() {
     });
   };
 
-  const handleSubmit = (publish: boolean) => {
+  const handleSubmit = async (publish: boolean) => {
     // Validate required fields
     if (!formData.title || !formData.division || !formData.location || !formData.deadline || !formData.vacancies) {
       setError("Mohon lengkapi semua field wajib");
@@ -108,41 +108,41 @@ export default function CreateJobPage() {
 
     setIsSubmitting(true);
     setError("");
-    setStatus(publish ? "ACTIVE" : "DRAFT");
+
+    const jobData = {
+      title: formData.title,
+      division: formData.division,
+      location: formData.location,
+      description: formData.description,
+      requirements: formData.requirements,
+      minEducation: formData.minEducation,
+      minHeight: formData.minHeight || undefined,
+      minAge: formData.minAge || undefined,
+      maxAge: formData.maxAge || undefined,
+      deadline: formData.deadline,
+      status: publish ? "ACTIVE" : "DRAFT",
+    };
 
     try {
-      // Create job object
-      const newJob: Job = {
-        id: "job-" + Date.now(),
-        title: formData.title,
-        division: formData.division,
-        jobType: formData.jobType,
-        location: formData.location,
-        minEducation: formData.minEducation,
-        salaryMin: formData.salaryMin,
-        salaryMax: formData.salaryMax,
-        description: formData.description,
-        responsibilities: formData.responsibilities,
-        requirements: formData.requirements,
-        benefits: formData.benefits,
-        deadline: formData.deadline,
-        vacancies: formData.vacancies,
-        status: publish ? "ACTIVE" : "DRAFT",
-        applicants: 0,
-      };
+      const response = await fetch("/api/jobs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(jobData),
+      });
 
-      // Save to store (localStorage)
-      addJob(newJob);
+      const result = await response.json();
 
-      // Simulate save delay
-      setTimeout(() => {
-        setIsSubmitting(false);
+      if (result.success) {
+        // Refresh jobs from API
+        await fetchJobs();
         router.push("/admin/jobs");
-      }, 1000);
+      } else {
+        setError(result.error || "Gagal membuat lowongan");
+      }
     } catch (err) {
       setError("Terjadi kesalahan saat menyimpan");
-      setIsSubmitting(false);
     }
+    setIsSubmitting(false);
   };
 
   return (

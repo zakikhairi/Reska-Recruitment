@@ -62,7 +62,7 @@ export default function CreateTestConfigPage() {
     );
   };
 
-  const handleSubmit = (active: boolean) => {
+  const handleSubmit = async (active: boolean) => {
     if (!formData.jobTitle || !formData.division || selectedCategories.length === 0) {
       alert("Mohon lengkapi semua field wajib!");
       return;
@@ -82,7 +82,7 @@ export default function CreateTestConfigPage() {
       active,
     };
 
-    addConfig(newConfig);
+    await addConfig(newConfig);
 
     setTimeout(() => {
       setIsSubmitting(false);

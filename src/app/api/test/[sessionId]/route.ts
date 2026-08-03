@@ -3,8 +3,7 @@ import prisma from "@/lib/db";
 import { calculateTestScore, selectQuestionsForTest } from "@/lib/scoring";
 import { TestCategory } from "@/types";
 
-// GET: Get test configuration
-// This endpoint handles both application ID and session ID
+// GET: Get test configuration and questions
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ sessionId: string }> }
@@ -12,7 +11,7 @@ export async function GET(
   try {
     const { sessionId } = await params;
 
-    // First try to find by session ID
+    // First try to find by session ID (testSession.id)
     let session = await prisma.testSession.findUnique({
       where: { id: sessionId },
       include: {
@@ -44,65 +43,100 @@ export async function GET(
 
       if (!application) {
         return NextResponse.json(
-          { success: false, error: "Application not found" },
+          { success: false, error: "Lamaran tidak ditemukan" },
           { status: 404 }
         );
       }
 
-      if (!application.jobPosting.testConfig) {
+      // If application has test session, get that instead
+      if (application.testSession) {
+        session = await prisma.testSession.findUnique({
+          where: { id: application.testSession.id },
+          include: {
+            application: {
+              include: {
+                jobPosting: {
+                  include: {
+                    testConfig: true,
+                  },
+                },
+              },
+            },
+          },
+        });
+      } else if (application.jobPosting.testConfig) {
+        // No session yet, return config info only
+        const config = application.jobPosting.testConfig;
+        return NextResponse.json({
+          success: true,
+          session: null,
+          jobTitle: application.jobPosting.title,
+          config: {
+            totalDurationMinutes: config.totalDurationMinutes,
+            categories: config.categories.split(","),
+          },
+        });
+      } else {
         return NextResponse.json(
-          { success: false, error: "Test not configured for this position" },
+          { success: false, error: "Test belum dikonfigurasi untuk posisi ini" },
           { status: 400 }
         );
       }
-
-      const config = {
-        ...application.jobPosting.testConfig,
-        categories: application.jobPosting.testConfig.categories.split(",") as TestCategory[],
-        categoryWeights: JSON.parse(application.jobPosting.testConfig.categoryWeights),
-        passingGrades: JSON.parse(application.jobPosting.testConfig.passingGrades),
-      };
-
-      return NextResponse.json({
-        success: true,
-        data: {
-          applicationId: sessionId,
-          sessionId: application.testSession?.id,
-          status: application.testSession?.status || "NOT_STARTED",
-          config,
-        },
-      });
     }
 
-    // Parse config from session's application
+    // Parse config
     const application = session.application;
     if (!application?.jobPosting.testConfig) {
       return NextResponse.json(
-        { success: false, error: "Test configuration not found" },
+        { success: false, error: "Konfigurasi test tidak ditemukan" },
         { status: 400 }
       );
     }
 
-    const config = {
-      ...application.jobPosting.testConfig,
-      categories: application.jobPosting.testConfig.categories.split(",") as TestCategory[],
-      categoryWeights: JSON.parse(application.jobPosting.testConfig.categoryWeights),
-      passingGrades: JSON.parse(application.jobPosting.testConfig.passingGrades),
-    };
+    const config = application.jobPosting.testConfig;
+
+    // Get questions
+    let questions: any[] = [];
+    if (session.questions) {
+      const questionIds = JSON.parse(session.questions);
+      questions = await prisma.question.findMany({
+        where: { id: { in: questionIds } },
+      });
+      // Sort by the order in session.questions
+      const orderMap = new Map(questionIds.map((id: string, idx: number) => [id, idx]));
+      questions.sort((a, b) => (orderMap.get(a.id) || 0) - (orderMap.get(b.id) || 0));
+    }
+
+    // Remove correct answers from questions for client
+    const safeQuestions = questions.map(q => ({
+      id: q.id,
+      category: q.category,
+      stem: q.stem,
+      optionA: q.optionA,
+      optionB: q.optionB,
+      optionC: q.optionC,
+      optionD: q.optionD,
+    }));
 
     return NextResponse.json({
       success: true,
-      data: {
-        applicationId: application.id,
-        sessionId: session.id,
+      session: {
+        id: session.id,
         status: session.status,
-        config,
+        startedAt: session.startedAt,
+        tabSwitchCount: session.tabSwitchCount,
+      },
+      jobTitle: application.jobPosting.title,
+      questions: safeQuestions,
+      config: {
+        totalDurationMinutes: config.totalDurationMinutes,
+        categories: config.categories.split(","),
       },
     });
   } catch (error) {
-    console.error("Error fetching test config:", error);
+    console.error("Error fetching test:", error);
     return NextResponse.json(
-      { success: false, error: "Internal server error" },
+      { success: false, error: "Terjadi kesalahan server" },
       { status: 500 }
     );
   }
@@ -126,7 +160,7 @@ export async function POST(
     if (existingSession) {
       if (existingSession.status === "SUBMITTED" || existingSession.status === "SCORED") {
         return NextResponse.json(
-          { success: false, error: "Test already completed" },
+          { success: false, error: "Test sudah selesai" },
           { status: 400 }
         );
       }
@@ -146,12 +180,10 @@ export async function POST(
 
       return NextResponse.json({
         success: true,
-        data: {
-          sessionId: updatedSession.id,
-          status: updatedSession.status,
-          questions,
-          startedAt: updatedSession.startedAt,
-        },
+        sessionId: updatedSession.id,
+        status: updatedSession.status,
+        questions,
+        startedAt: updatedSession.startedAt,
       });
     }
 
@@ -169,14 +201,14 @@ export async function POST(
 
     if (!application) {
       return NextResponse.json(
-        { success: false, error: "Application not found" },
+        { success: false, error: "Lamaran tidak ditemukan" },
         { status: 404 }
       );
     }
 
     if (!application.jobPosting.testConfig) {
       return NextResponse.json(
-        { success: false, error: "Test not configured for this position" },
+        { success: false, error: "Test belum dikonfigurasi" },
         { status: 400 }
       );
     }
@@ -251,17 +283,53 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      data: {
-        sessionId: session.id,
-        status: session.status,
-        questions: selectedQuestions.map((q) => q.id),
-        startedAt: session.startedAt,
-      },
+      sessionId: session.id,
+      status: session.status,
+      questions: selectedQuestions.map((q) => q.id),
+      startedAt: session.startedAt,
     });
   } catch (error) {
     console.error("Error starting test session:", error);
     return NextResponse.json(
-      { success: false, error: "Internal server error" },
+      { success: false, error: "Terjadi kesalahan server" },
+      { status: 500 }
+    );
+  }
+}
+
+// PATCH: Update session status
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ sessionId: string }> }
+) {
+  try {
+    const { sessionId } = await params;
+    const body = await request.json();
+    const { status } = body;
+
+    const session = await prisma.testSession.update({
+      where: { id: sessionId },
+      data: { status },
+    });
+
+    // Also update application status if transitioning to IN_TEST
+    if (status === "IN_PROGRESS") {
+      const application = await prisma.application.findFirst({
+        where: { id: session.applicationId },
+      });
+      if (application) {
+        await prisma.application.update({
+          where: { id: application.id },
+          data: { status: "IN_TEST" },
+        });
+      }
+    }
+
+    return NextResponse.json({ success: true, status: session.status });
+  } catch (error) {
+    console.error("Error updating session:", error);
+    return NextResponse.json(
+      { success: false, error: "Terjadi kesalahan server" },
       { status: 500 }
     );
   }

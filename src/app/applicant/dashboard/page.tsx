@@ -3,14 +3,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/auth";
-import {
-  getAllApplications,
-  getJobById,
-  getAllUsers,
-  type User,
-  type Application,
-  type JobPosting
-} from "@/lib/local-db";
 
 // Format division name for display
 const formatDivision = (division: string | undefined): string => {
@@ -32,19 +24,28 @@ const statusConfig: Record<string, { bg: string; text: string; label: string }> 
   TEST_COMPLETED: { bg: "#dcfce7", text: "#16a34a", label: "Tes Selesai" },
   INTERVIEW: { bg: "#fce7f3", text: "#be185d", label: "Interview" },
   MCU: { bg: "#d1fae5", text: "#059669", label: "Medical Check-Up" },
+  OFFERING: { bg: "#fef3c7", text: "#d97706", label: "Offering" },
   OFFERED: { bg: "#fef3c7", text: "#d97706", label: "Offering" },
   ACCEPTED: { bg: "#dcfce7", text: "#16a34a", label: "Diterima" },
   REJECTED: { bg: "#fee2e2", text: "#dc2626", label: "Ditolak" },
   PENDING: { bg: "#f1f5f9", text: "#64748b", label: "Menunggu" },
 };
 
-interface ApplicationWithJob extends Application {
-  job?: JobPosting;
+interface ApplicationData {
+  id: string;
+  status: string;
+  createdAt: string;
+  job?: {
+    id: string;
+    title: string;
+    division: string;
+    location: string;
+  };
 }
 
 export default function ApplicantDashboardPage() {
   const { user } = useAuthStore();
-  const [applications, setApplications] = useState<ApplicationWithJob[]>([]);
+  const [applications, setApplications] = useState<ApplicationData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userName, setUserName] = useState("Pelamar");
 
@@ -53,30 +54,26 @@ export default function ApplicantDashboardPage() {
   }, [user]);
 
   const fetchData = async () => {
-    // Get user profile from local-db
-    if (user?.id) {
-      const users = getAllUsers();
-      const currentUser = users.find((u: User) => u.id === user.id);
-      if (currentUser?.fullName) {
-        setUserName(currentUser.fullName);
-      }
+    if (!user?.id) {
+      setIsLoading(false);
+      return;
     }
 
-    // Fetch applications from local-db with job data
-    if (user?.id) {
-      try {
-        const allApps = getAllApplications();
-        // Filter applications for this user and enrich with job data
-        const userApps = allApps
-          .filter((app: Application) => app.applicantId === user.id)
-          .map((app: Application) => {
-            const job = getJobById(app.jobPostingId);
-            return { ...app, job: job || undefined };
-          });
-        setApplications(userApps);
-      } catch (err) {
-        console.log("Could not fetch applications from local-db");
+    try {
+      // Fetch applications from API
+      const response = await fetch(`/api/apply?userId=${user.id}`);
+      const result = await response.json();
+
+      if (result.success && result.applications) {
+        setApplications(result.applications);
       }
+
+      // Set user name from auth store
+      if (user?.fullName) {
+        setUserName(user.fullName);
+      }
+    } catch (err) {
+      console.error("Failed to fetch data:", err);
     }
     setIsLoading(false);
   };
@@ -149,6 +146,7 @@ export default function ApplicantDashboardPage() {
 
             {isLoading ? (
               <div style={{ textAlign: "center", padding: "40px" }}>
+                <div style={{ width: "40px", height: "40px", border: "4px solid #eeeeee", borderTopColor: "#FF5E00", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
                 <p style={{ color: "#666" }}>Memuat...</p>
               </div>
             ) : applications.length === 0 ? (
@@ -189,6 +187,7 @@ export default function ApplicantDashboardPage() {
 
           {/* Sidebar */}
           <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+
             {/* Quick Actions */}
             <div style={{ background: "#fff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
               <h2 style={{ fontSize: "18px", fontWeight: 700, color: "#111", marginBottom: "20px" }}>Aksi Cepat</h2>
@@ -229,6 +228,13 @@ export default function ApplicantDashboardPage() {
           </div>
         </div>
       </div>
+
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }

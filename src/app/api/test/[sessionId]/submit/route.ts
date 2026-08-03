@@ -10,9 +10,11 @@ export async function POST(
 ) {
   try {
     const { sessionId } = await params;
+    const body = await request.json().catch(() => ({}));
+    const { answers } = body; // Optional: answers passed directly for auto-submit
 
-    // Get test session with answers and application
-    const session = await prisma.testSession.findUnique({
+    // Find the session - could be by sessionId or applicationId
+    let session = await prisma.testSession.findUnique({
       where: { id: sessionId },
       include: {
         application: {
@@ -28,16 +30,42 @@ export async function POST(
       },
     });
 
+    // If not found, try as applicationId
+    if (!session) {
+      const application = await prisma.application.findUnique({
+        where: { id: sessionId },
+        include: {
+          testSession: {
+            include: {
+              application: {
+                include: {
+                  jobPosting: {
+                    include: {
+                      testConfig: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (application?.testSession) {
+        session = application.testSession;
+      }
+    }
+
     if (!session) {
       return NextResponse.json(
-        { success: false, error: "Test session not found" },
+        { success: false, error: "Sesi test tidak ditemukan" },
         { status: 404 }
       );
     }
 
-    if (session.status === "SUBMITTED" || session.status === "SCORED") {
+    if (session.status === "SCORED") {
       return NextResponse.json(
-        { success: false, error: "Test already submitted" },
+        { success: false, error: "Tes sudah dinilai" },
         { status: 400 }
       );
     }
@@ -48,22 +76,52 @@ export async function POST(
       where: { id: { in: questionIds } },
     });
 
-    // Create question map
-    const questionMap = new Map(
-      questions.map((q) => [
-        q.id,
-        {
-          id: q.id,
-          category: q.category as TestCategory,
-          correctAnswer: q.correctAnswer,
-        },
-      ])
-    );
+    // Create question map with correct answers
+    const questionMap = new Map<string, { category: string; correctAnswer: string }>();
+    questions.forEach((q) => {
+      questionMap.set(q.id, {
+        category: q.category,
+        correctAnswer: q.correctAnswer,
+      });
+    });
+
+    // Get or prepare answers
+    let sessionAnswers = session.answers;
+
+    // If answers were passed directly (for auto-submit), save them first
+    if (answers && typeof answers === "object") {
+      for (const [qId, selectedAnswer] of Object.entries(answers)) {
+        const existingAnswer = sessionAnswers.find(a => a.questionId === qId);
+        if (existingAnswer) {
+          await prisma.applicantAnswer.update({
+            where: { id: existingAnswer.id },
+            data: {
+              selectedAnswer: selectedAnswer as string,
+              answeredAt: new Date(),
+            },
+          });
+        } else {
+          await prisma.applicantAnswer.create({
+            data: {
+              testSessionId: session.id,
+              questionId: qId,
+              selectedAnswer: selectedAnswer as string,
+              answeredAt: new Date(),
+              pointsEarned: 0,
+            },
+          });
+        }
+      }
+      // Refresh answers
+      sessionAnswers = await prisma.applicantAnswer.findMany({
+        where: { testSessionId: session.id },
+      });
+    }
 
     // Grade each answer
-    for (const answer of session.answers) {
+    for (const answer of sessionAnswers) {
       const question = questionMap.get(answer.questionId);
-      if (question) {
+      if (question && answer.selectedAnswer) {
         const isCorrect = answer.selectedAnswer === question.correctAnswer;
         await prisma.applicantAnswer.update({
           where: { id: answer.id },
@@ -76,10 +134,10 @@ export async function POST(
     }
 
     // Get test config
-    const config = session.application.jobPosting.testConfig;
+    const config = session.application?.jobPosting?.testConfig;
     if (!config) {
       return NextResponse.json(
-        { success: false, error: "Test configuration not found" },
+        { success: false, error: "Konfigurasi test tidak ditemukan" },
         { status: 500 }
       );
     }
@@ -90,8 +148,8 @@ export async function POST(
     });
 
     // Grade answers per category
-    const rawScores: Record<string, { correct: number; total: number }> = {};
     const categories = config.categories.split(",");
+    const rawScores: Record<string, { correct: number; total: number }> = {};
 
     for (const category of categories) {
       rawScores[category] = { correct: 0, total: 0 };
@@ -99,7 +157,7 @@ export async function POST(
 
     for (const answer of updatedAnswers) {
       const question = questionMap.get(answer.questionId);
-      if (question && rawScores[question.category]) {
+      if (question && rawScores[question.category] !== undefined) {
         rawScores[question.category].total++;
         if (answer.isCorrect) {
           rawScores[question.category].correct++;
@@ -110,37 +168,38 @@ export async function POST(
     // Calculate weighted scores
     const categoryWeights = JSON.parse(config.categoryWeights);
     const passingGrades = JSON.parse(config.passingGrades);
-    const weightedScores: Record<string, number> = {};
     let totalWeightedScore = 0;
 
     for (const category of categories) {
       const { correct, total } = rawScores[category];
-      const percentage = total > 0 ? Math.round((correct / total) * 100) : 0;
-      const weight = categoryWeights[category] || 0;
-      const weightedScore = percentage * (weight / 100);
-      weightedScores[category] = Math.round(weightedScore * 100) / 100;
-      totalWeightedScore += weightedScore;
+      const percentage = total > 0 ? (correct / total) * 100 : 0;
+      const weight = categoryWeights[category] || 25;
+      totalWeightedScore += (percentage * weight) / 100;
     }
 
     const finalScore = Math.round(totalWeightedScore);
 
     // Check if passed
-    const allCategoriesPassed = categories.every((cat: string) => {
+    let allCategoriesPassed = true;
+    for (const cat of categories) {
       const { correct, total } = rawScores[cat];
       const percentage = total > 0 ? (correct / total) * 100 : 0;
-      return percentage >= passingGrades[cat];
-    });
+      if (percentage < (passingGrades[cat] || 0)) {
+        allCategoriesPassed = false;
+        break;
+      }
+    }
 
     const passed = allCategoriesPassed && finalScore >= config.overallPassingGrade;
+    const newStatus = passed ? "INTERVIEW" : "REJECTED";
 
     // Update session
     await prisma.testSession.update({
-      where: { id: sessionId },
+      where: { id: session.id },
       data: {
         status: "SCORED",
         submittedAt: new Date(),
         rawScores: JSON.stringify(rawScores),
-        weightedScores: JSON.stringify(weightedScores),
         totalScore: finalScore,
         passed,
       },
@@ -150,7 +209,7 @@ export async function POST(
     await prisma.application.update({
       where: { id: session.applicationId },
       data: {
-        status: passed ? "INTERVIEW" : "REJECTED",
+        status: newStatus,
         reviewedAt: new Date(),
       },
     });
@@ -159,53 +218,26 @@ export async function POST(
     await prisma.statusHistory.create({
       data: {
         applicationId: session.applicationId,
-        toStatus: passed ? "INTERVIEW" : "REJECTED",
+        fromStatus: "IN_TEST",
+        toStatus: newStatus,
         notes: `Tes kompetensi selesai. Skor: ${finalScore}%. Status: ${passed ? "LULUS" : "TIDAK LULUS"}`,
       },
     });
 
-    // Get recommendation level
-    const categoryScores = categories.map((cat: string) => {
-      const { correct, total } = rawScores[cat];
-      const percentage = total > 0 ? Math.round((correct / total) * 100) : 0;
-      const weight = categoryWeights[cat] || 25;
-      const weightedScore = percentage * (weight / 100);
-      return {
-        category: cat as TestCategory,
-        rawScore: correct,
-        totalQuestions: total,
-        percentage,
-        weightedScore,
-        passed: percentage >= passingGrades[cat],
-      };
-    });
-
-    const recommendation = getRecommendationLevel(finalScore, categoryScores);
-
     return NextResponse.json({
       success: true,
       data: {
-        sessionId,
+        sessionId: session.id,
         totalScore: finalScore,
         passed,
-        rawScores,
-        weightedScores,
-        categoryScores,
-        recommendation,
-        breakdown: categories.map((cat: string) => ({
-          category: cat,
-          correct: rawScores[cat].correct,
-          total: rawScores[cat].total,
-          percentage: Math.round((rawScores[cat].correct / Math.max(rawScores[cat].total, 1)) * 100),
-          passingGrade: passingGrades[cat],
-          passed: (rawScores[cat].correct / Math.max(rawScores[cat].total, 1)) * 100 >= passingGrades[cat],
-        })),
+        status: newStatus,
       },
+      message: passed ? "Selamat! Anda lulus tes." : "Mohon maaf, Anda tidak memenuhi passing grade.",
     });
   } catch (error) {
     console.error("Error submitting test:", error);
     return NextResponse.json(
-      { success: false, error: "Internal server error" },
+      { success: false, error: "Terjadi kesalahan server" },
       { status: 500 }
     );
   }

@@ -1,8 +1,92 @@
-// API Route: Verify Application (Approve/Reject)
-// PATCH /api/admin/applications/[id]/verify
+// API Route: Verify Application (Approve/Reject) and Get Details
+// GET /api/admin/applications/[id]/verify - Get application details
+// PATCH /api/admin/applications/[id]/verify - Verify application
 
 import { NextRequest, NextResponse } from "next/server";
-import { updateApplicationStatus } from "@/lib/local-db";
+import prisma from "@/lib/db";
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+
+    const application = await prisma.application.findUnique({
+      where: { id },
+      include: {
+        applicant: {
+          include: {
+            documents: true,
+            user: {
+              select: {
+                email: true,
+              },
+            },
+          },
+        },
+        jobPosting: {
+          select: {
+            id: true,
+            title: true,
+            division: true,
+            location: true,
+          },
+        },
+      },
+    });
+
+    if (!application) {
+      return NextResponse.json(
+        { success: false, error: "Lamaran tidak ditemukan" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        application: {
+          id: application.id,
+          status: application.status,
+          notes: application.notes,
+          createdAt: application.createdAt,
+        },
+        applicant: {
+          id: application.applicant.id,
+          fullName: application.applicant.fullName,
+          email: application.applicant.user?.email || "",
+          nik: application.applicant.nik,
+          phone: application.applicant.phone,
+          dateOfBirth: application.applicant.dateOfBirth,
+          placeOfBirth: application.applicant.placeOfBirth,
+          gender: application.applicant.gender,
+          address: application.applicant.address,
+          city: application.applicant.city,
+          education: application.applicant.education,
+          university: application.applicant.university,
+          height: application.applicant.height,
+          weight: application.applicant.weight,
+          documents: application.applicant.documents.map(doc => ({
+            id: doc.id,
+            type: doc.type,
+            fileName: doc.fileName,
+            fileUrl: doc.fileUrl,
+            fileSize: doc.fileSize,
+            uploadedAt: doc.uploadedAt,
+          })),
+        },
+        job: application.jobPosting,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching application:", error);
+    return NextResponse.json(
+      { success: false, error: "Terjadi kesalahan server" },
+      { status: 500 }
+    );
+  }
+}
 
 export async function PATCH(
   request: NextRequest,
@@ -21,54 +105,82 @@ export async function PATCH(
     }
 
     // Get current application
-    const { getAllApplications } = await import("@/lib/local-db");
-    const applications = getAllApplications();
-    const application = applications.find(a => a.id === id);
+    const currentApp = await prisma.application.findUnique({
+      where: { id },
+    });
 
-    if (!application) {
+    if (!currentApp) {
       return NextResponse.json(
         { success: false, error: "Lamaran tidak ditemukan" },
         { status: 404 }
       );
     }
 
-    // Determine new status based on action
-    const newStatus = action === "approve" ? "TEST" : "REJECTED";
+    const previousStatus = currentApp.status;
 
-    // Update application status
-    const updated = updateApplicationStatus(id, newStatus);
-
-    if (!updated) {
-      return NextResponse.json(
-        { success: false, error: "Gagal mengupdate status" },
-        { status: 500 }
-      );
-    }
-
-    // Save notes if provided
-    if (notes) {
-      const { getAllApplications: getApps } = await import("@/lib/local-db");
-      const allApps = getApps();
-      const appIndex = allApps.findIndex(a => a.id === id);
-      if (appIndex !== -1) {
-        allApps[appIndex].notes = notes;
-        if (typeof window !== "undefined") {
-          localStorage.setItem("kai_recruitment_db", JSON.stringify({
-            users: [],
-            jobs: [],
-            applications: allApps,
-            questions: []
-          }));
-        }
+    // Determine new status based on action and current status
+    let newStatus = "";
+    if (action === "reject") {
+      newStatus = "REJECTED";
+    } else {
+      // Approve - determine next status based on current status
+      switch (currentApp.status) {
+        case "ADMIN_CHECK":
+          newStatus = "TEST_SCHEDULED";
+          break;
+        case "TEST_COMPLETED":
+          newStatus = "INTERVIEW";
+          break;
+        case "INTERVIEW":
+          newStatus = "MCU";
+          break;
+        case "MCU":
+          newStatus = "OFFERING";
+          break;
+        case "OFFERING":
+          newStatus = "ACCEPTED";
+          break;
+        default:
+          newStatus = "TEST_SCHEDULED";
       }
     }
+
+    // Update application
+    const application = await prisma.application.update({
+      where: { id },
+      data: {
+        status: newStatus,
+        notes: notes || currentApp.notes,
+        reviewedAt: new Date(),
+        statusHistory: {
+          create: {
+            fromStatus: previousStatus,
+            toStatus: newStatus,
+            notes,
+          },
+        },
+      },
+      include: {
+        applicant: {
+          select: {
+            fullName: true,
+          },
+        },
+        jobPosting: {
+          select: {
+            title: true,
+            division: true,
+          },
+        },
+      },
+    });
 
     return NextResponse.json({
       success: true,
       data: {
-        id: updated.id,
-        status: updated.status,
-        previousStatus: application.status,
+        id: application.id,
+        status: application.status,
+        previousStatus,
       },
       message: action === "approve"
         ? "Lamaran berhasil diverifikasi dan dilanjutkan ke tahap tes"
@@ -76,71 +188,6 @@ export async function PATCH(
     });
   } catch (error) {
     console.error("Error verifying application:", error);
-    return NextResponse.json(
-      { success: false, error: "Terjadi kesalahan server" },
-      { status: 500 }
-    );
-  }
-}
-
-// GET: Get application details
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-    const { getAllApplications, getAllUsers, getJobById } = await import("@/lib/local-db");
-
-    const applications = getAllApplications();
-    const application = applications.find(a => a.id === id);
-
-    if (!application) {
-      return NextResponse.json(
-        { success: false, error: "Lamaran tidak ditemukan" },
-        { status: 404 }
-      );
-    }
-
-    const users = getAllUsers();
-    const applicant = users.find(u => u.id === application.applicantId);
-    const job = getJobById(application.jobPostingId);
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        application: {
-          id: application.id,
-          status: application.status,
-          notes: application.notes,
-          createdAt: application.createdAt,
-        },
-        applicant: applicant ? {
-          id: applicant.id,
-          fullName: applicant.fullName,
-          email: applicant.email,
-          nik: applicant.nik,
-          phone: applicant.phone,
-          dateOfBirth: applicant.dateOfBirth,
-          placeOfBirth: applicant.placeOfBirth,
-          gender: applicant.gender,
-          address: applicant.address,
-          city: applicant.city,
-          education: applicant.education,
-          university: applicant.university,
-          height: applicant.height,
-          weight: applicant.weight,
-        } : null,
-        job: job ? {
-          id: job.id,
-          title: job.title,
-          division: job.division,
-          location: job.location,
-        } : null,
-      },
-    });
-  } catch (error) {
-    console.error("Error fetching application:", error);
     return NextResponse.json(
       { success: false, error: "Terjadi kesalahan server" },
       { status: 500 }
