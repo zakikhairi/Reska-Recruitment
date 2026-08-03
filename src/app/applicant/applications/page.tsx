@@ -18,7 +18,8 @@ const formatDivision = (division: string | undefined): string => {
 };
 
 const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
-  ADMIN_CHECK: { bg: "#fef3c7", text: "#d97706", label: "Menunggu Review HR" },
+  PENDING: { bg: "#fef3c7", text: "#d97706", label: "Menunggu" },
+  ADMIN_CHECK: { bg: "#fef3c7", text: "#d97706", label: "Verifikasi" },
   TEST_SCHEDULED: { bg: "#dbeafe", text: "#2563eb", label: "Menunggu Tes" },
   IN_TEST: { bg: "#e0e7ff", text: "#4f46e5", label: "Sedang Tes" },
   TEST_COMPLETED: { bg: "#dcfce7", text: "#16a34a", label: "Tes Selesai" },
@@ -28,7 +29,6 @@ const statusConfig: Record<string, { bg: string; text: string; label: string }> 
   OFFERED: { bg: "#fef3c7", text: "#d97706", label: "Offering" },
   ACCEPTED: { bg: "#dcfce7", text: "#16a34a", label: "Diterima" },
   REJECTED: { bg: "#fee2e2", text: "#dc2626", label: "Ditolak" },
-  PENDING: { bg: "#fef3c7", text: "#d97706", label: "Menunggu" },
 };
 
 interface ApplicationData {
@@ -134,7 +134,7 @@ export default function ApplicationsPage() {
           {/* Left - Application List */}
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-              {["all", "PENDING", "ADMIN_CHECK", "TEST_SCHEDULED", "TEST_COMPLETED", "INTERVIEW", "MCU", "OFFERING", "ACCEPTED", "REJECTED"].map((f) => (
+              {["all", "PENDING", "ADMIN_CHECK", "TEST_SCHEDULED", "IN_TEST", "TEST_COMPLETED", "INTERVIEW", "MCU", "OFFERING", "ACCEPTED", "REJECTED"].map((f) => (
                 <button key={f} onClick={() => setFilter(f)} style={{
                   padding: "8px 16px",
                   background: filter === f ? "#00205B" : "#fff",
@@ -191,6 +191,77 @@ export default function ApplicationsPage() {
                 <span style={{ display: "inline-block", padding: "8px 16px", background: statusConfig[selectedApp.status]?.bg, color: statusConfig[selectedApp.status]?.text, borderRadius: "20px", fontSize: "14px", fontWeight: 700, marginBottom: "24px" }}>
                   {statusConfig[selectedApp.status]?.label}
                 </span>
+
+                {/* Test Section */}
+                {selectedApp.status === "TEST_SCHEDULED" && (
+                  <div style={{ background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)", borderRadius: "12px", padding: "20px", marginBottom: "20px", textAlign: "center" }}>
+                    <p style={{ fontSize: "14px", color: "#fff", marginBottom: "12px", lineHeight: 1.5 }}>
+                      🎯 Anda dijadwalkan untuk mengikuti tes kompetensi. Segera kerjakan sebelum batas waktu habis!
+                    </p>
+                    <Link href={`/applicant/test/${selectedApp.id}`} style={{ textDecoration: "none" }}>
+                      <button style={{
+                        width: "100%",
+                        padding: "14px",
+                        background: "#fff",
+                        color: "#2563eb",
+                        border: "none",
+                        borderRadius: "10px",
+                        fontSize: "15px",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                      }}>
+                        Mulai Tes Sekarang
+                      </button>
+                    </Link>
+                  </div>
+                )}
+
+                {selectedApp.status === "IN_TEST" && (
+                  <div style={{ background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", borderRadius: "12px", padding: "20px", marginBottom: "20px", textAlign: "center" }}>
+                    <p style={{ fontSize: "14px", color: "#fff", marginBottom: "12px", lineHeight: 1.5 }}>
+                      ⏳ Tes sedang berlangsung. Segera selesaikan sebelum waktu habis!
+                    </p>
+                    <Link href={`/applicant/test/${selectedApp.id}`} style={{ textDecoration: "none" }}>
+                      <button style={{
+                        width: "100%",
+                        padding: "14px",
+                        background: "#fff",
+                        color: "#f59e0b",
+                        border: "none",
+                        borderRadius: "10px",
+                        fontSize: "15px",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                      }}>
+                        Lanjutkan Tes
+                      </button>
+                    </Link>
+                  </div>
+                )}
+
+                {selectedApp.status === "TEST_COMPLETED" && (
+                  <div style={{ background: "#dcfce7", borderRadius: "12px", padding: "20px", marginBottom: "20px", textAlign: "center" }}>
+                    <p style={{ fontSize: "14px", color: "#16a34a", fontWeight: 600, margin: 0 }}>
+                      ✅ Tes telah selesai. Menunggu hasil dari tim HR.
+                    </p>
+                  </div>
+                )}
+
+                {selectedApp.status === "REJECTED" && (
+                  <div style={{ background: "#fee2e2", borderRadius: "12px", padding: "20px", marginBottom: "20px", textAlign: "center" }}>
+                    <p style={{ fontSize: "14px", color: "#dc2626", fontWeight: 600, margin: 0 }}>
+                      ❌ Maaf, lamaran Anda tidak diterima.
+                    </p>
+                  </div>
+                )}
+
+                {selectedApp.status === "ACCEPTED" && (
+                  <div style={{ background: "#dcfce7", borderRadius: "12px", padding: "20px", marginBottom: "20px", textAlign: "center" }}>
+                    <p style={{ fontSize: "14px", color: "#16a34a", fontWeight: 600, margin: 0 }}>
+                      🎉 Selamat! Anda diterima加入PT KAI Services!
+                    </p>
+                  </div>
+                )}
 
                 <div style={{ marginTop: "24px", paddingTop: "24px", borderTop: "1px solid #eee" }}>
                   <h4 style={{ fontSize: "13px", fontWeight: 600, color: "#888", marginBottom: "12px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Detail</h4>

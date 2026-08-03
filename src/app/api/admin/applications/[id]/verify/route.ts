@@ -15,7 +15,16 @@ export async function GET(
     const application = await prisma.application.findUnique({
       where: { id },
       include: {
-        applicant: true,
+        applicant: {
+          include: {
+            documents: true,
+            user: {
+              select: {
+                email: true,
+              },
+            },
+          },
+        },
         jobPosting: {
           select: {
             id: true,
@@ -58,6 +67,14 @@ export async function GET(
           university: application.applicant.university,
           height: application.applicant.height,
           weight: application.applicant.weight,
+          documents: application.applicant.documents.map(doc => ({
+            id: doc.id,
+            type: doc.type,
+            fileName: doc.fileName,
+            fileUrl: doc.fileUrl,
+            fileSize: doc.fileSize,
+            uploadedAt: doc.uploadedAt,
+          })),
         },
         job: application.jobPosting,
       },
@@ -101,8 +118,32 @@ export async function PATCH(
 
     const previousStatus = currentApp.status;
 
-    // Determine new status based on action
-    const newStatus = action === "approve" ? "TEST" : "REJECTED";
+    // Determine new status based on action and current status
+    let newStatus = "";
+    if (action === "reject") {
+      newStatus = "REJECTED";
+    } else {
+      // Approve - determine next status based on current status
+      switch (currentApp.status) {
+        case "ADMIN_CHECK":
+          newStatus = "TEST_SCHEDULED";
+          break;
+        case "TEST_COMPLETED":
+          newStatus = "INTERVIEW";
+          break;
+        case "INTERVIEW":
+          newStatus = "MCU";
+          break;
+        case "MCU":
+          newStatus = "OFFERING";
+          break;
+        case "OFFERING":
+          newStatus = "ACCEPTED";
+          break;
+        default:
+          newStatus = "TEST_SCHEDULED";
+      }
+    }
 
     // Update application
     const application = await prisma.application.update({

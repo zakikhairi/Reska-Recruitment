@@ -17,14 +17,12 @@ export async function PATCH(
     const validStatuses = [
       "PENDING",
       "ADMIN_CHECK",
-      "TEST",
-      "IN_TEST",
       "TEST_SCHEDULED",
+      "IN_TEST",
       "TEST_COMPLETED",
       "INTERVIEW",
       "MCU",
       "OFFERING",
-      "OFFERED",
       "ACCEPTED",
       "REJECTED",
       "WITHDRAWN",
@@ -66,33 +64,15 @@ export async function PATCH(
           },
         },
       },
-      include: {
-        applicant: {
-          select: {
-            id: true,
-            fullName: true,
-            email: true,
-          },
-        },
-        jobPosting: {
-          select: {
-            id: true,
-            title: true,
-            division: true,
-          },
-        },
-      },
     });
 
     return NextResponse.json({
       success: true,
       message: `Status berhasil diubah dari ${previousStatus} ke ${status}`,
-      application: {
+      data: {
         id: application.id,
         status: application.status,
         previousStatus,
-        applicant: application.applicant,
-        job: application.jobPosting,
       },
     });
   } catch (error) {

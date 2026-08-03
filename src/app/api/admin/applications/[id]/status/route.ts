@@ -8,14 +8,12 @@ import prisma from "@/lib/db";
 const validStatuses = [
   "PENDING",
   "ADMIN_CHECK",
-  "TEST",
-  "IN_TEST",
   "TEST_SCHEDULED",
+  "IN_TEST",
   "TEST_COMPLETED",
   "INTERVIEW",
   "MCU",
   "OFFERING",
-  "OFFERED",
   "ACCEPTED",
   "REJECTED",
   "WITHDRAWN",
@@ -29,6 +27,8 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
     const { status } = body;
+
+    console.log("Status update request:", { id, status });
 
     if (!status || !validStatuses.includes(status)) {
       return NextResponse.json(
@@ -49,6 +49,8 @@ export async function PATCH(
       );
     }
 
+    console.log("Current status:", currentApp.status);
+
     const previousStatus = currentApp.status;
 
     // Update application
@@ -64,21 +66,9 @@ export async function PATCH(
           },
         },
       },
-      include: {
-        applicant: {
-          select: {
-            fullName: true,
-            email: true,
-          },
-        },
-        jobPosting: {
-          select: {
-            title: true,
-            division: true,
-          },
-        },
-      },
     });
+
+    console.log("Update successful:", application.status);
 
     return NextResponse.json({
       success: true,

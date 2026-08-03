@@ -46,6 +46,14 @@ interface ApplicantData {
     university?: string;
     height?: number;
     weight?: number;
+    documents: Array<{
+      id: string;
+      type: string;
+      fileName: string;
+      fileUrl: string;
+      fileSize: number;
+      uploadedAt: string;
+    }>;
   };
   job: {
     id: string;
@@ -77,11 +85,11 @@ function saveLocalDB(db: any) {
 const getStatusConfig = (status: string) => {
   switch (status) {
     case "PENDING":
-    case "ADMINISTRATION":
       return { bg: "#fef3c7", text: "#d97706", label: "Menunggu", icon: Clock };
     case "ADMIN_CHECK":
       return { bg: "#dbeafe", text: "#2563eb", label: "Verifikasi", icon: AlertCircle };
-    case "TEST":
+    case "TEST_SCHEDULED":
+      return { bg: "#e0e7ff", text: "#4f46e5", label: "Tes Terjadwal", icon: Clock };
     case "IN_TEST":
       return { bg: "#fef3c7", text: "#d97706", label: "Sedang Tes", icon: Clock };
     case "TEST_COMPLETED":
@@ -90,7 +98,8 @@ const getStatusConfig = (status: string) => {
       return { bg: "#fae8ff", text: "#c026d3", label: "Interview", icon: User };
     case "MCU":
       return { bg: "#e0e7ff", text: "#4f46e5", label: "MCU", icon: CheckCircle };
-    case "OFFERED":
+    case "OFFERING":
+      return { bg: "#fef3c7", text: "#d97706", label: "Offering", icon: CheckCircle };
     case "ACCEPTED":
       return { bg: "#d1fae5", text: "#059669", label: "Diterima", icon: CheckCircle };
     case "REJECTED":
@@ -101,12 +110,12 @@ const getStatusConfig = (status: string) => {
 };
 
 const documentTypes = [
-  { key: "photo", label: "Pas Foto 3x4", icon: Image },
-  { key: "cv", label: "Curriculum Vitae (CV)", icon: FileText },
-  { key: "ijazah", label: "Ijazah", icon: GraduationCap },
-  { key: "transkrip", label: "Transkrip Nilai", icon: FileText },
-  { key: "ktp", label: "KTP", icon: FileText },
-  { key: "sertifikat", label: "Sertifikat (jika ada)", icon: FileText },
+  { key: "CV", label: "Curriculum Vitae (CV)", icon: FileText },
+  { key: "KTPCARD", label: "KTP", icon: FileText },
+  { key: "IJAZAH", label: "Ijazah", icon: GraduationCap },
+  { key: "TRANSCRIPT", label: "Transkrip Nilai", icon: FileText },
+  { key: "SKCK", label: "Pas Foto 3x4", icon: Image },
+  { key: "CERTIFICATE", label: "Sertifikat", icon: FileText },
 ];
 
 export default function ApplicantDetailPage() {
@@ -314,6 +323,56 @@ export default function ApplicantDetailPage() {
             </div>
 
             {/* Action Buttons - tampil sesuai dengan status aplikasi */}
+
+            {/* Status PENDING - Tombol untuk mulai verifikasi */}
+            {application.status === "PENDING" && (
+              <div style={{ display: "flex", gap: "12px" }}>
+                <button
+                  onClick={() => handleVerify("reject")}
+                  disabled={actionLoading}
+                  style={{
+                    padding: "12px 24px",
+                    background: "#ffffff",
+                    color: "#dc2626",
+                    border: "2px solid #dc2626",
+                    borderRadius: "12px",
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    cursor: actionLoading ? "not-allowed" : "pointer",
+                    opacity: actionLoading ? 0.6 : 1,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
+                  <XCircle className="w-5 h-5" />
+                  Tolak
+                </button>
+                <button
+                  onClick={() => handleAdvanceStatus("ADMIN_CHECK")}
+                  disabled={actionLoading}
+                  style={{
+                    padding: "12px 24px",
+                    background: "#f59e0b",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: "12px",
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    cursor: actionLoading ? "not-allowed" : "pointer",
+                    opacity: actionLoading ? 0.6 : 1,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    boxShadow: "0 4px 12px rgba(245, 158, 11, 0.3)",
+                  }}
+                >
+                  <CheckCircle className="w-5 h-5" />
+                  Mulai Verifikasi
+                </button>
+              </div>
+            )}
+
             {(application.status === "ADMIN_CHECK" || application.status === "TEST_COMPLETED" || application.status === "INTERVIEW") && (
               <div style={{ display: "flex", gap: "12px" }}>
                 <button
@@ -619,8 +678,8 @@ export default function ApplicantDetailPage() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 {documentTypes.map((doc) => {
                   const DocIcon = doc.icon;
-                  // Simulasi dokumen - dalam implementasi nyata, ini akan berisi URL file
-                  const hasDocument = applicant.nik && doc.key !== "sertifikat"; // Demo:假装有文件
+                  const uploadedDoc = data?.applicant?.documents?.find(d => d.type === doc.key);
+                  const hasDocument = !!uploadedDoc;
                   return (
                     <div
                       key={doc.key}
@@ -648,11 +707,14 @@ export default function ApplicantDetailPage() {
                       <div style={{ flex: 1 }}>
                         <p style={{ fontSize: "14px", fontWeight: 600, color: "#111111", marginBottom: "2px" }}>{doc.label}</p>
                         <p style={{ fontSize: "12px", color: hasDocument ? "#16a34a" : "#888888" }}>
-                          {hasDocument ? "Tersedia" : "Belum diupload"}
+                          {hasDocument ? uploadedDoc.fileName : "Belum diupload"}
                         </p>
                       </div>
                       {hasDocument && (
-                        <button
+                        <a
+                          href={uploadedDoc.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           style={{
                             padding: "8px 12px",
                             background: "#ffffff",
@@ -662,10 +724,11 @@ export default function ApplicantDetailPage() {
                             fontWeight: 600,
                             color: "#16a34a",
                             cursor: "pointer",
+                            textDecoration: "none",
                           }}
                         >
                           Lihat
-                        </button>
+                        </a>
                       )}
                     </div>
                   );
@@ -682,11 +745,11 @@ export default function ApplicantDetailPage() {
               <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
                 {[
                   { label: "Pendaftaran", status: "completed" },
-                  { label: "Verifikasi Admin", status: application.status === "ADMIN_CHECK" ? "current" : ["TEST", "IN_TEST", "TEST_COMPLETED", "INTERVIEW", "MCU", "OFFERED", "ACCEPTED"].includes(application.status) ? "completed" : "pending" },
-                  { label: "Tes Kompetensi", status: ["TEST", "IN_TEST"].includes(application.status) ? "current" : ["TEST_COMPLETED", "INTERVIEW", "MCU", "OFFERED", "ACCEPTED"].includes(application.status) ? "completed" : "pending" },
-                  { label: "Interview", status: application.status === "INTERVIEW" ? "current" : ["MCU", "OFFERED", "ACCEPTED"].includes(application.status) ? "completed" : "pending" },
-                  { label: "MCU", status: application.status === "MCU" ? "current" : ["OFFERED", "ACCEPTED"].includes(application.status) ? "completed" : "pending" },
-                  { label: "Offering", status: ["OFFERED", "ACCEPTED"].includes(application.status) ? "completed" : "pending" },
+                  { label: "Verifikasi Admin", status: application.status === "ADMIN_CHECK" ? "current" : ["TEST_SCHEDULED", "IN_TEST", "TEST_COMPLETED", "INTERVIEW", "MCU", "OFFERING", "ACCEPTED"].includes(application.status) ? "completed" : "pending" },
+                  { label: "Tes Kompetensi", status: ["TEST_SCHEDULED", "IN_TEST"].includes(application.status) ? "current" : ["TEST_COMPLETED", "INTERVIEW", "MCU", "OFFERING", "ACCEPTED"].includes(application.status) ? "completed" : "pending" },
+                  { label: "Interview", status: application.status === "INTERVIEW" ? "current" : ["MCU", "OFFERING", "ACCEPTED"].includes(application.status) ? "completed" : "pending" },
+                  { label: "MCU", status: application.status === "MCU" ? "current" : ["OFFERING", "ACCEPTED"].includes(application.status) ? "completed" : "pending" },
+                  { label: "Offering", status: ["OFFERING", "ACCEPTED"].includes(application.status) ? "completed" : "pending" },
                 ].map((item, index) => (
                   <div key={index} style={{ display: "flex", gap: "12px", position: "relative" }}>
                     {/* Line connector */}

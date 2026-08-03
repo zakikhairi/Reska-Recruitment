@@ -13,9 +13,13 @@ export async function GET() {
             id: true,
             nik: true,
             fullName: true,
-            email: true,
             phone: true,
             education: true,
+            user: {
+              select: {
+                email: true,
+              },
+            },
           },
         },
         jobPosting: {
@@ -39,7 +43,10 @@ export async function GET() {
         status: app.status,
         notes: app.notes,
         createdAt: app.createdAt,
-        applicant: app.applicant,
+        applicant: {
+          ...app.applicant,
+          email: app.applicant.user?.email,
+        },
         job: app.jobPosting,
       })),
     });

@@ -187,6 +187,7 @@ export default function ApplicantDashboardPage() {
 
           {/* Sidebar */}
           <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+
             {/* Quick Actions */}
             <div style={{ background: "#fff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
               <h2 style={{ fontSize: "18px", fontWeight: 700, color: "#111", marginBottom: "20px" }}>Aksi Cepat</h2>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   Users,
@@ -26,7 +26,18 @@ import {
 import { useJobsStore } from "@/stores/jobs";
 
 const stats: { label: string; value: string; change: string; trend: "up" | "down"; icon: any; color: string }[] = [];
-const statusDistribution: { name: string; value: number; color: string }[] = [];
+const statusDistribution = [
+  { name: "Pending", value: 0, color: "#F59E0B" },
+  { name: "Verifikasi", value: 0, color: "#d97706" },
+  { name: "Tes Terjadwal", value: 0, color: "#8B5CF6" },
+  { name: "Sedang Tes", value: 0, color: "#f59e0b" },
+  { name: "Tes Selesai", value: 0, color: "#22c55e" },
+  { name: "Interview", value: 0, color: "#3B82F6" },
+  { name: "MCU", value: 0, color: "#a855f7" },
+  { name: "Offering", value: 0, color: "#14b8a6" },
+  { name: "Diterima", value: 0, color: "#10B981" },
+  { name: "Ditolak", value: 0, color: "#EF4444" },
+];
 const monthlyTrend = [
   { month: "Jan", pelamar: 0, lulus: 0 },
   { month: "Feb", pelamar: 0, lulus: 0 },
@@ -35,6 +46,11 @@ const monthlyTrend = [
   { month: "Mei", pelamar: 0, lulus: 0 },
   { month: "Jun", pelamar: 0, lulus: 0 },
   { month: "Jul", pelamar: 0, lulus: 0 },
+  { month: "Agt", pelamar: 0, lulus: 0 },
+  { month: "Sep", pelamar: 0, lulus: 0 },
+  { month: "Okt", pelamar: 0, lulus: 0 },
+  { month: "Nov", pelamar: 0, lulus: 0 },
+  { month: "Des", pelamar: 0, lulus: 0 },
 ];
 const recentApplications: any[] = [];
 
@@ -48,9 +64,122 @@ const getStatusConfig = (status: string) => {
     case "MCU": return { bg: "#fae8ff", text: "#c026d3", label: "MCU", icon: <CheckCircle2 className="w-3 h-3" /> };
     case "OFFERING": return { bg: "#fef3c7", text: "#d97706", label: "Offering", icon: <CheckCircle2 className="w-3 h-3" /> };
     case "ACCEPTED": return { bg: "#dcfce7", text: "#16a34a", label: "Diterima", icon: <CheckCircle2 className="w-3 h-3" /> };
-    default: return { bg: "#f1f5f9", text: "#64748b", label: "Pending", icon: <Clock className="w-3 h-3" /> };
+    case "PENDING": return { bg: "#f1f5f9", text: "#64748b", label: "Pending", icon: <Clock className="w-3 h-3" /> };
+    case "IN_TEST": return { bg: "#fef3c7", text: "#d97706", label: "Sedang Tes", icon: <Clock className="w-3 h-3" /> };
+    default: return { bg: "#f1f5f9", text: "#64748b", label: status, icon: <Clock className="w-3 h-3" /> };
   }
 };
+
+const statusLabels: Record<string, string> = {
+  PENDING: "Pending",
+  ADMIN_CHECK: "Verifikasi",
+  TEST_SCHEDULED: "Tes Terjadwal",
+  IN_TEST: "Sedang Tes",
+  TEST_COMPLETED: "Tes Selesai",
+  INTERVIEW: "Interview",
+  MCU: "MCU",
+  OFFERING: "Offering",
+  ACCEPTED: "Diterima",
+  REJECTED: "Ditolak",
+};
+
+function StatusFilterDropdown({ statusFilter, setStatusFilter }: { statusFilter: string; setStatusFilter: (v: string) => void }) {
+  const [show, setShow] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShow(false);
+      }
+    };
+    if (show) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [show]);
+
+  return (
+    <div ref={dropdownRef} style={{ position: "relative" }}>
+      <button
+        onClick={() => setShow(!show)}
+        style={{
+          padding: "10px 16px",
+          border: `2px solid ${statusFilter !== "all" ? "#FF5E00" : "#eeeeee"}`,
+          background: statusFilter !== "all" ? "#fff7f0" : "#ffffff",
+          borderRadius: "10px",
+          fontSize: "14px",
+          fontWeight: 600,
+          color: statusFilter !== "all" ? "#FF5E00" : "#666666",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+        }}
+      >
+        <Filter className="w-4 h-4" />
+        {statusFilter === "all" ? "Filter" : statusLabels[statusFilter] || statusFilter}
+      </button>
+      {show && (
+        <div style={{
+          position: "absolute",
+          top: "100%",
+          right: 0,
+          marginTop: "8px",
+          background: "#ffffff",
+          borderRadius: "12px",
+          boxShadow: "0 10px 40px rgba(0,0,0,0.15)",
+          border: "1px solid #eeeeee",
+          zIndex: 100,
+          minWidth: "200px",
+          overflow: "hidden",
+        }}>
+          <div style={{ padding: "8px" }}>
+            <button
+              onClick={() => { setStatusFilter("all"); setShow(false); }}
+              style={{
+                width: "100%",
+                padding: "10px 14px",
+                border: "none",
+                background: statusFilter === "all" ? "#fff7f0" : "transparent",
+                borderRadius: "8px",
+                fontSize: "14px",
+                fontWeight: statusFilter === "all" ? 600 : 500,
+                color: statusFilter === "all" ? "#FF5E00" : "#666666",
+                cursor: "pointer",
+                textAlign: "left",
+              }}
+            >
+              Semua Status
+            </button>
+            {Object.entries(statusLabels).map(([key, label]) => (
+              <button
+                key={key}
+                onClick={() => { setStatusFilter(key); setShow(false); }}
+                style={{
+                  width: "100%",
+                  padding: "10px 14px",
+                  border: "none",
+                  background: statusFilter === key ? "#fff7f0" : "transparent",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  fontWeight: statusFilter === key ? 600 : 500,
+                  color: statusFilter === key ? "#FF5E00" : "#666666",
+                  cursor: "pointer",
+                  textAlign: "left",
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function AdminDashboardPage() {
   const { jobs, _hasHydrated } = useJobsStore();
@@ -60,6 +189,22 @@ export default function AdminDashboardPage() {
   const [statsData, setStatsData] = useState<typeof stats>([]);
   const [statusDist, setStatusDist] = useState<typeof statusDistribution>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Monthly data state - initialize with proper data
+  const [monthlyData, setMonthlyData] = useState<Array<{month: string; pelamar: number; lulus: number}>>([
+    { month: "Jan", pelamar: 0, lulus: 0 },
+    { month: "Feb", pelamar: 0, lulus: 0 },
+    { month: "Mar", pelamar: 0, lulus: 0 },
+    { month: "Apr", pelamar: 0, lulus: 0 },
+    { month: "Mei", pelamar: 0, lulus: 0 },
+    { month: "Jun", pelamar: 0, lulus: 0 },
+    { month: "Jul", pelamar: 0, lulus: 0 },
+    { month: "Agt", pelamar: 0, lulus: 0 },
+    { month: "Sep", pelamar: 0, lulus: 0 },
+    { month: "Okt", pelamar: 0, lulus: 0 },
+    { month: "Nov", pelamar: 0, lulus: 0 },
+    { month: "Des", pelamar: 0, lulus: 0 },
+  ]);
 
   useEffect(() => {
     loadData();
@@ -112,11 +257,42 @@ export default function AdminDashboardPage() {
         setStatusDist([
           { name: "Pending", value: statusCounts["PENDING"] || 0, color: "#F59E0B" },
           { name: "Verifikasi", value: statusCounts["ADMIN_CHECK"] || 0, color: "#d97706" },
-          { name: "Dalam Tes", value: (statusCounts["TEST_SCHEDULED"] || 0) + (statusCounts["IN_TEST"] || 0), color: "#8B5CF6" },
+          { name: "Tes Terjadwal", value: statusCounts["TEST_SCHEDULED"] || 0, color: "#8B5CF6" },
+          { name: "Sedang Tes", value: statusCounts["IN_TEST"] || 0, color: "#f59e0b" },
+          { name: "Tes Selesai", value: statusCounts["TEST_COMPLETED"] || 0, color: "#22c55e" },
           { name: "Interview", value: statusCounts["INTERVIEW"] || 0, color: "#3B82F6" },
+          { name: "MCU", value: statusCounts["MCU"] || 0, color: "#a855f7" },
+          { name: "Offering", value: statusCounts["OFFERING"] || 0, color: "#14b8a6" },
+          { name: "Diterima", value: statusCounts["ACCEPTED"] || 0, color: "#10B981" },
           { name: "Ditolak", value: statusCounts["REJECTED"] || 0, color: "#EF4444" },
-          { name: "Diterima", value: (statusCounts["ACCEPTED"] || 0) + (statusCounts["OFFERED"] || 0) + (statusCounts["MCU"] || 0), color: "#10B981" },
         ]);
+
+        // Calculate monthly trend
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agt", "Sep", "Okt", "Nov", "Des"];
+        const monthlyApplicants = new Array(12).fill(0);
+        const monthlyPassed = new Array(12).fill(0);
+
+        console.log("Total applications:", apps.length);
+        apps.forEach((app: any) => {
+          const date = new Date(app.createdAt);
+          const monthIndex = date.getMonth();
+          console.log("App createdAt:", app.createdAt, "-> month:", monthIndex, monthNames[monthIndex]);
+          if (monthIndex >= 0 && monthIndex < 12) {
+            monthlyApplicants[monthIndex]++;
+            if (["ACCEPTED", "OFFERING", "MCU", "INTERVIEW", "TEST_COMPLETED"].includes(app.status)) {
+              monthlyPassed[monthIndex]++;
+            }
+          }
+        });
+
+        console.log("Monthly applicants:", monthlyApplicants);
+        console.log("Monthly passed:", monthlyPassed);
+
+        setMonthlyData(monthNames.map((month, i) => ({
+          month,
+          pelamar: monthlyApplicants[i],
+          lulus: monthlyPassed[i],
+        })));
       }
     } catch (err) {
       console.error("Error loading data:", err);
@@ -247,10 +423,7 @@ export default function AdminDashboardPage() {
                       style={{ padding: "10px 14px 10px 42px", border: "2px solid #eeeeee", borderRadius: "10px", fontSize: "14px", outline: "none", width: "200px" }}
                     />
                   </div>
-                  <button style={{ padding: "10px 16px", border: "2px solid #eeeeee", background: "#ffffff", borderRadius: "10px", fontSize: "14px", fontWeight: 600, color: "#666666", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
-                    <Filter className="w-4 h-4" />
-                    Filter
-                  </button>
+                  <StatusFilterDropdown statusFilter={statusFilter} setStatusFilter={setStatusFilter} />
                 </div>
               </div>
 
@@ -309,12 +482,22 @@ export default function AdminDashboardPage() {
                             </td>
                             <td style={{ padding: "16px", textAlign: "right" }}>
                               <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
-                                {/* Quick Accept Button */}
+                                {/* Quick Accept Button - ADMIN_CHECK */}
                                 {app.status === "ADMIN_CHECK" && (
                                   <button
                                     onClick={() => handleUpdateStatus(app.applicationId, "TEST_SCHEDULED")}
                                     style={{ padding: "8px", background: "#dcfce7", border: "none", borderRadius: "8px", cursor: "pointer", color: "#16a34a", display: "flex", alignItems: "center", justifyContent: "center" }}
                                     title="Terima ke Tahap Tes"
+                                  >
+                                    <CheckCircle2 className="w-4 h-4" />
+                                  </button>
+                                )}
+                                {/* Quick Accept Button - TEST_SCHEDULED */}
+                                {app.status === "TEST_SCHEDULED" && (
+                                  <button
+                                    onClick={() => handleUpdateStatus(app.applicationId, "TEST_COMPLETED")}
+                                    style={{ padding: "8px", background: "#dcfce7", border: "none", borderRadius: "8px", cursor: "pointer", color: "#16a34a", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                    title="Selesaikan Tes"
                                   >
                                     <CheckCircle2 className="w-4 h-4" />
                                   </button>
@@ -329,7 +512,7 @@ export default function AdminDashboardPage() {
                                   </button>
                                 )}
                                 {/* Quick Reject Button */}
-                                {(app.status === "ADMIN_CHECK" || app.status === "TEST_SCHEDULED" || app.status === "TEST_COMPLETED" || app.status === "INTERVIEW") && (
+                                {(app.status === "PENDING" || app.status === "ADMIN_CHECK" || app.status === "TEST_SCHEDULED" || app.status === "TEST_COMPLETED" || app.status === "INTERVIEW") && (
                                   <button
                                     onClick={() => handleUpdateStatus(app.applicationId, "REJECTED")}
                                     style={{ padding: "8px", background: "#fee2e2", border: "none", borderRadius: "8px", cursor: "pointer", color: "#dc2626", display: "flex", alignItems: "center", justifyContent: "center" }}
@@ -369,29 +552,59 @@ export default function AdminDashboardPage() {
                   <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#111111", marginBottom: "4px" }}>Tren Pelamar Bulanan</h2>
                   <p style={{ fontSize: "14px", color: "#888888" }}>Data pelamar dan kelulusan per bulan</p>
                 </div>
-                <div style={{ display: "flex", gap: "16px", fontSize: "13px" }}>
+                <div style={{ display: "flex", gap: "20px", fontSize: "13px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <div style={{ width: "12px", height: "12px", background: "#00205B", borderRadius: "50%" }} />
+                    <div style={{ width: "12px", height: "12px", background: "#2563eb", borderRadius: "3px" }} />
                     <span style={{ color: "#666666" }}>Total Pelamar</span>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <div style={{ width: "12px", height: "12px", background: "#10B981", borderRadius: "50%" }} />
+                    <div style={{ width: "12px", height: "12px", background: "#10B981", borderRadius: "3px" }} />
                     <span style={{ color: "#666666" }}>Lulus</span>
                   </div>
                 </div>
               </div>
 
-              {/* Simple bar chart visualization */}
-              <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", height: "160px", padding: "0 8px" }}>
-                {monthlyTrend.map((data, i) => (
-                  <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", flex: 1 }}>
-                    <div style={{ display: "flex", gap: "4px", alignItems: "flex-end", height: "120px" }}>
-                      <div style={{ width: "20px", background: "linear-gradient(180deg, #00205B 0%, #003380 100%)", borderRadius: "6px 6px 0 0", minHeight: `${(data.pelamar / 250) * 120}px` }} title={`${data.pelamar} pelamar`} />
-                      <div style={{ width: "20px", background: "linear-gradient(180deg, #10B981 0%, #059669 100%)", borderRadius: "6px 6px 0 0", minHeight: `${(data.lulus / 250) * 120}px` }} title={`${data.lulus} lulus`} />
+              {/* Simple bar chart - per month */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", height: "150px", gap: "8px" }}>
+                {monthlyData.map((data, i) => {
+                  const maxVal = Math.max(...monthlyData.map(d => Math.max(d.pelamar, d.lulus)), 1);
+                  const pelamarHeight = (data.pelamar / maxVal) * 100;
+                  const lulusHeight = (data.lulus / maxVal) * 100;
+
+                  return (
+                    <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", height: "100%" }}>
+                      {/* Values on top */}
+                      <div style={{ display: "flex", gap: "4px", marginBottom: "8px", alignItems: "flex-end", height: "60px" }}>
+                        <div style={{
+                          width: "20px",
+                          background: "#2563eb",
+                          borderRadius: "4px 4px 0 0",
+                          height: `${Math.max(pelamarHeight * 0.6, data.pelamar > 0 ? 20 : 0)}px`,
+                          display: "flex",
+                          alignItems: "flex-start",
+                          justifyContent: "center",
+                          paddingTop: "4px"
+                        }}>
+                          {data.pelamar > 0 && <span style={{ fontSize: "10px", fontWeight: 600, color: "#fff" }}>{data.pelamar}</span>}
+                        </div>
+                        <div style={{
+                          width: "20px",
+                          background: "#10B981",
+                          borderRadius: "4px 4px 0 0",
+                          height: `${Math.max(lulusHeight * 0.6, data.lulus > 0 ? 20 : 0)}px`,
+                          display: "flex",
+                          alignItems: "flex-start",
+                          justifyContent: "center",
+                          paddingTop: "4px"
+                        }}>
+                          {data.lulus > 0 && <span style={{ fontSize: "10px", fontWeight: 600, color: "#fff" }}>{data.lulus}</span>}
+                        </div>
+                      </div>
+                      {/* Month label */}
+                      <span style={{ fontSize: "11px", color: "#94a3b8", fontWeight: 500 }}>{data.month}</span>
                     </div>
-                    <span style={{ fontSize: "12px", color: "#888888", fontWeight: 500 }}>{data.month}</span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -405,7 +618,17 @@ export default function AdminDashboardPage() {
 
               {/* Simple pie chart visualization */}
               <div style={{ display: "flex", justifyContent: "center", marginBottom: "24px" }}>
-                <div style={{ width: "140px", height: "140px", borderRadius: "50%", background: "#f1f5f9", position: "relative" }}>
+                <div style={{
+                  width: "140px",
+                  height: "140px",
+                  borderRadius: "50%",
+                  background: `conic-gradient(${statusDist.map((item, i) => {
+                    const total = statusDist.reduce((sum, s) => sum + s.value, 0);
+                    const percentage = total > 0 ? (item.value / total) * 100 : 0;
+                    return `${item.color} ${statusDist.slice(0, i).reduce((sum, s) => sum + (total > 0 ? (s.value / total) * 360 : 0), 0)}deg ${statusDist.slice(0, i + 1).reduce((sum, s) => sum + (total > 0 ? (s.value / total) * 360 : 0), 0)}deg`;
+                  }).join(', ')})`,
+                  position: "relative"
+                }}>
                   <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "80px", height: "80px", background: "#ffffff", borderRadius: "50%" }}>
                     <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", textAlign: "center" }}>
                       <div style={{ fontSize: "24px", fontWeight: 800, color: "#111111" }}>{applications.length}</div>
@@ -416,7 +639,7 @@ export default function AdminDashboardPage() {
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                {statusDist.map((item, i) => (
+                {statusDist.filter(item => item.value > 0).map((item, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                       <div style={{ width: "10px", height: "10px", background: item.color, borderRadius: "50%" }} />

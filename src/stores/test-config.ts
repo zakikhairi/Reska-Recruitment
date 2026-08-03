@@ -26,11 +26,63 @@ interface TestConfigState {
   configs: TestConfig[];
   _hasHydrated: boolean;
   setHasHydrated: (state: boolean) => void;
-  addConfig: (config: TestConfig) => void;
+  addConfig: (config: TestConfig) => Promise<void>;
   updateConfig: (id: string, data: Partial<TestConfig>) => void;
   deleteConfig: (id: string) => void;
   getConfig: (id: string) => TestConfig | undefined;
+  getConfigByDivision: (division: string) => TestConfig | undefined;
 }
+
+// Save config to Prisma database
+const saveConfigToDb = async (config: TestConfig) => {
+  try {
+    // First get jobs to find matching jobId
+    const jobsRes = await fetch("/api/jobs");
+    const jobsData = await jobsRes.json();
+    const jobs = jobsData.jobs || [];
+    const matchingJob = jobs.find((j: any) => j.division === config.division);
+
+    if (!matchingJob) {
+      console.log("No matching job found for division:", config.division);
+      return;
+    }
+
+    const jobId = matchingJob.id;
+    const categoryCount = config.categories.length;
+    const weightPerCategory = Math.round(100 / categoryCount);
+    const weights: Record<string, number> = {};
+    const passingGrades: Record<string, number> = {};
+
+    config.categories.forEach(cat => {
+      weights[cat] = weightPerCategory;
+      passingGrades[cat] = config.passingGrade;
+    });
+
+    const response = await fetch("/api/admin/test-config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jobId,
+        categories: config.categories.join(","),
+        categoryWeights: JSON.stringify(weights),
+        passingGrades: JSON.stringify(passingGrades),
+        overallPassingGrade: config.passingGrade,
+        totalDurationMinutes: config.duration,
+        questionsPerCategory: config.questionsPerCategory,
+        shuffleQuestions: true,
+        shuffleAnswers: true,
+        allowTabSwitch: false,
+        maxTabSwitches: 3,
+        isActive: true,
+      }),
+    });
+
+    const result = await response.json();
+    console.log("Test config synced to DB:", result.success ? "OK" : result.error);
+  } catch (err) {
+    console.error("Error saving test config to DB:", err);
+  }
+};
 
 export const useTestConfigStore = create<TestConfigState>()(
   persist(
@@ -38,10 +90,13 @@ export const useTestConfigStore = create<TestConfigState>()(
       configs: initialConfigs,
       _hasHydrated: false,
       setHasHydrated: (state) => set({ _hasHydrated: state }),
-      addConfig: (config) =>
+      addConfig: async (config) => {
         set((state) => ({
           configs: [...state.configs, config],
-        })),
+        }));
+        // Sync to database
+        await saveConfigToDb(config);
+      },
       updateConfig: (id, data) =>
         set((state) => ({
           configs: state.configs.map((config) =>
@@ -53,6 +108,7 @@ export const useTestConfigStore = create<TestConfigState>()(
           configs: state.configs.filter((config) => config.id !== id),
         })),
       getConfig: (id) => get().configs.find((config) => config.id === id),
+      getConfigByDivision: (division) => get().configs.find((config) => config.division === division),
     }),
     {
       name: "kai-test-configs",
