@@ -249,9 +249,15 @@ export default function ApplicationsPage() {
 
                 {selectedApp.status === "REJECTED" && (
                   <div style={{ background: "#fee2e2", borderRadius: "12px", padding: "20px", marginBottom: "20px", textAlign: "center" }}>
-                    <p style={{ fontSize: "14px", color: "#dc2626", fontWeight: 600, margin: 0 }}>
+                    <p style={{ fontSize: "14px", color: "#dc2626", fontWeight: 600, margin: "0 0 8px 0" }}>
                       ❌ Maaf, lamaran Anda tidak diterima.
                     </p>
+                    {selectedApp.notes && (
+                      <div style={{ background: "#fff", borderRadius: "8px", padding: "12px", marginTop: "12px", textAlign: "left" }}>
+                        <p style={{ fontSize: "12px", fontWeight: 600, color: "#666", margin: "0 0 4px 0" }}>Alasan Penolakan:</p>
+                        <p style={{ fontSize: "13px", color: "#444", margin: 0, lineHeight: 1.5 }}>{selectedApp.notes}</p>
+                      </div>
+                    )}
                   </div>
                 )}
 
