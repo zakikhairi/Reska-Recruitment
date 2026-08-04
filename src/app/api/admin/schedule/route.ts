@@ -15,7 +15,10 @@ export async function GET(request: NextRequest) {
     if (!type || type === "TEST") {
       const testSessions = await prisma.testSession.findMany({
         where: {
-          startedAt: { not: null },
+          OR: [
+            { scheduledAt: { not: null } },
+            { startedAt: { not: null } },
+          ],
           application: status ? { status } : undefined,
         },
         include: {
@@ -26,14 +29,14 @@ export async function GET(request: NextRequest) {
             },
           },
         },
-        orderBy: { startedAt: "asc" },
+        orderBy: { scheduledAt: "asc" },
       });
 
       testSchedules = testSessions.map((s) => ({
         id: s.id,
         applicationId: s.applicationId,
         type: "TEST",
-        scheduledAt: s.startedAt,
+        scheduledAt: s.scheduledAt || s.startedAt,
         location: "Online System",
         applicantName: s.application.applicant.fullName,
         position: s.application.jobPosting.title,
@@ -76,12 +79,34 @@ export async function GET(request: NextRequest) {
 
     // Combine and sort by scheduled date
     const allSchedules = [...testSchedules, ...interviewSchedules].sort(
-      (a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()
+      (a, b) => new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime()
     );
+
+    // Group schedules by job posting (for batch view)
+    const groupedByJob = allSchedules.reduce((acc: any, schedule) => {
+      const key = schedule.position;
+      if (!acc[key]) {
+        acc[key] = {
+          position: schedule.position,
+          division: schedule.division,
+          type: schedule.type,
+          scheduledAt: schedule.scheduledAt,
+          applicants: [],
+        };
+      }
+      acc[key].applicants.push({
+        applicantName: schedule.applicantName,
+        status: schedule.status,
+      });
+      return acc;
+    }, {});
+
+    const groupedSchedules = Object.values(groupedByJob);
 
     return NextResponse.json({
       success: true,
       schedules: allSchedules,
+      groupedSchedules,
       testSchedules,
       interviewSchedules,
     });

@@ -64,6 +64,17 @@ export default function SchedulePage() {
   });
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [showBatchModal, setShowBatchModal] = useState(false);
+  const [batchData, setBatchData] = useState({
+    jobPostingId: "",
+    scheduledDate: "",
+    scheduledTime: "",
+    location: "Online System",
+    message: "",
+  });
+  const [jobPostings, setJobPostings] = useState<any[]>([]);
+  const [batchApplicants, setBatchApplicants] = useState<any[]>([]);
+  const [loadingApplicants, setLoadingApplicants] = useState(false);
 
   // Current month for calendar view
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -71,6 +82,45 @@ export default function SchedulePage() {
   useEffect(() => {
     fetchSchedules();
   }, []);
+
+  // Fetch job postings when batch modal opens
+  useEffect(() => {
+    if (showBatchModal) {
+      fetchJobPostings();
+    }
+  }, [showBatchModal]);
+
+  const fetchJobPostings = async () => {
+    try {
+      const response = await fetch("/api/jobs");
+      const result = await response.json();
+      if (result.success) {
+        // Filter only active jobs
+        const activeJobs = result.jobs.filter((job: any) => job.status === "ACTIVE");
+        setJobPostings(activeJobs);
+      }
+    } catch (err) {
+      console.error("Failed to fetch job postings:", err);
+    }
+  };
+
+  const fetchBatchApplicants = async (jobPostingId: string) => {
+    try {
+      setLoadingApplicants(true);
+      const response = await fetch(`/api/admin/test-schedule?jobPostingId=${jobPostingId}`);
+      const result = await response.json();
+      if (result.success) {
+        setBatchApplicants(result.pendingApplicants || []);
+      } else {
+        setBatchApplicants([]);
+      }
+    } catch (err) {
+      console.error("Failed to fetch batch applicants:", err);
+      setBatchApplicants([]);
+    } finally {
+      setLoadingApplicants(false);
+    }
+  };
 
   const fetchSchedules = async () => {
     try {
@@ -222,9 +272,30 @@ export default function SchedulePage() {
     <div style={{ fontFamily: "Inter, system-ui, sans-serif", minHeight: "100vh", background: "#f8f9fa" }}>
       {/* Header */}
       <header style={{ background: "#ffffff", borderBottom: "1px solid #eeeeee", padding: "20px 32px", marginBottom: "32px" }}>
-        <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
-          <h1 style={{ fontSize: "28px", fontWeight: 800, color: "#00205B", marginBottom: "4px" }}>Jadwal Seleksi</h1>
-          <p style={{ fontSize: "15px", color: "#666666" }}>Kelola jadwal tes dan interview pelamar</p>
+        <div style={{ maxWidth: "1400px", margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <h1 style={{ fontSize: "28px", fontWeight: 800, color: "#00205B", marginBottom: "4px" }}>Jadwal Seleksi</h1>
+            <p style={{ fontSize: "15px", color: "#666666" }}>Kelola jadwal tes dan interview pelamar</p>
+          </div>
+          <button
+            onClick={() => setShowBatchModal(true)}
+            style={{
+              padding: "14px 24px",
+              background: "#00205B",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: "12px",
+              fontSize: "15px",
+              fontWeight: 700,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+            }}
+          >
+            <Calendar className="w-5 h-5" />
+            Jadwalkan Batch Tes
+          </button>
         </div>
       </header>
 
@@ -654,6 +725,258 @@ export default function SchedulePage() {
                 }}
               >
                 {saving ? "Menyimpan..." : "Simpan Jadwal"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Batch Schedule Modal */}
+      {showBatchModal && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0,0,0,0.6)",
+          backdropFilter: "blur(4px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
+          padding: "20px",
+        }}>
+          <div style={{
+            background: "#ffffff",
+            borderRadius: "20px",
+            padding: "32px",
+            width: "100%",
+            maxWidth: "600px",
+            maxHeight: "90vh",
+            overflowY: "auto",
+            boxShadow: "0 25px 80px rgba(0,0,0,0.25)",
+          }}>
+            <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#111", marginBottom: "8px" }}>
+              Jadwalkan Batch Tes
+            </h2>
+            <p style={{ fontSize: "14px", color: "#666", marginBottom: "24px" }}>
+              Jadwalkan tes secara bersamaan untuk semua pelamar satu lowongan
+            </p>
+
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
+                Lowongan <span style={{ color: "#FF5E00" }}>*</span>
+              </label>
+              <select
+                value={batchData.jobPostingId}
+                onChange={(e) => {
+                  setBatchData({ ...batchData, jobPostingId: e.target.value });
+                  if (e.target.value) {
+                    fetchBatchApplicants(e.target.value);
+                  } else {
+                    setBatchApplicants([]);
+                  }
+                }}
+                style={{
+                  width: "100%",
+                  padding: "12px 14px",
+                  border: "2px solid #e5e5e5",
+                  borderRadius: "10px",
+                  fontSize: "14px",
+                  outline: "none",
+                }}
+              >
+                <option value="">Pilih Lowongan</option>
+                {jobPostings.map((job) => (
+                  <option key={job.id} value={job.id}>{job.title} - {divisionLabels[job.division] || job.division}</option>
+                ))}
+              </select>
+            </div>
+
+            {batchData.jobPostingId && (
+              <div style={{ marginBottom: "16px" }}>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
+                  Pelamar yang akan dijadwalkan
+                </label>
+                <div style={{ background: "#f8f9fa", borderRadius: "12px", padding: "16px", maxHeight: "150px", overflowY: "auto" }}>
+                  {loadingApplicants ? (
+                    <p style={{ color: "#666", textAlign: "center" }}>Memuat...</p>
+                  ) : batchApplicants.length === 0 ? (
+                    <p style={{ color: "#dc2626", textAlign: "center" }}>Tidak ada pelamar dengan status TEST_SCHEDULED</p>
+                  ) : (
+                    batchApplicants.map((app: any, index: number) => (
+                      <div key={index} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 0", borderBottom: index < batchApplicants.length - 1 ? "1px solid #eee" : "none" }}>
+                        <User className="w-4 h-4" style={{ color: "#666" }} />
+                        <span style={{ fontSize: "14px", color: "#111" }}>{app.applicantName}</span>
+                        <span style={{ fontSize: "12px", color: "#888" }}>NIK: {app.nik}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+                {batchApplicants.length > 0 && (
+                  <p style={{ fontSize: "12px", color: "#16a34a", marginTop: "8px" }}>
+                    {batchApplicants.length} pelamar akan dijadwalkan
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
+                  Tanggal <span style={{ color: "#FF5E00" }}>*</span>
+                </label>
+                <input
+                  type="date"
+                  value={batchData.scheduledDate}
+                  onChange={(e) => setBatchData({ ...batchData, scheduledDate: e.target.value })}
+                  style={{
+                    width: "100%",
+                    padding: "12px 14px",
+                    border: "2px solid #e5e5e5",
+                    borderRadius: "10px",
+                    fontSize: "14px",
+                    outline: "none",
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
+                  Waktu <span style={{ color: "#FF5E00" }}>*</span>
+                </label>
+                <input
+                  type="time"
+                  value={batchData.scheduledTime}
+                  onChange={(e) => setBatchData({ ...batchData, scheduledTime: e.target.value })}
+                  style={{
+                    width: "100%",
+                    padding: "12px 14px",
+                    border: "2px solid #e5e5e5",
+                    borderRadius: "10px",
+                    fontSize: "14px",
+                    outline: "none",
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={{ marginTop: "16px" }}>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
+                Lokasi
+              </label>
+              <input
+                type="text"
+                value={batchData.location}
+                onChange={(e) => setBatchData({ ...batchData, location: e.target.value })}
+                placeholder="Online System"
+                style={{
+                  width: "100%",
+                  padding: "12px 14px",
+                  border: "2px solid #e5e5e5",
+                  borderRadius: "10px",
+                  fontSize: "14px",
+                  outline: "none",
+                }}
+              />
+            </div>
+
+            <div style={{ marginTop: "16px" }}>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
+                Pesan untuk Pelamar
+              </label>
+              <textarea
+                value={batchData.message}
+                onChange={(e) => setBatchData({ ...batchData, message: e.target.value })}
+                placeholder="Contoh: Harap hadir 15 menit sebelum tes dimulai. Bawa KTP asli dan fotokopi."
+                rows={3}
+                style={{
+                  width: "100%",
+                  padding: "12px 14px",
+                  border: "2px solid #e5e5e5",
+                  borderRadius: "10px",
+                  fontSize: "14px",
+                  outline: "none",
+                  resize: "vertical",
+                }}
+              />
+            </div>
+
+            <div style={{ display: "flex", gap: "12px", marginTop: "24px" }}>
+              <button
+                onClick={() => {
+                  setShowBatchModal(false);
+                  setBatchData({ jobPostingId: "", scheduledDate: "", scheduledTime: "", location: "Online System", message: "" });
+                  setBatchApplicants([]);
+                }}
+                style={{
+                  flex: 1,
+                  padding: "14px 24px",
+                  background: "#fff",
+                  color: "#666",
+                  border: "2px solid #e5e5e5",
+                  borderRadius: "12px",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Batal
+              </button>
+              <button
+                onClick={async () => {
+                  if (!batchData.jobPostingId || !batchData.scheduledDate || !batchData.scheduledTime) {
+                    showToast("Mohon isi semua field yang wajib", "error");
+                    return;
+                  }
+                  if (batchApplicants.length === 0) {
+                    showToast("Tidak ada pelamar untuk dijadwalkan", "error");
+                    return;
+                  }
+
+                  setSaving(true);
+                  try {
+                    const scheduledAt = `${batchData.scheduledDate}T${batchData.scheduledTime}:00`;
+                    const response = await fetch("/api/admin/test-schedule", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        jobPostingId: batchData.jobPostingId,
+                        scheduledAt,
+                        location: batchData.location,
+                      }),
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                      showToast(result.message, "success");
+                      setShowBatchModal(false);
+                      setBatchData({ jobPostingId: "", scheduledDate: "", scheduledTime: "", location: "Online System" });
+                      setBatchApplicants([]);
+                      fetchSchedules();
+                    } else {
+                      showToast(result.error, "error");
+                    }
+                  } catch (err) {
+                    showToast("Terjadi kesalahan saat menyimpan", "error");
+                  } finally {
+                    setSaving(false);
+                  }
+                }}
+                disabled={saving || batchApplicants.length === 0}
+                style={{
+                  flex: 1,
+                  padding: "14px 24px",
+                  background: batchApplicants.length > 0 ? "#00205B" : "#ccc",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "12px",
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  cursor: saving || batchApplicants.length === 0 ? "not-allowed" : "pointer",
+                  opacity: saving ? 0.6 : 1,
+                }}
+              >
+                {saving ? "Menyimpan..." : `Jadwalkan ${batchApplicants.length} Pelamar`}
               </button>
             </div>
           </div>

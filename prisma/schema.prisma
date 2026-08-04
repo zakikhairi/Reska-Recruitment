@@ -266,8 +266,9 @@ model TestSession {
   applicationId String    @unique
   application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
-  status        String    @default("NOT_STARTED") // NOT_STARTED, IN_PROGRESS, PAUSED, SUBMITTED, SCORED, EXPIRED
+  status        String    @default("SCHEDULED") // SCHEDULED, NOT_STARTED, IN_PROGRESS, PAUSED, SUBMITTED, SCORED, EXPIRED
 
+  scheduledAt   DateTime? // Jadwal tes yang ditentukan admin (batch)
   startedAt     DateTime?
   submittedAt   DateTime?
 

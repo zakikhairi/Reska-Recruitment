@@ -22,6 +22,32 @@ interface TestData {
   categories: string[];
 }
 
+interface SessionData {
+  id: string;
+  status: string;
+  scheduledAt?: string;
+  startedAt?: string;
+  submittedAt?: string;
+  totalScore?: number;
+  passed?: boolean;
+}
+
+function formatDateTime(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function formatTimeOnly(dateStr: string) {
+  return new Date(dateStr).toLocaleTimeString("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 function formatTime(seconds: number) {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
@@ -50,8 +76,9 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
   const router = useRouter();
   const { user } = useAuthStore();
 
-  const [testState, setTestState] = useState<"intro" | "testing" | "submitted" | "loading">("loading");
+  const [testState, setTestState] = useState<"intro" | "testing" | "submitted" | "loading" | "blocked">("loading");
   const [testData, setTestData] = useState<TestData | null>(null);
+  const [sessionData, setSessionData] = useState<SessionData | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
@@ -59,7 +86,11 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [tabSwitchCount, setTabSwitchCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [blockedReason, setBlockedReason] = useState<string | null>(null);
+  const [countdownToStart, setCountdownToStart] = useState<number | null>(null);
+  const [scheduledTime, setScheduledTime] = useState<string | null>(null);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
+  const countdownToStartRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch test session data
   useEffect(() => {
@@ -72,8 +103,40 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
       const result = await response.json();
 
       if (result.success) {
+        // Check if blocked
+        if (result.blocked) {
+          setBlockedReason(result.blockedReason);
+          setScheduledTime(result.timeUntilStart || null);
+
+          if (result.blockedReason === "WAKTU_BELUM_TIBA") {
+            setCountdownToStart(result.minutesUntilStart * 60); // Convert to seconds
+            setTestState("blocked");
+            startCountdownToStart(result.minutesUntilStart * 60);
+          } else if (result.blockedReason === "SUDAH_SELESAI") {
+            setSessionData({
+              id: result.session.id,
+              status: result.session.status,
+              scheduledAt: result.session.scheduledAt,
+              submittedAt: result.session.submittedAt,
+              totalScore: result.session.totalScore,
+              passed: result.session.passed,
+              startedAt: result.session.startedAt,
+            });
+            setTestData({
+              id: result.session.id,
+              jobTitle: result.jobTitle || "Tes Kompetensi",
+              questions: result.questions || [],
+              durationMinutes: result.config?.totalDurationMinutes || 90,
+              categories: result.config?.categories || [],
+            });
+            setTestState("submitted");
+          }
+          return;
+        }
+
         if (result.session) {
           // Has existing session - load questions
+          setSessionData(result.session);
           setTestData({
             id: result.session.id,
             jobTitle: result.jobTitle || "Tes Kompetensi",
@@ -104,6 +167,36 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
       setTestState("intro");
     }
   };
+
+  // Countdown to test start time
+  const startCountdownToStart = (seconds: number) => {
+    if (countdownToStartRef.current) {
+      clearInterval(countdownToStartRef.current);
+    }
+
+    countdownToStartRef.current = setInterval(() => {
+      setCountdownToStart((prev) => {
+        if (prev === null || prev <= 1) {
+          if (countdownToStartRef.current) {
+            clearInterval(countdownToStartRef.current);
+          }
+          // Refresh to check if can start now
+          fetchTestSession();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  // Cleanup countdown on unmount
+  useEffect(() => {
+    return () => {
+      if (countdownToStartRef.current) {
+        clearInterval(countdownToStartRef.current);
+      }
+    };
+  }, []);
 
   // Timer countdown
   useEffect(() => {
@@ -232,6 +325,73 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
     );
   }
 
+  // Blocked State - Waiting for scheduled time
+  if (testState === "blocked") {
+    const countdownMins = countdownToStart !== null ? Math.floor(countdownToStart / 60) : 0;
+    const countdownSecs = countdownToStart !== null ? countdownToStart % 60 : 0;
+
+    return (
+      <div style={{ fontFamily: "Inter, system-ui, sans-serif", minHeight: "100vh", background: "#f8f9fa", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
+        <div style={{ width: "100%", maxWidth: "560px", background: "#ffffff", borderRadius: "20px", padding: "48px", boxShadow: "0 8px 40px rgba(0,0,0,0.1)" }}>
+          <div style={{ textAlign: "center", marginBottom: "32px" }}>
+            <div style={{ width: "100px", height: "100px", background: "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px", boxShadow: "0 8px 24px rgba(251, 191, 36, 0.3)" }}>
+              <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 6v6l4 2"/>
+              </svg>
+            </div>
+            <h1 style={{ fontSize: "28px", fontWeight: 800, color: "#00205B", marginBottom: "8px" }}>Menunggu Jadwal Tes</h1>
+            <p style={{ fontSize: "16px", color: "#666666" }}>{testData?.jobTitle || "Tes Kompetensi"}</p>
+          </div>
+
+          <div style={{ background: "#fffbeb", borderRadius: "16px", padding: "32px", marginBottom: "28px", textAlign: "center" }}>
+            <p style={{ fontSize: "14px", color: "#92400e", marginBottom: "16px" }}>Tes akan dimulai pada:</p>
+            {scheduledTime && (
+              <>
+                <p style={{ fontSize: "24px", fontWeight: 700, color: "#111", marginBottom: "4px" }}>
+                  {formatDateTime(scheduledTime)}
+                </p>
+                <p style={{ fontSize: "20px", fontWeight: 600, color: "#d97706", marginBottom: "24px" }}>
+                  Pukul {formatTimeOnly(scheduledTime)} WIB
+                </p>
+              </>
+            )}
+            <div style={{ background: "#fef3c7", borderRadius: "12px", padding: "20px", marginTop: "16px" }}>
+              <p style={{ fontSize: "13px", color: "#92400e", marginBottom: "8px" }}>Waktu tersisa sebelum tes dimulai:</p>
+              <p style={{ fontSize: "48px", fontWeight: 800, color: "#d97706", fontFamily: "monospace" }}>
+                {formatTime(countdownToStart || 0)}
+              </p>
+            </div>
+          </div>
+
+          <div style={{ background: "#eff6ff", borderRadius: "12px", padding: "20px", marginBottom: "28px" }}>
+            <p style={{ fontSize: "14px", color: "#1e40af", margin: 0, display: "flex", alignItems: "flex-start", gap: "12px" }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, marginTop: "2px" }}>
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 16v-4M12 8h.01"/>
+              </svg>
+              <span>
+                <strong>Persiapkan diri Anda!</strong><br/>
+                Pastikan koneksi internet stabil. Tes akan dimulai secara otomatis ketika waktu telah tiba. Jangan tutup halaman ini.
+              </span>
+            </p>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", color: "#888", fontSize: "14px" }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="animate-spin" style={{ animation: "spin 1s linear infinite" }}>
+              <circle cx="12" cy="12" r="10" strokeOpacity="0.25"/>
+              <path d="M12 2a10 10 0 019.95 9" strokeLinecap="round"/>
+            </svg>
+            Halaman akan refresh otomatis...
+          </div>
+        </div>
+        <style>{`
+          @keyframes spin { to { transform: rotate(360deg); } }
+        `}</style>
+      </div>
+    );
+  }
+
   // Intro Screen
   if (testState === "intro") {
     return (
@@ -316,17 +476,44 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
 
   // Submitted Screen
   if (testState === "submitted") {
+    const score = sessionData?.totalScore;
+    const passed = sessionData?.passed;
+
     return (
       <div style={{ fontFamily: "Inter, system-ui, sans-serif", minHeight: "100vh", background: "#f8f9fa", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
         <div style={{ width: "100%", maxWidth: "560px", background: "#ffffff", borderRadius: "20px", padding: "48px", boxShadow: "0 8px 40px rgba(0,0,0,0.1)", textAlign: "center" }}>
-          <div style={{ width: "80px", height: "80px", background: "#dcfce7", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2">
-              <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/>
-            </svg>
+          <div style={{ width: "80px", height: "80px", background: passed ? "#dcfce7" : "#fee2e2", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
+            {passed ? (
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2">
+                <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+                <polyline points="22,4 12,14.01 9,11.01"/>
+              </svg>
+            ) : (
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="15" y1="9" x2="9" y2="15"/>
+                <line x1="9" y1="9" x2="15" y2="15"/>
+              </svg>
+            )}
           </div>
-          <h1 style={{ fontSize: "28px", fontWeight: 800, color: "#111", marginBottom: "12px" }}>Tes Selesai!</h1>
+          <h1 style={{ fontSize: "28px", fontWeight: 800, color: "#111", marginBottom: "12px" }}>
+            {passed ? "Selamat! Anda Lulus Tes" : "Tes Selesai"}
+          </h1>
+
+          {score !== undefined && score !== null && (
+            <div style={{ background: passed ? "#f0fdf4" : "#fef2f2", borderRadius: "16px", padding: "24px", marginBottom: "24px" }}>
+              <p style={{ fontSize: "14px", color: passed ? "#166534" : "#991b1b", marginBottom: "8px" }}>Nilai Akhir</p>
+              <p style={{ fontSize: "48px", fontWeight: 800, color: passed ? "#16a34a" : "#dc2626" }}>{score}</p>
+              <p style={{ fontSize: "14px", color: passed ? "#166534" : "#991b1b" }}>
+                {passed ? "Melampaui batas kelulusan" : "Di bawah batas kelulusan"}
+              </p>
+            </div>
+          )}
+
           <p style={{ fontSize: "16px", color: "#666", marginBottom: "32px", lineHeight: 1.6 }}>
-            Jawaban Anda telah tersimpan. Tim HR akan meninjau hasil tes Anda.
+            {passed
+              ? "Selamat! Anda telah melewati tahap tes kompetensi. Tim HR akan menghubungi Anda untuk tahap selanjutnya."
+              : "Jawaban Anda telah tersimpan. Tim HR akan meninjau hasil tes Anda."}
           </p>
           <button
             onClick={() => router.push("/applicant/dashboard")}

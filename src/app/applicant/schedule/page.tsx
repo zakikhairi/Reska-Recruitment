@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/auth";
-import { Calendar, Clock, MapPin, User, FileText, CheckCircle, AlertCircle } from "lucide-react";
+import { Calendar, Clock, MapPin, User, FileText, CheckCircle, AlertCircle, Play } from "lucide-react";
 
 interface ScheduleItem {
   applicationId: string;
@@ -14,6 +14,7 @@ interface ScheduleItem {
     scheduledAt: string;
     location: string;
     status: string;
+    sessionId?: string;
   };
   interview?: {
     scheduledAt: string;
@@ -106,6 +107,29 @@ export default function SchedulePage() {
     return new Date(nextDate!) >= new Date();
   });
 
+  // Check if test can be started (time has arrived)
+  const canStartTest = (scheduledAt: string) => {
+    return new Date() >= new Date(scheduledAt);
+  };
+
+  // Get time remaining until test
+  const getTimeRemaining = (scheduledAt: string) => {
+    const diff = new Date(scheduledAt).getTime() - new Date().getTime();
+    if (diff <= 0) return null;
+
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+    if (hours > 24) {
+      const days = Math.floor(hours / 24);
+      return `${days} hari`;
+    }
+    if (hours > 0) {
+      return `${hours} jam ${minutes} menit`;
+    }
+    return `${minutes} menit`;
+  };
+
   // Get past schedules
   const pastSchedules = schedules.filter((s) => {
     const testDate = s.test?.scheduledAt;
@@ -174,21 +198,31 @@ export default function SchedulePage() {
                             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
                               <FileText className="w-5 h-5" style={{ color: "#2563eb" }} />
                               <span style={{ fontSize: "14px", fontWeight: 600, color: "#2563eb" }}>Tes Kompetensi</span>
-                              <span style={{
-                                marginLeft: "auto",
-                                padding: "4px 10px",
-                                background: "#dbeafe",
-                                color: "#2563eb",
-                                borderRadius: "20px",
-                                fontSize: "11px",
-                                fontWeight: 700
-                              }}>
-                                {getDaysUntil(schedule.test.scheduledAt) === 0
-                                  ? "Hari ini"
-                                  : getDaysUntil(schedule.test.scheduledAt) === 1
-                                  ? "Besok"
-                                  : `${getDaysUntil(schedule.test.scheduledAt)} hari lagi`}
-                              </span>
+                              {canStartTest(schedule.test.scheduledAt) ? (
+                                <span style={{
+                                  marginLeft: "auto",
+                                  padding: "4px 10px",
+                                  background: "#16a34a",
+                                  color: "#fff",
+                                  borderRadius: "20px",
+                                  fontSize: "11px",
+                                  fontWeight: 700
+                                }}>
+                                  Bisa Dimulai
+                                </span>
+                              ) : (
+                                <span style={{
+                                  marginLeft: "auto",
+                                  padding: "4px 10px",
+                                  background: "#fef3c7",
+                                  color: "#d97706",
+                                  borderRadius: "20px",
+                                  fontSize: "11px",
+                                  fontWeight: 700
+                                }}>
+                                  {getTimeRemaining(schedule.test.scheduledAt) || "Menunggu"}
+                                </span>
+                              )}
                             </div>
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -204,6 +238,24 @@ export default function SchedulePage() {
                               <MapPin className="w-4 h-4" style={{ color: "#666" }} />
                               <span style={{ fontSize: "13px", color: "#111" }}>{schedule.test.location}</span>
                             </div>
+                            {canStartTest(schedule.test.scheduledAt) && schedule.test.sessionId && (
+                              <Link href={`/applicant/test/${schedule.test.sessionId}`}>
+                                <button style={{
+                                  marginTop: "16px",
+                                  width: "100%",
+                                  padding: "12px 20px",
+                                  background: "#16a34a",
+                                  color: "#fff",
+                                  border: "none",
+                                  borderRadius: "10px",
+                                  fontSize: "14px",
+                                  fontWeight: 700,
+                                  cursor: "pointer",
+                                }}>
+                                  Mulai Tes Sekarang
+                                </button>
+                              </Link>
+                            )}
                           </div>
                         )}
 

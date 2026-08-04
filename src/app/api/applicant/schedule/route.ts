@@ -52,12 +52,13 @@ export async function GET(request: NextRequest) {
         status: app.status,
       };
 
-      // Add test schedule if exists
-      if (app.testSession?.startedAt) {
+      // Add test schedule if exists (check scheduledAt OR startedAt)
+      if (app.testSession?.scheduledAt || app.testSession?.startedAt) {
         schedule.test = {
-          scheduledAt: app.testSession.startedAt,
-          location: "Online System (Link akan dikirim via email)",
+          scheduledAt: app.testSession.scheduledAt || app.testSession.startedAt,
+          location: "Online System",
           status: app.testSession.status,
+          sessionId: app.testSession.id,
         };
       }
 
