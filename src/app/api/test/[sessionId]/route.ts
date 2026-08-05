@@ -65,8 +65,12 @@ export async function GET(
           },
         });
       } else if (application.jobPosting.testConfig) {
-        // No session yet, return config info only
+        // No session yet, but check if scheduled time exists
         const config = application.jobPosting.testConfig;
+        const scheduledAt = application.testSession?.scheduledAt;
+        const now = new Date();
+        const canStart = !scheduledAt || now >= new Date(scheduledAt);
+
         return NextResponse.json({
           success: true,
           session: null,
@@ -75,7 +79,9 @@ export async function GET(
             totalDurationMinutes: config.totalDurationMinutes,
             categories: config.categories.split(","),
           },
-          blocked: false,
+          questions: [],
+          canStart,
+          scheduledAt,
         });
       } else {
         return NextResponse.json(
@@ -148,8 +154,8 @@ export async function GET(
           totalDurationMinutes: config.totalDurationMinutes,
           categories: config.categories.split(","),
         },
-        blocked: true,
-        blockedReason: "SUDAH_SELESAI",
+        canStart: false, // Already done
+        scheduledAt: session.scheduledAt,
       });
     }
 
@@ -173,10 +179,9 @@ export async function GET(
           totalDurationMinutes: config.totalDurationMinutes,
           categories: config.categories.split(","),
         },
-        blocked: true,
-        blockedReason: "WAKTU_BELUM_TIBA",
+        canStart: false, // Time hasn't arrived
         minutesUntilStart,
-        timeUntilStart: session.scheduledAt.toISOString(),
+        scheduledAt: session.scheduledAt,
       });
     }
 
@@ -196,7 +201,8 @@ export async function GET(
         totalDurationMinutes: config.totalDurationMinutes,
         categories: config.categories.split(","),
       },
-      blocked: false,
+      canStart: true, // Can start now
+      scheduledAt: session.scheduledAt,
     });
   } catch (error) {
     console.error("Error fetching test:", error);
@@ -282,6 +288,7 @@ export async function POST(
         jobPosting: {
           include: {
             testConfig: true,
+            testSessions: true,
           },
         },
       },
@@ -299,6 +306,17 @@ export async function POST(
         { success: false, error: "Test belum dikonfigurasi" },
         { status: 400 }
       );
+    }
+
+    // Check if there's a scheduled time and if it hasn't arrived yet
+    if (application.testSessions.length > 0) {
+      const existingSession = application.testSessions[0];
+      if (existingSession.scheduledAt && new Date() < existingSession.scheduledAt) {
+        return NextResponse.json(
+          { success: false, error: "Belum waktunya memulai tes" },
+          { status: 400 }
+        );
+      }
     }
 
     const config = application.jobPosting.testConfig;

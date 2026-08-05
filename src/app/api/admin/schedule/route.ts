@@ -1,9 +1,83 @@
-// API Route: Get Schedules
+// API Route: Get and Delete Schedules
 // GET /api/admin/schedule
+// DELETE /api/admin/schedule?applicationId=xxx
 
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
 
+// DELETE: Delete test schedule for specific application
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const applicationId = searchParams.get("applicationId");
+    const jobPostingId = searchParams.get("jobPostingId");
+    const deleteAll = searchParams.get("deleteAll");
+
+    if (applicationId) {
+      // Delete schedule for specific application (test session)
+      const session = await prisma.testSession.findFirst({
+        where: { applicationId },
+      });
+
+      if (!session) {
+        return NextResponse.json(
+          { success: false, error: "Jadwal tes tidak ditemukan" },
+          { status: 404 }
+        );
+      }
+
+      await prisma.testSession.delete({
+        where: { id: session.id },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: "Jadwal tes berhasil dihapus",
+      });
+    } else if (jobPostingId) {
+      // Delete all test sessions for a job posting
+      const deleted = await prisma.testSession.deleteMany({
+        where: {
+          application: {
+            jobPostingId,
+          },
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `Berhasil menghapus ${deleted.count} jadwal tes`,
+        deletedCount: deleted.count,
+      });
+    } else if (deleteAll === "true") {
+      // Delete all scheduled test sessions
+      const deleted = await prisma.testSession.deleteMany({
+        where: {
+          status: "SCHEDULED",
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `Berhasil menghapus ${deleted.count} jadwal tes`,
+        deletedCount: deleted.count,
+      });
+    }
+
+    return NextResponse.json(
+      { success: false, error: "Parameter tidak valid" },
+      { status: 400 }
+    );
+  } catch (error: any) {
+    console.error("Delete schedule error:", error);
+    return NextResponse.json(
+      { success: false, error: `Terjadi kesalahan: ${error.message}` },
+      { status: 500 }
+    );
+  }
+}
+
+// GET: Get schedules (existing handler)
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);

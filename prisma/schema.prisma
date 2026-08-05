@@ -170,12 +170,14 @@ model Interview {
   application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
   scheduledAt   DateTime
+  endTime       DateTime? // Jam selesai interview
   location      String
   interviewer   String
-  type          String    @default("RECORDING") // RECORDING, face_to_face, HYBRID
+  type          String    @default("ONLINE") // ONLINE, OFFLINE
   notes         String?
   score         Int?
   result        String?   // PASSED, FAILED, RESCHEDULE
+  adminMessage  String?   // Pesan dari admin untuk pelamar
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -271,6 +273,7 @@ model TestSession {
   scheduledAt   DateTime? // Jadwal tes yang ditentukan admin (batch)
   startedAt     DateTime?
   submittedAt   DateTime?
+  adminMessage  String?   // Pesan dari admin untuk pelamar
 
   questions     String?   // JSON array of selected question IDs (shuffled)
   tabSwitchCount Int      @default(0)

@@ -73,6 +73,7 @@ export async function POST(request: NextRequest) {
             status: "SCHEDULED",
             startedAt: null,
             submittedAt: null,
+            adminMessage: message || null,
           },
         });
         scheduledList.push(app.applicant.fullName);
@@ -83,6 +84,7 @@ export async function POST(request: NextRequest) {
             applicationId: app.id,
             status: "SCHEDULED",
             scheduledAt: scheduledDateTime,
+            adminMessage: message || null,
           },
         });
         scheduledList.push(app.applicant.fullName);

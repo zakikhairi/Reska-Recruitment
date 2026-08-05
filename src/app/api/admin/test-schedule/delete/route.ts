@@ -1,5 +1,7 @@
 // API Route: Delete Test Schedules
-// DELETE /api/admin/test-schedule
+// DELETE /api/admin/test-schedule/delete?applicationId=xxx (individual)
+// DELETE /api/admin/test-schedule/delete (all scheduled)
+// POST /api/admin/test-schedule/delete with { deleteAll: true } (all scheduled)
 
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
@@ -7,19 +9,32 @@ import prisma from "@/lib/db";
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+    const applicationId = searchParams.get("applicationId");
     const jobPostingId = searchParams.get("jobPostingId");
 
-    if (jobPostingId) {
-      // Delete only schedules for specific job posting
-      const sessions = await prisma.testSession.findMany({
-        where: {
-          application: {
-            jobPostingId,
-          },
-          status: "SCHEDULED",
-        },
+    if (applicationId) {
+      // Delete schedule for specific application
+      const session = await prisma.testSession.findFirst({
+        where: { applicationId },
       });
 
+      if (!session) {
+        return NextResponse.json(
+          { success: false, error: "Jadwal tidak ditemukan" },
+          { status: 404 }
+        );
+      }
+
+      await prisma.testSession.delete({
+        where: { id: session.id },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: "Jadwal berhasil dihapus",
+      });
+    } else if (jobPostingId) {
+      // Delete only schedules for specific job posting
       const deleted = await prisma.testSession.deleteMany({
         where: {
           application: {

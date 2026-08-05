@@ -192,29 +192,7 @@ export default function ApplicationsPage() {
                   {statusConfig[selectedApp.status]?.label}
                 </span>
 
-                {/* Test Section */}
-                {selectedApp.status === "TEST_SCHEDULED" && (
-                  <div style={{ background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)", borderRadius: "12px", padding: "20px", marginBottom: "20px", textAlign: "center" }}>
-                    <p style={{ fontSize: "14px", color: "#fff", marginBottom: "12px", lineHeight: 1.5 }}>
-                      🎯 Anda dijadwalkan untuk mengikuti tes kompetensi. Segera kerjakan sebelum batas waktu habis!
-                    </p>
-                    <Link href={`/applicant/test/${selectedApp.id}`} style={{ textDecoration: "none" }}>
-                      <button style={{
-                        width: "100%",
-                        padding: "14px",
-                        background: "#fff",
-                        color: "#2563eb",
-                        border: "none",
-                        borderRadius: "10px",
-                        fontSize: "15px",
-                        fontWeight: 700,
-                        cursor: "pointer",
-                      }}>
-                        Mulai Tes Sekarang
-                      </button>
-                    </Link>
-                  </div>
-                )}
+                {/* Test Section - Removed per user request */}
 
                 {selectedApp.status === "IN_TEST" && (
                   <div style={{ background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", borderRadius: "12px", padding: "20px", marginBottom: "20px", textAlign: "center" }}>
@@ -268,18 +246,6 @@ export default function ApplicationsPage() {
                     </p>
                   </div>
                 )}
-
-                <div style={{ marginTop: "24px", paddingTop: "24px", borderTop: "1px solid #eee" }}>
-                  <h4 style={{ fontSize: "13px", fontWeight: 600, color: "#888", marginBottom: "12px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Detail</h4>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ fontSize: "14px", color: "#666" }}>Tanggal Lamar</span>
-                      <span style={{ fontSize: "14px", fontWeight: 600, color: "#111" }}>
-                        {new Date(selectedApp.createdAt).toLocaleDateString("id-ID")}
-                      </span>
-                    </div>
-                  </div>
-                </div>
 
                 <div style={{ marginTop: "24px" }}>
                   <Link href="/applicant/jobs">

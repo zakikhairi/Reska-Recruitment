@@ -59,6 +59,7 @@ export async function GET(request: NextRequest) {
           location: "Online System",
           status: app.testSession.status,
           sessionId: app.testSession.id,
+          message: app.testSession.adminMessage || null,
         };
       }
 
@@ -66,9 +67,11 @@ export async function GET(request: NextRequest) {
       if (app.interview) {
         schedule.interview = {
           scheduledAt: app.interview.scheduledAt,
+          endTime: app.interview.endTime,
           location: app.interview.location,
           interviewer: app.interview.interviewer,
           type: app.interview.type,
+          message: app.interview.adminMessage || null,
         };
       }
 

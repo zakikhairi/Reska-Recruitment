@@ -76,7 +76,7 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
   const router = useRouter();
   const { user } = useAuthStore();
 
-  const [testState, setTestState] = useState<"intro" | "testing" | "submitted" | "loading" | "blocked">("loading");
+  const [testState, setTestState] = useState<"intro" | "testing" | "submitted" | "loading">("loading");
   const [testData, setTestData] = useState<TestData | null>(null);
   const [sessionData, setSessionData] = useState<SessionData | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -86,7 +86,7 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [tabSwitchCount, setTabSwitchCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [blockedReason, setBlockedReason] = useState<string | null>(null);
+  const [canStart, setCanStart] = useState(false);
   const [countdownToStart, setCountdownToStart] = useState<number | null>(null);
   const [scheduledTime, setScheduledTime] = useState<string | null>(null);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
@@ -103,35 +103,16 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
       const result = await response.json();
 
       if (result.success) {
-        // Check if blocked
-        if (result.blocked) {
-          setBlockedReason(result.blockedReason);
-          setScheduledTime(result.timeUntilStart || null);
+        // Check if test can be started
+        if (result.canStart !== undefined) {
+          setCanStart(result.canStart);
+          setScheduledTime(result.scheduledAt || null);
 
-          if (result.blockedReason === "WAKTU_BELUM_TIBA") {
-            setCountdownToStart(result.minutesUntilStart * 60); // Convert to seconds
-            setTestState("blocked");
+          if (!result.canStart && result.minutesUntilStart !== undefined && result.minutesUntilStart > 0) {
+            // Time hasn't arrived yet - set countdown
+            setCountdownToStart(result.minutesUntilStart * 60);
             startCountdownToStart(result.minutesUntilStart * 60);
-          } else if (result.blockedReason === "SUDAH_SELESAI") {
-            setSessionData({
-              id: result.session.id,
-              status: result.session.status,
-              scheduledAt: result.session.scheduledAt,
-              submittedAt: result.session.submittedAt,
-              totalScore: result.session.totalScore,
-              passed: result.session.passed,
-              startedAt: result.session.startedAt,
-            });
-            setTestData({
-              id: result.session.id,
-              jobTitle: result.jobTitle || "Tes Kompetensi",
-              questions: result.questions || [],
-              durationMinutes: result.config?.totalDurationMinutes || 90,
-              categories: result.config?.categories || [],
-            });
-            setTestState("submitted");
           }
-          return;
         }
 
         if (result.session) {
@@ -180,7 +161,8 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
           if (countdownToStartRef.current) {
             clearInterval(countdownToStartRef.current);
           }
-          // Refresh to check if can start now
+          // Time's up - refresh to check if can start now
+          setCanStart(true);
           fetchTestSession();
           return 0;
         }
@@ -325,73 +307,6 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
     );
   }
 
-  // Blocked State - Waiting for scheduled time
-  if (testState === "blocked") {
-    const countdownMins = countdownToStart !== null ? Math.floor(countdownToStart / 60) : 0;
-    const countdownSecs = countdownToStart !== null ? countdownToStart % 60 : 0;
-
-    return (
-      <div style={{ fontFamily: "Inter, system-ui, sans-serif", minHeight: "100vh", background: "#f8f9fa", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
-        <div style={{ width: "100%", maxWidth: "560px", background: "#ffffff", borderRadius: "20px", padding: "48px", boxShadow: "0 8px 40px rgba(0,0,0,0.1)" }}>
-          <div style={{ textAlign: "center", marginBottom: "32px" }}>
-            <div style={{ width: "100px", height: "100px", background: "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px", boxShadow: "0 8px 24px rgba(251, 191, 36, 0.3)" }}>
-              <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2">
-                <circle cx="12" cy="12" r="10"/>
-                <path d="M12 6v6l4 2"/>
-              </svg>
-            </div>
-            <h1 style={{ fontSize: "28px", fontWeight: 800, color: "#00205B", marginBottom: "8px" }}>Menunggu Jadwal Tes</h1>
-            <p style={{ fontSize: "16px", color: "#666666" }}>{testData?.jobTitle || "Tes Kompetensi"}</p>
-          </div>
-
-          <div style={{ background: "#fffbeb", borderRadius: "16px", padding: "32px", marginBottom: "28px", textAlign: "center" }}>
-            <p style={{ fontSize: "14px", color: "#92400e", marginBottom: "16px" }}>Tes akan dimulai pada:</p>
-            {scheduledTime && (
-              <>
-                <p style={{ fontSize: "24px", fontWeight: 700, color: "#111", marginBottom: "4px" }}>
-                  {formatDateTime(scheduledTime)}
-                </p>
-                <p style={{ fontSize: "20px", fontWeight: 600, color: "#d97706", marginBottom: "24px" }}>
-                  Pukul {formatTimeOnly(scheduledTime)} WIB
-                </p>
-              </>
-            )}
-            <div style={{ background: "#fef3c7", borderRadius: "12px", padding: "20px", marginTop: "16px" }}>
-              <p style={{ fontSize: "13px", color: "#92400e", marginBottom: "8px" }}>Waktu tersisa sebelum tes dimulai:</p>
-              <p style={{ fontSize: "48px", fontWeight: 800, color: "#d97706", fontFamily: "monospace" }}>
-                {formatTime(countdownToStart || 0)}
-              </p>
-            </div>
-          </div>
-
-          <div style={{ background: "#eff6ff", borderRadius: "12px", padding: "20px", marginBottom: "28px" }}>
-            <p style={{ fontSize: "14px", color: "#1e40af", margin: 0, display: "flex", alignItems: "flex-start", gap: "12px" }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, marginTop: "2px" }}>
-                <circle cx="12" cy="12" r="10"/>
-                <path d="M12 16v-4M12 8h.01"/>
-              </svg>
-              <span>
-                <strong>Persiapkan diri Anda!</strong><br/>
-                Pastikan koneksi internet stabil. Tes akan dimulai secara otomatis ketika waktu telah tiba. Jangan tutup halaman ini.
-              </span>
-            </p>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", color: "#888", fontSize: "14px" }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="animate-spin" style={{ animation: "spin 1s linear infinite" }}>
-              <circle cx="12" cy="12" r="10" strokeOpacity="0.25"/>
-              <path d="M12 2a10 10 0 019.95 9" strokeLinecap="round"/>
-            </svg>
-            Halaman akan refresh otomatis...
-          </div>
-        </div>
-        <style>{`
-          @keyframes spin { to { transform: rotate(360deg); } }
-        `}</style>
-      </div>
-    );
-  }
-
   // Intro Screen
   if (testState === "intro") {
     return (
@@ -454,21 +369,67 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
             )}
           </div>
 
+          {/* Countdown Timer - shown when time hasn't arrived */}
+          {!canStart && countdownToStart !== null && countdownToStart > 0 && (
+            <div style={{ background: "#fffbeb", borderRadius: "14px", padding: "24px", marginBottom: "24px", textAlign: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", marginBottom: "12px" }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M12 6v6l4 2"/>
+                </svg>
+                <p style={{ fontSize: "14px", fontWeight: 600, color: "#92400e", margin: 0 }}>
+                  Tes akan dimulai pada:
+                </p>
+              </div>
+              {scheduledTime && (
+                <>
+                  <p style={{ fontSize: "18px", fontWeight: 700, color: "#111", marginBottom: "4px" }}>
+                    {formatDateTime(scheduledTime)} - {formatTimeOnly(scheduledTime)} WIB
+                  </p>
+                </>
+              )}
+              <div style={{ background: "#fef3c7", borderRadius: "10px", padding: "16px", marginTop: "16px" }}>
+                <p style={{ fontSize: "12px", color: "#92400e", marginBottom: "8px" }}>Waktu tersisa:</p>
+                <p style={{ fontSize: "36px", fontWeight: 800, color: "#d97706", fontFamily: "monospace", margin: 0 }}>
+                  {formatTime(countdownToStart)}
+                </p>
+              </div>
+            </div>
+          )}
+
           <div style={{ background: "#fef3c7", borderRadius: "12px", padding: "16px", marginBottom: "28px" }}>
             <p style={{ fontSize: "13px", color: "#92400e", margin: 0, display: "flex", alignItems: "flex-start", gap: "10px" }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, marginTop: "2px" }}>
                 <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
               </svg>
-              <span>Pastikan koneksi internet stabil.切换 tab atau minimize jendela akan tercatat.</span>
+              <span>Pastikan koneksi internet stabil. Switch tab atau minimize jendela akan tercatat.</span>
             </p>
           </div>
 
           <button
             onClick={handleStart}
-            style={{ width: "100%", height: "56px", background: "linear-gradient(135deg, #FF5E00, #ff7a2f)", color: "#fff", border: "none", borderRadius: "14px", fontSize: "16px", fontWeight: 700, cursor: "pointer" }}
+            disabled={!canStart}
+            style={{
+              width: "100%",
+              height: "56px",
+              background: canStart ? "linear-gradient(135deg, #FF5E00, #ff7a2f)" : "#9ca3af",
+              color: "#fff",
+              border: "none",
+              borderRadius: "14px",
+              fontSize: "16px",
+              fontWeight: 700,
+              cursor: canStart ? "pointer" : "not-allowed",
+              opacity: canStart ? 1 : 0.7,
+            }}
           >
-            Mulai Tes
+            {canStart ? "Mulai Tes" : "Menunggu Waktu Tes..."}
           </button>
+
+          {!canStart && (
+            <p style={{ textAlign: "center", fontSize: "12px", color: "#888", marginTop: "12px" }}>
+              Tombol akan aktif otomatis saat waktu tes tiba
+            </p>
+          )}
         </div>
       </div>
     );

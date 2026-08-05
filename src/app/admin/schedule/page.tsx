@@ -9,12 +9,16 @@ import {
   FileText,
   CheckCircle,
   XCircle,
-  Plus,
-  ChevronLeft,
+  ChevronDown,
   ChevronRight,
   AlertCircle,
+  Trash2,
+  Users,
+  Briefcase,
+  Plus,
+  Info,
 } from "lucide-react";
-import { useAuthStore } from "@/stores/auth";
+import { useJobsStore, Job } from "@/stores/jobs";
 
 interface Schedule {
   id: string;
@@ -27,6 +31,24 @@ interface Schedule {
   division: string;
   status: string;
   interviewer?: string;
+  applicantId?: string;
+}
+
+interface GroupedSchedule {
+  position: string;
+  division: string;
+  type: "TEST" | "INTERVIEW";
+  scheduledAt: string;
+  location: string;
+  applicants: {
+    id: string;
+    applicationId: string;
+    applicantName: string;
+    status: string;
+    scheduledAt: string;
+    location: string;
+  }[];
+  totalApplicants: number;
 }
 
 const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
@@ -48,77 +70,46 @@ const divisionLabels: Record<string, string> = {
 };
 
 export default function SchedulePage() {
-  const { user } = useAuthStore();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
-  const [testSchedules, setTestSchedules] = useState<Schedule[]>([]);
-  const [interviewSchedules, setInterviewSchedules] = useState<Schedule[]>([]);
+  const [groupedSchedules, setGroupedSchedules] = useState<GroupedSchedule[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "TEST" | "INTERVIEW">("all");
-  const [showModal, setShowModal] = useState(false);
-  const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
-  const [formData, setFormData] = useState({
-    scheduledDate: "",
-    scheduledTime: "",
-    location: "",
-    notes: "",
-  });
-  const [saving, setSaving] = useState(false);
+  const [expandedJobs, setExpandedJobs] = useState<Set<string>>(new Set());
+  const [selectedJob, setSelectedJob] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
-  const [showBatchModal, setShowBatchModal] = useState(false);
-  const [batchData, setBatchData] = useState({
-    jobPostingId: "",
+  const [deleteModal, setDeleteModal] = useState<{ show: boolean; job: GroupedSchedule | null }>({ show: false, job: null });
+  const [deleteAllModal, setDeleteAllModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deletingAll, setDeletingAll] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [scheduleType, setScheduleType] = useState<"TEST" | "INTERVIEW">("TEST");
+  const [activeTab, setActiveTab] = useState<"TEST" | "INTERVIEW" | "ALL">("ALL");
+  const [jobs, setJobs] = useState<{ id: string; title: string; division: string }[]>([]);
+  const [selectedJobId, setSelectedJobId] = useState("");
+  const [scheduleForm, setScheduleForm] = useState({
     scheduledDate: "",
     scheduledTime: "",
+    endTime: "",
     location: "Online System",
     message: "",
+    interviewer: "",
+    interviewType: "ONLINE",
   });
-  const [jobPostings, setJobPostings] = useState<any[]>([]);
-  const [batchApplicants, setBatchApplicants] = useState<any[]>([]);
-  const [loadingApplicants, setLoadingApplicants] = useState(false);
-
-  // Current month for calendar view
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetchSchedules();
+    fetchJobs();
   }, []);
 
-  // Fetch job postings when batch modal opens
-  useEffect(() => {
-    if (showBatchModal) {
-      fetchJobPostings();
-    }
-  }, [showBatchModal]);
-
-  const fetchJobPostings = async () => {
+  const fetchJobs = async () => {
     try {
-      const response = await fetch("/api/jobs");
+      const response = await fetch("/api/admin/jobs");
       const result = await response.json();
-      if (result.success) {
-        // Filter only active jobs
-        const activeJobs = result.jobs.filter((job: any) => job.status === "ACTIVE");
-        setJobPostings(activeJobs);
+      if (result.jobs) {
+        setJobs(result.jobs);
       }
     } catch (err) {
-      console.error("Failed to fetch job postings:", err);
-    }
-  };
-
-  const fetchBatchApplicants = async (jobPostingId: string) => {
-    try {
-      setLoadingApplicants(true);
-      const response = await fetch(`/api/admin/test-schedule?jobPostingId=${jobPostingId}`);
-      const result = await response.json();
-      if (result.success) {
-        setBatchApplicants(result.pendingApplicants || []);
-      } else {
-        setBatchApplicants([]);
-      }
-    } catch (err) {
-      console.error("Failed to fetch batch applicants:", err);
-      setBatchApplicants([]);
-    } finally {
-      setLoadingApplicants(false);
+      console.error("Failed to fetch jobs:", err);
     }
   };
 
@@ -130,8 +121,10 @@ export default function SchedulePage() {
 
       if (result.success) {
         setSchedules(result.schedules);
-        setTestSchedules(result.testSchedules);
-        setInterviewSchedules(result.interviewSchedules);
+
+        // Group schedules by job posting
+        const grouped = groupSchedulesByJob(result.schedules);
+        setGroupedSchedules(grouped);
       }
     } catch (err) {
       console.error("Failed to fetch schedules:", err);
@@ -140,41 +133,81 @@ export default function SchedulePage() {
     }
   };
 
+  const groupSchedulesByJob = (schedules: Schedule[]): GroupedSchedule[] => {
+    const groups: Record<string, GroupedSchedule> = {};
+
+    schedules.forEach((schedule) => {
+      const key = `${schedule.position}-${schedule.division}-${schedule.type}`;
+
+      if (!groups[key]) {
+        groups[key] = {
+          position: schedule.position,
+          division: schedule.division,
+          type: schedule.type,
+          scheduledAt: schedule.scheduledAt,
+          location: schedule.location,
+          applicants: [],
+          totalApplicants: 0,
+        };
+      }
+
+      groups[key].applicants.push({
+        id: schedule.id,
+        applicationId: schedule.applicationId,
+        applicantName: schedule.applicantName,
+        status: schedule.status,
+        scheduledAt: schedule.scheduledAt,
+        location: schedule.location,
+      });
+      groups[key].totalApplicants++;
+    });
+
+    return Object.values(groups).sort(
+      (a, b) => new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime()
+    );
+  };
+
   const showToast = (message: string, type: "success" | "error") => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   };
 
-  const openScheduleModal = (schedule: Schedule) => {
-    setSelectedSchedule(schedule);
-    setFormData({
-      scheduledDate: "",
-      scheduledTime: "",
-      location: schedule.type === "INTERVIEW" ? "" : "Online System",
-      notes: "",
-    });
-    setShowModal(true);
-  };
-
-  const handleSubmitSchedule = async () => {
-    if (!selectedSchedule || !formData.scheduledDate || !formData.scheduledTime) {
+  const handleAddSchedule = async () => {
+    if (!selectedJobId || !scheduleForm.scheduledDate || !scheduleForm.scheduledTime) {
       showToast("Mohon isi semua field yang wajib", "error");
+      return;
+    }
+
+    if (scheduleType === "INTERVIEW" && !scheduleForm.interviewer) {
+      showToast("Nama interviewer wajib diisi", "error");
+      return;
+    }
+
+    if (scheduleType === "INTERVIEW" && scheduleForm.endTime && scheduleForm.scheduledTime >= scheduleForm.endTime) {
+      showToast("Jam selesai harus lebih晚 dari jam mulai", "error");
       return;
     }
 
     setSaving(true);
     try {
-      const scheduledAt = `${formData.scheduledDate}T${formData.scheduledTime}:00`;
+      const scheduledAt = `${scheduleForm.scheduledDate}T${scheduleForm.scheduledTime}:00`;
+      const endTime = scheduleForm.endTime ? `${scheduleForm.scheduledDate}T${scheduleForm.endTime}:00` : null;
 
-      const response = await fetch("/api/admin/schedule", {
+      const apiEndpoint = scheduleType === "TEST" ? "/api/admin/test-schedule" : "/api/admin/interview-schedule";
+
+      const response = await fetch(apiEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          applicationId: selectedSchedule.applicationId,
-          type: selectedSchedule.type,
+          jobPostingId: selectedJobId,
           scheduledAt,
-          location: formData.location,
-          notes: formData.notes,
+          endTime,
+          location: scheduleForm.location,
+          message: scheduleForm.message,
+          ...(scheduleType === "INTERVIEW" && {
+            interviewer: scheduleForm.interviewer,
+            interviewType: scheduleForm.interviewType,
+          }),
         }),
       });
 
@@ -182,10 +215,13 @@ export default function SchedulePage() {
 
       if (result.success) {
         showToast(result.message, "success");
-        setShowModal(false);
+        setShowAddModal(false);
+        setSelectedJobId("");
+        setScheduleType("TEST");
+        setScheduleForm({ scheduledDate: "", scheduledTime: "", endTime: "", location: "Online System", message: "", interviewer: "", interviewType: "ONLINE" });
         fetchSchedules();
       } else {
-        showToast(result.error, "error");
+        showToast(result.error || "Gagal membuat jadwal", "error");
       }
     } catch (err) {
       showToast("Terjadi kesalahan saat menyimpan", "error");
@@ -194,57 +230,79 @@ export default function SchedulePage() {
     }
   };
 
-  // Get schedules for a specific date
-  const getSchedulesForDate = (date: Date) => {
-    return schedules.filter((s) => {
-      const scheduleDate = new Date(s.scheduledAt);
-      return (
-        scheduleDate.getDate() === date.getDate() &&
-        scheduleDate.getMonth() === date.getMonth() &&
-        scheduleDate.getFullYear() === date.getFullYear()
-      );
-    });
+  const toggleJob = (position: string) => {
+    const newExpanded = new Set(expandedJobs);
+    if (newExpanded.has(position)) {
+      newExpanded.delete(position);
+    } else {
+      newExpanded.add(position);
+    }
+    setExpandedJobs(newExpanded);
+    setSelectedJob(position);
   };
 
-  // Generate calendar days
-  const generateCalendarDays = () => {
-    const year = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
+  const handleDeleteJob = async () => {
+    if (!deleteModal.job) return;
 
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
+    setDeleting(true);
+    try {
+      // Delete all schedules for this job posting
+      const response = await fetch(`/api/admin/schedule?deleteAll=true&position=${encodeURIComponent(deleteModal.job.position)}`, {
+        method: "DELETE",
+      });
 
-    const days: Date[] = [];
+      const result = await response.json();
 
-    // Add empty days for days before first day of month
-    for (let i = 0; i < firstDay.getDay(); i++) {
-      days.push(new Date(year, month, -i));
+      if (result.success) {
+        showToast(result.message || "Jadwal berhasil dihapus", "success");
+        setDeleteModal({ show: false, job: null });
+        fetchSchedules();
+      } else {
+        showToast(result.error || "Gagal menghapus jadwal", "error");
+      }
+    } catch (err) {
+      showToast("Terjadi kesalahan saat menghapus", "error");
+    } finally {
+      setDeleting(false);
     }
-
-    // Add days of current month
-    for (let i = 1; i <= lastDay.getDate(); i++) {
-      days.push(new Date(year, month, i));
-    }
-
-    // Add empty days for remaining cells
-    const remaining = 42 - days.length;
-    for (let i = 1; i <= remaining; i++) {
-      days.push(new Date(year, month + 1, i));
-    }
-
-    return days;
   };
 
-  const filteredSchedules =
-    filter === "all"
-      ? schedules
-      : schedules.filter((s) => s.type === filter);
+  const handleDeleteAllSchedules = async () => {
+    setDeletingAll(true);
+    try {
+      const response = await fetch("/api/admin/schedule?deleteAll=true", {
+        method: "DELETE",
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        showToast(result.message, "success");
+        setDeleteAllModal(false);
+        fetchSchedules();
+      } else {
+        showToast(result.error || "Gagal menghapus semua jadwal", "error");
+      }
+    } catch (err) {
+      showToast("Terjadi kesalahan saat menghapus", "error");
+    } finally {
+      setDeletingAll(false);
+    }
+  };
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("id-ID", {
       weekday: "long",
       day: "numeric",
       month: "long",
+      year: "numeric",
+    });
+  };
+
+  const formatShortDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "short",
       year: "numeric",
     });
   };
@@ -256,17 +314,8 @@ export default function SchedulePage() {
     });
   };
 
-  const calendarDays = generateCalendarDays();
-
-  // Get upcoming schedules (next 7 days)
-  const today = new Date();
-  const nextWeek = new Date(today);
-  nextWeek.setDate(nextWeek.getDate() + 7);
-
-  const upcomingSchedules = schedules.filter((s) => {
-    const scheduleDate = new Date(s.scheduledAt);
-    return scheduleDate >= today && scheduleDate <= nextWeek;
-  });
+  const totalSchedules = groupedSchedules.length;
+  const totalApplicants = groupedSchedules.reduce((sum, g) => sum + g.totalApplicants, 0);
 
   return (
     <div style={{ fontFamily: "Inter, system-ui, sans-serif", minHeight: "100vh", background: "#f8f9fa" }}>
@@ -275,314 +324,507 @@ export default function SchedulePage() {
         <div style={{ maxWidth: "1400px", margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <h1 style={{ fontSize: "28px", fontWeight: 800, color: "#00205B", marginBottom: "4px" }}>Jadwal Seleksi</h1>
-            <p style={{ fontSize: "15px", color: "#666666" }}>Kelola jadwal tes dan interview pelamar</p>
+            <p style={{ fontSize: "15px", color: "#666666" }}>Kelola jadwal tes dan interview per lowongan</p>
           </div>
-          <button
-            onClick={() => setShowBatchModal(true)}
-            style={{
-              padding: "14px 24px",
-              background: "#00205B",
-              color: "#ffffff",
-              border: "none",
-              borderRadius: "12px",
-              fontSize: "15px",
-              fontWeight: 700,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-            }}
-          >
-            <Calendar className="w-5 h-5" />
-            Jadwalkan Batch Tes
-          </button>
+          <div style={{ display: "flex", gap: "12px" }}>
+            <button
+              onClick={() => { setScheduleType("TEST"); setShowAddModal(true); }}
+              style={{ padding: "12px 20px", background: "#2563eb", color: "#ffffff", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
+            >
+              <FileText className="w-4 h-4" />
+              Jadwalkan Tes
+            </button>
+            <button
+              onClick={() => { setScheduleType("INTERVIEW"); setShowAddModal(true); }}
+              style={{ padding: "12px 20px", background: "#be185d", color: "#ffffff", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
+            >
+              <User className="w-4 h-4" />
+              Jadwalkan Interview
+            </button>
+          </div>
         </div>
       </header>
 
       <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "0 32px 60px" }}>
         {/* Quick Stats */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "20px", marginBottom: "32px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "20px", marginBottom: "32px" }}>
           <div style={{ background: "#ffffff", borderRadius: "16px", padding: "20px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <div style={{ width: "48px", height: "48px", background: "#dbeafe", borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <FileText className="w-6 h-6" style={{ color: "#2563eb" }} />
+                <Briefcase className="w-6 h-6" style={{ color: "#2563eb" }} />
               </div>
               <div>
-                <p style={{ fontSize: "28px", fontWeight: 800, color: "#111" }}>{testSchedules.length}</p>
-                <p style={{ fontSize: "13px", color: "#888" }}>Jadwal Tes</p>
+                <p style={{ fontSize: "28px", fontWeight: 800, color: "#111" }}>{totalSchedules}</p>
+                <p style={{ fontSize: "13px", color: "#888" }}>Lowongan Terjadwal</p>
               </div>
             </div>
           </div>
           <div style={{ background: "#ffffff", borderRadius: "16px", padding: "20px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <div style={{ width: "48px", height: "48px", background: "#fce7f3", borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <User className="w-6 h-6" style={{ color: "#be185d" }} />
+                <Users className="w-6 h-6" style={{ color: "#be185d" }} />
               </div>
               <div>
-                <p style={{ fontSize: "28px", fontWeight: 800, color: "#111" }}>{interviewSchedules.length}</p>
-                <p style={{ fontSize: "13px", color: "#888" }}>Jadwal Interview</p>
+                <p style={{ fontSize: "28px", fontWeight: 800, color: "#111" }}>{totalApplicants}</p>
+                <p style={{ fontSize: "13px", color: "#888" }}>Total Pelamar</p>
               </div>
             </div>
           </div>
           <div style={{ background: "#ffffff", borderRadius: "16px", padding: "20px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <div style={{ width: "48px", height: "48px", background: "#fef3c7", borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Clock className="w-6 h-6" style={{ color: "#d97706" }} />
+                <Calendar className="w-6 h-6" style={{ color: "#d97706" }} />
               </div>
               <div>
-                <p style={{ fontSize: "28px", fontWeight: 800, color: "#111" }}>{upcomingSchedules.length}</p>
-                <p style={{ fontSize: "13px", color: "#888" }}>Minggu Ini</p>
-              </div>
-            </div>
-          </div>
-          <div style={{ background: "#ffffff", borderRadius: "16px", padding: "20px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <div style={{ width: "48px", height: "48px", background: "#dcfce7", borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <CheckCircle className="w-6 h-6" style={{ color: "#16a34a" }} />
-              </div>
-              <div>
-                <p style={{ fontSize: "28px", fontWeight: 800, color: "#111" }}>{schedules.filter(s => s.status === "TEST_COMPLETED" || s.status === "INTERVIEW").length}</p>
-                <p style={{ fontSize: "13px", color: "#888" }}>Selesai</p>
+                <p style={{ fontSize: "28px", fontWeight: 800, color: "#111" }}>
+                  {groupedSchedules.filter(g => g.type === "TEST").length}
+                </p>
+                <p style={{ fontSize: "13px", color: "#888" }}>Jadwal Tes</p>
               </div>
             </div>
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
-          {/* Calendar View */}
-          <div style={{ background: "#ffffff", borderRadius: "16px", padding: "24px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-              <h2 style={{ fontSize: "18px", fontWeight: 700, color: "#111" }}>Kalender</h2>
-              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                <button
-                  onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
-                  style={{ padding: "8px", background: "#f8f9fa", border: "none", borderRadius: "8px", cursor: "pointer" }}
-                >
-                  <ChevronLeft className="w-5 h-5" style={{ color: "#666" }} />
-                </button>
-                <span style={{ fontSize: "14px", fontWeight: 600, color: "#111", minWidth: "140px", textAlign: "center" }}>
-                  {currentMonth.toLocaleDateString("id-ID", { month: "long", year: "numeric" })}
-                </span>
-                <button
-                  onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
-                  style={{ padding: "8px", background: "#f8f9fa", border: "none", borderRadius: "8px", cursor: "pointer" }}
-                >
-                  <ChevronRight className="w-5 h-5" style={{ color: "#666" }} />
-                </button>
-              </div>
-            </div>
-
-            {/* Calendar Grid */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "4px", textAlign: "center" }}>
-              {["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"].map((day) => (
-                <div key={day} style={{ padding: "8px", fontSize: "12px", fontWeight: 600, color: "#888" }}>
-                  {day}
-                </div>
-              ))}
-              {calendarDays.map((day, index) => {
-                const daySchedules = getSchedulesForDate(day);
-                const isCurrentMonth = day.getMonth() === currentMonth.getMonth();
-                const isToday = day.toDateString() === today.toDateString();
-
-                return (
-                  <div
-                    key={index}
-                    style={{
-                      padding: "8px",
-                      minHeight: "60px",
-                      background: isToday ? "#f0f4ff" : isCurrentMonth ? "#ffffff" : "#f8f9fa",
-                      borderRadius: "8px",
-                      border: isToday ? "2px solid #00205B" : "1px solid #eee",
-                    }}
-                  >
-                    <span style={{
-                      fontSize: "12px",
-                      fontWeight: isToday ? 700 : 500,
-                      color: isCurrentMonth ? "#111" : "#ccc"
-                    }}>
-                      {day.getDate()}
-                    </span>
-                    {daySchedules.length > 0 && (
-                      <div style={{ marginTop: "4px" }}>
-                        {daySchedules.slice(0, 2).map((s, i) => (
-                          <div
-                            key={i}
-                            style={{
-                              fontSize: "9px",
-                              padding: "2px 4px",
-                              background: s.type === "TEST" ? "#dbeafe" : "#fce7f3",
-                              color: s.type === "TEST" ? "#2563eb" : "#be185d",
-                              borderRadius: "4px",
-                              marginBottom: "2px",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {s.type === "TEST" ? "Tes" : "Interview"}
-                          </div>
-                        ))}
-                        {daySchedules.length > 2 && (
-                          <span style={{ fontSize: "9px", color: "#888" }}>+{daySchedules.length - 2}</span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+        {/* Main Content - Job List with Tabs */}
+        <div style={{ background: "#ffffff", borderRadius: "16px", padding: "24px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+          {/* Tabs */}
+          <div style={{ display: "flex", gap: "8px", marginBottom: "20px", borderBottom: "2px solid #eee", paddingBottom: "12px" }}>
+            <button
+              onClick={() => setActiveTab("ALL")}
+              style={{
+                padding: "10px 20px",
+                background: activeTab === "ALL" ? "#00205B" : "transparent",
+                color: activeTab === "ALL" ? "#fff" : "#666",
+                border: "none",
+                borderRadius: "8px",
+                fontSize: "14px",
+                fontWeight: 600,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
+              <Calendar className="w-4 h-4" />
+              Semua ({totalSchedules})
+            </button>
+            <button
+              onClick={() => setActiveTab("TEST")}
+              style={{
+                padding: "10px 20px",
+                background: activeTab === "TEST" ? "#2563eb" : "transparent",
+                color: activeTab === "TEST" ? "#fff" : "#2563eb",
+                border: "2px solid #2563eb",
+                borderRadius: "8px",
+                fontSize: "14px",
+                fontWeight: 600,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
+              <FileText className="w-4 h-4" />
+              Tes ({groupedSchedules.filter(g => g.type === "TEST").length})
+            </button>
+            <button
+              onClick={() => setActiveTab("INTERVIEW")}
+              style={{
+                padding: "10px 20px",
+                background: activeTab === "INTERVIEW" ? "#be185d" : "transparent",
+                color: activeTab === "INTERVIEW" ? "#fff" : "#be185d",
+                border: "2px solid #be185d",
+                borderRadius: "8px",
+                fontSize: "14px",
+                fontWeight: 600,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
+              <User className="w-4 h-4" />
+              Interview ({groupedSchedules.filter(g => g.type === "INTERVIEW").length})
+            </button>
           </div>
 
-          {/* Schedule List */}
-          <div style={{ background: "#ffffff", borderRadius: "16px", padding: "24px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-              <h2 style={{ fontSize: "18px", fontWeight: 700, color: "#111" }}>Jadwal</h2>
-              <div style={{ display: "flex", gap: "8px" }}>
-                <button
-                  onClick={() => setFilter("all")}
-                  style={{
-                    padding: "6px 12px",
-                    background: filter === "all" ? "#00205B" : "#f8f9fa",
-                    color: filter === "all" ? "#fff" : "#666",
-                    border: "none",
-                    borderRadius: "8px",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
-                >
-                  Semua
-                </button>
-                <button
-                  onClick={() => setFilter("TEST")}
-                  style={{
-                    padding: "6px 12px",
-                    background: filter === "TEST" ? "#2563eb" : "#f8f9fa",
-                    color: filter === "TEST" ? "#fff" : "#666",
-                    border: "none",
-                    borderRadius: "8px",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
-                >
-                  Tes
-                </button>
-                <button
-                  onClick={() => setFilter("INTERVIEW")}
-                  style={{
-                    padding: "6px 12px",
-                    background: filter === "INTERVIEW" ? "#be185d" : "#f8f9fa",
-                    color: filter === "INTERVIEW" ? "#fff" : "#666",
-                    border: "none",
-                    borderRadius: "8px",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
-                >
-                  Interview
-                </button>
+          <div style={{ maxHeight: "600px", overflowY: "auto" }}>
+            {loading ? (
+              <div style={{ textAlign: "center", padding: "60px" }}>
+                <div style={{ width: "40px", height: "40px", border: "4px solid #eee", borderTopColor: "#FF5E00", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto" }} />
+                <p style={{ marginTop: "16px", color: "#888" }}>Memuat jadwal...</p>
               </div>
-            </div>
+            ) : groupedSchedules.filter(g => activeTab === "ALL" || g.type === activeTab).length === 0 ? (
+              <div style={{ textAlign: "center", padding: "60px", color: "#888" }}>
+                <Calendar className="w-16 h-16" style={{ margin: "0 auto 16px", opacity: 0.4 }} />
+                <h3 style={{ fontSize: "18px", fontWeight: 600, color: "#444", marginBottom: "8px" }}>Belum Ada Jadwal</h3>
+                <p style={{ fontSize: "14px" }}>Jadwalkan tes atau interview untuk pelamar</p>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {groupedSchedules.filter(g => activeTab === "ALL" || g.type === activeTab).map((job, index) => {
+                  const isExpanded = expandedJobs.has(job.position);
+                  const isSelected = selectedJob === job.position;
 
-            <div style={{ maxHeight: "400px", overflowY: "auto" }}>
-              {loading ? (
-                <div style={{ textAlign: "center", padding: "40px" }}>
-                  <div style={{ width: "40px", height: "40px", border: "4px solid #eee", borderTopColor: "#FF5E00", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto" }} />
-                </div>
-              ) : filteredSchedules.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "40px", color: "#888" }}>
-                  <Calendar className="w-12 h-12" style={{ margin: "0 auto 12px", opacity: 0.5 }} />
-                  <p>Belum ada jadwal</p>
-                </div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                  {filteredSchedules.map((schedule) => (
+                  return (
                     <div
-                      key={schedule.id}
+                      key={`${job.position}-${index}`}
                       style={{
-                        padding: "16px",
-                        background: "#f8f9fa",
-                        borderRadius: "12px",
-                        border: `2px solid ${schedule.type === "TEST" ? "#dbeafe" : "#fce7f3"}`,
+                        background: isSelected ? "#f8f9fa" : "#ffffff",
+                        border: `2px solid ${isSelected ? "#00205B" : "#eeeeee"}`,
+                        borderRadius: "16px",
+                        overflow: "hidden",
+                        transition: "all 0.2s",
                       }}
                     >
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
-                        <div>
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                            <span style={{
-                              padding: "4px 8px",
-                              background: schedule.type === "TEST" ? "#dbeafe" : "#fce7f3",
-                              color: schedule.type === "TEST" ? "#2563eb" : "#be185d",
-                              borderRadius: "6px",
-                              fontSize: "11px",
-                              fontWeight: 700,
-                            }}>
-                              {schedule.type === "TEST" ? "Tes" : "Interview"}
-                            </span>
-                            <span style={{ fontSize: "11px", color: "#888" }}>
-                              {divisionLabels[schedule.division] || schedule.division}
-                            </span>
-                          </div>
-                          <h4 style={{ fontSize: "14px", fontWeight: 600, color: "#111", margin: 0 }}>{schedule.position}</h4>
-                          <p style={{ fontSize: "12px", color: "#666", margin: "4px 0 0 0" }}>{schedule.applicantName}</p>
-                        </div>
-                        {statusConfig[schedule.status] && (
-                          <span style={{
-                            padding: "4px 10px",
-                            background: statusConfig[schedule.status].bg,
-                            color: statusConfig[schedule.status].text,
-                            borderRadius: "20px",
-                            fontSize: "11px",
-                            fontWeight: 600,
-                          }}>
-                            {statusConfig[schedule.status].label}
-                          </span>
-                        )}
-                      </div>
-                      <div style={{ display: "flex", gap: "16px", fontSize: "12px", color: "#666" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                          <Calendar className="w-4 h-4" />
-                          {formatDate(schedule.scheduledAt)}
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                          <Clock className="w-4 h-4" />
-                          {formatTime(schedule.scheduledAt)}
-                        </div>
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "12px", color: "#666", marginTop: "8px" }}>
-                        <MapPin className="w-4 h-4" />
-                        {schedule.location}
-                      </div>
-                      <button
-                        onClick={() => openScheduleModal(schedule)}
+                      {/* Job Header - Clickable */}
+                      <div
+                        onClick={() => toggleJob(job.position)}
                         style={{
-                          marginTop: "12px",
-                          padding: "8px 16px",
-                          background: schedule.type === "TEST" ? "#2563eb" : "#be185d",
-                          color: "#fff",
-                          border: "none",
-                          borderRadius: "8px",
-                          fontSize: "12px",
-                          fontWeight: 600,
+                          padding: "20px",
                           cursor: "pointer",
-                          width: "100%",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
                         }}
                       >
-                        Atur Ulang Jadwal
-                      </button>
+                        <div style={{ display: "flex", alignItems: "flex-start", gap: "16px" }}>
+                          <div style={{
+                            width: "48px",
+                            height: "48px",
+                            background: job.type === "TEST" ? "#dbeafe" : "#fce7f3",
+                            borderRadius: "12px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                          }}>
+                            {job.type === "TEST" ? (
+                              <FileText className="w-6 h-6" style={{ color: "#2563eb" }} />
+                            ) : (
+                              <User className="w-6 h-6" style={{ color: "#be185d" }} />
+                            )}
+                          </div>
+
+                          <div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
+                              <span style={{
+                                padding: "4px 10px",
+                                background: job.type === "TEST" ? "#dbeafe" : "#fce7f3",
+                                color: job.type === "TEST" ? "#2563eb" : "#be185d",
+                                borderRadius: "6px",
+                                fontSize: "11px",
+                                fontWeight: 700,
+                              }}>
+                                {job.type === "TEST" ? "TES" : "INTERVIEW"}
+                              </span>
+                              <span style={{ fontSize: "12px", color: "#888" }}>
+                                {divisionLabels[job.division] || job.division}
+                              </span>
+                            </div>
+                            <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#111", margin: 0 }}>{job.position}</h3>
+                            <div style={{ display: "flex", alignItems: "center", gap: "16px", marginTop: "8px", fontSize: "13px", color: "#666" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                <Calendar className="w-4 h-4" />
+                                {formatShortDate(job.scheduledAt)}
+                              </div>
+                              <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                <Clock className="w-4 h-4" />
+                                {formatTime(job.scheduledAt)}
+                              </div>
+                              <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                <Users className="w-4 h-4" />
+                                {job.totalApplicants} pelamar
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteModal({ show: true, job });
+                            }}
+                            style={{
+                              padding: "8px",
+                              background: "#fef2f2",
+                              border: "none",
+                              borderRadius: "8px",
+                              cursor: "pointer",
+                              color: "#dc2626",
+                            }}
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                          <div style={{
+                            width: "36px",
+                            height: "36px",
+                            background: isExpanded ? "#00205B" : "#f1f5f9",
+                            borderRadius: "50%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            transition: "all 0.2s",
+                          }}>
+                            {isExpanded ? (
+                              <ChevronDown className="w-5 h-5" style={{ color: "#fff" }} />
+                            ) : (
+                              <ChevronRight className="w-5 h-5" style={{ color: "#666" }} />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Expanded Applicants List */}
+                      {isExpanded && (
+                        <div style={{
+                          borderTop: "1px solid #eeeeee",
+                          background: "#ffffff",
+                          padding: "20px",
+                        }}>
+                          <div style={{ marginBottom: "16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                            <h4 style={{ fontSize: "14px", fontWeight: 600, color: "#444" }}>
+                              Daftar Pelamar ({job.applicants.length})
+                            </h4>
+                            <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "12px", color: "#666" }}>
+                              <MapPin className="w-4 h-4" />
+                              {job.location}
+                            </div>
+                          </div>
+
+                          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                            {job.applicants.map((applicant, idx) => (
+                              <div
+                                key={applicant.applicationId}
+                                style={{
+                                  padding: "14px 16px",
+                                  background: "#f8f9fa",
+                                  borderRadius: "10px",
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                }}
+                              >
+                                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                  <div style={{
+                                    width: "36px",
+                                    height: "36px",
+                                    background: "#e5e7eb",
+                                    borderRadius: "50%",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: "13px",
+                                    fontWeight: 600,
+                                    color: "#666",
+                                  }}>
+                                    {idx + 1}
+                                  </div>
+                                  <div>
+                                    <p style={{ fontSize: "14px", fontWeight: 600, color: "#111", margin: 0 }}>{applicant.applicantName}</p>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "4px", fontSize: "12px", color: "#666" }}>
+                                      <span>{formatShortDate(applicant.scheduledAt)}</span>
+                                      <span>•</span>
+                                      <span>{formatTime(applicant.scheduledAt)}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                  {statusConfig[applicant.status] && (
+                                    <span style={{
+                                      padding: "4px 10px",
+                                      background: statusConfig[applicant.status].bg,
+                                      color: statusConfig[applicant.status].text,
+                                      borderRadius: "20px",
+                                      fontSize: "11px",
+                                      fontWeight: 600,
+                                    }}>
+                                      {statusConfig[applicant.status].label}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Schedule Modal */}
-      {showModal && selectedSchedule && (
+      {/* Delete Job Confirmation Modal */}
+      {deleteModal.show && deleteModal.job && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0,0,0,0.6)",
+          backdropFilter: "blur(4px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
+          padding: "20px",
+        }}>
+          <div style={{
+            background: "#ffffff",
+            borderRadius: "20px",
+            padding: "32px",
+            width: "100%",
+            maxWidth: "420px",
+            boxShadow: "0 25px 80px rgba(0,0,0,0.25)",
+          }}>
+            <div style={{ textAlign: "center", marginBottom: "24px" }}>
+              <div style={{ width: "64px", height: "64px", background: "#fee2e2", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                <AlertCircle className="w-8 h-8" style={{ color: "#dc2626" }} />
+              </div>
+              <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#111", marginBottom: "8px" }}>Hapus Semua Jadwal?</h2>
+              <p style={{ fontSize: "14px", color: "#666" }}>
+                {deleteModal.job.position}
+              </p>
+              <p style={{ fontSize: "13px", color: "#888", marginTop: "4px" }}>
+                {deleteModal.job.totalApplicants} pelamar • {formatDate(deleteModal.job.scheduledAt)}
+              </p>
+            </div>
+            <p style={{ fontSize: "13px", color: "#dc2626", marginBottom: "24px", padding: "12px", background: "#fef2f2", borderRadius: "8px", textAlign: "center" }}>
+              ⚠️ Semua jadwal untuk lowongan ini akan dihapus permanen
+            </p>
+            <div style={{ display: "flex", gap: "12px" }}>
+              <button
+                onClick={() => setDeleteModal({ show: false, job: null })}
+                style={{
+                  flex: 1,
+                  padding: "14px 24px",
+                  background: "#fff",
+                  color: "#666",
+                  border: "2px solid #e5e5e5",
+                  borderRadius: "12px",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleDeleteJob}
+                disabled={deleting}
+                style={{
+                  flex: 1,
+                  padding: "14px 24px",
+                  background: "#dc2626",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "12px",
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  cursor: deleting ? "not-allowed" : "pointer",
+                  opacity: deleting ? 0.6 : 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                }}
+              >
+                <Trash2 className="w-4 h-4" />
+                {deleting ? "Menghapus..." : "Ya, Hapus"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete All Confirmation Modal */}
+      {deleteAllModal && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0,0,0,0.6)",
+          backdropFilter: "blur(4px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
+          padding: "20px",
+        }}>
+          <div style={{
+            background: "#ffffff",
+            borderRadius: "20px",
+            padding: "32px",
+            width: "100%",
+            maxWidth: "420px",
+            boxShadow: "0 25px 80px rgba(0,0,0,0.25)",
+          }}>
+            <div style={{ textAlign: "center", marginBottom: "24px" }}>
+              <div style={{ width: "64px", height: "64px", background: "#fee2e2", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                <AlertCircle className="w-8 h-8" style={{ color: "#dc2626" }} />
+              </div>
+              <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#111", marginBottom: "8px" }}>Hapus Semua Jadwal?</h2>
+              <p style={{ fontSize: "14px", color: "#666" }}>
+                {totalSchedules} lowongan • {totalApplicants} pelamar
+              </p>
+            </div>
+            <p style={{ fontSize: "13px", color: "#dc2626", marginBottom: "24px", padding: "12px", background: "#fef2f2", borderRadius: "8px", textAlign: "center" }}>
+              ⚠️ Semua jadwal akan dihapus permanen. Pelamar perlu dijadwalkan ulang.
+            </p>
+            <div style={{ display: "flex", gap: "12px" }}>
+              <button
+                onClick={() => setDeleteAllModal(false)}
+                style={{
+                  flex: 1,
+                  padding: "14px 24px",
+                  background: "#fff",
+                  color: "#666",
+                  border: "2px solid #e5e5e5",
+                  borderRadius: "12px",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleDeleteAllSchedules}
+                disabled={deletingAll}
+                style={{
+                  flex: 1,
+                  padding: "14px 24px",
+                  background: "#dc2626",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "12px",
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  cursor: deletingAll ? "not-allowed" : "pointer",
+                  opacity: deletingAll ? 0.6 : 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                }}
+              >
+                <Trash2 className="w-4 h-4" />
+                {deletingAll ? "Menghapus..." : "Ya, Hapus Semua"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Schedule Modal */}
+      {showAddModal && (
         <div style={{
           position: "fixed",
           top: 0,
@@ -605,12 +847,71 @@ export default function SchedulePage() {
             maxWidth: "480px",
             boxShadow: "0 25px 80px rgba(0,0,0,0.25)",
           }}>
-            <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#111", marginBottom: "8px" }}>
-              Atur Jadwal {selectedSchedule.type === "TEST" ? "Tes" : "Interview"}
-            </h2>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
+              <div style={{ width: "40px", height: "40px", background: scheduleType === "TEST" ? "#2563eb" : "#be185d", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {scheduleType === "TEST" ? (
+                  <FileText className="w-5 h-5" style={{ color: "#fff" }} />
+                ) : (
+                  <User className="w-5 h-5" style={{ color: "#fff" }} />
+                )}
+              </div>
+              <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#111" }}>
+                {scheduleType === "TEST" ? "Jadwalkan Tes" : "Jadwalkan Interview"}
+              </h2>
+            </div>
             <p style={{ fontSize: "14px", color: "#666", marginBottom: "24px" }}>
-              {selectedSchedule.applicantName} - {selectedSchedule.position}
+              {scheduleType === "TEST"
+                ? "Jadwalkan tes untuk semua pelamar yang sudah lulus administrasi"
+                : "Jadwalkan interview untuk semua pelamar yang sudah lulus tes"}
             </p>
+
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
+                Lowongan <span style={{ color: "#FF5E00" }}>*</span>
+              </label>
+              <select
+                value={selectedJobId}
+                onChange={(e) => setSelectedJobId(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "12px 14px",
+                  border: "2px solid #e5e5e5",
+                  borderRadius: "10px",
+                  fontSize: "14px",
+                  outline: "none",
+                  background: "#fff",
+                }}
+              >
+                <option value="">Pilih Lowongan</option>
+                {jobs.map((job) => (
+                  <option key={job.id} value={job.id}>
+                    {job.title} - {divisionLabels[job.division] || job.division}
+                  </option>
+                ))}
+              </select>
+              {jobs.length === 0 && (
+                <div style={{
+                  marginTop: "12px",
+                  padding: "14px 16px",
+                  background: "#FEF3C7",
+                  border: "1px solid #FCD34D",
+                  borderRadius: "10px",
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "10px",
+                }}>
+                  <Info className="w-5 h-5" style={{ color: "#D97706", flexShrink: 0, marginTop: "1px" }} />
+                  <div>
+                    <p style={{ fontSize: "13px", fontWeight: 600, color: "#92400E", margin: 0 }}>
+                      Tidak Ada Lowongan
+                    </p>
+                    <p style={{ fontSize: "12px", color: "#B45309", margin: "4px 0 0 0" }}>
+                      Belum ada lowongan yang dibuat. Silakan buat lowongan terlebih dahulu.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div style={{ marginBottom: "16px" }}>
               <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
@@ -618,8 +919,8 @@ export default function SchedulePage() {
               </label>
               <input
                 type="date"
-                value={formData.scheduledDate}
-                onChange={(e) => setFormData({ ...formData, scheduledDate: e.target.value })}
+                value={scheduleForm.scheduledDate}
+                onChange={(e) => setScheduleForm({ ...scheduleForm, scheduledDate: e.target.value })}
                 style={{
                   width: "100%",
                   padding: "12px 14px",
@@ -637,8 +938,8 @@ export default function SchedulePage() {
               </label>
               <input
                 type="time"
-                value={formData.scheduledTime}
-                onChange={(e) => setFormData({ ...formData, scheduledTime: e.target.value })}
+                value={scheduleForm.scheduledTime}
+                onChange={(e) => setScheduleForm({ ...scheduleForm, scheduledTime: e.target.value })}
                 style={{
                   width: "100%",
                   padding: "12px 14px",
@@ -650,15 +951,105 @@ export default function SchedulePage() {
               />
             </div>
 
-            <div style={{ marginBottom: "16px" }}>
+            {/* Interview-specific fields */}
+            {scheduleType === "INTERVIEW" && (
+              <>
+                <div style={{ marginBottom: "16px" }}>
+                  <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
+                    Nama Interviewer <span style={{ color: "#FF5E00" }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={scheduleForm.interviewer}
+                    onChange={(e) => setScheduleForm({ ...scheduleForm, interviewer: e.target.value })}
+                    placeholder="Contoh: Bpk. John Doe"
+                    style={{
+                      width: "100%",
+                      padding: "12px 14px",
+                      border: "2px solid #e5e5e5",
+                      borderRadius: "10px",
+                      fontSize: "14px",
+                      outline: "none",
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: "16px" }}>
+                  <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
+                    Tipe Interview
+                  </label>
+                  <select
+                    value={scheduleForm.interviewType}
+                    onChange={(e) => setScheduleForm({ ...scheduleForm, interviewType: e.target.value })}
+                    style={{
+                      width: "100%",
+                      padding: "12px 14px",
+                      border: "2px solid #e5e5e5",
+                      borderRadius: "10px",
+                      fontSize: "14px",
+                      outline: "none",
+                      background: "#fff",
+                    }}
+                  >
+                    <option value="ONLINE">Online / Video Call</option>
+                    <option value="OFFLINE">Offline / Tatap Muka</option>
+                  </select>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
+                      Jam Mulai <span style={{ color: "#FF5E00" }}>*</span>
+                    </label>
+                    <input
+                      type="time"
+                      value={scheduleForm.scheduledTime}
+                      onChange={(e) => setScheduleForm({ ...scheduleForm, scheduledTime: e.target.value })}
+                      style={{
+                        width: "100%",
+                        padding: "12px 14px",
+                        border: "2px solid #e5e5e5",
+                        borderRadius: "10px",
+                        fontSize: "14px",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
+                      Jam Selesai
+                    </label>
+                    <input
+                      type="time"
+                      value={scheduleForm.endTime}
+                      onChange={(e) => setScheduleForm({ ...scheduleForm, endTime: e.target.value })}
+                      placeholder="Opsional"
+                      style={{
+                        width: "100%",
+                        padding: "12px 14px",
+                        border: "2px solid #e5e5e5",
+                        borderRadius: "10px",
+                        fontSize: "14px",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+                </div>
+                <p style={{ fontSize: "11px", color: "#888", marginTop: "-8px", marginBottom: "16px" }}>
+                  Kosongkan jam selesai jika tidak ada batasan
+                </p>
+              </>
+            )}
+
+            <div style={{ marginBottom: "24px" }}>
               <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
-                Lokasi <span style={{ color: "#FF5E00" }}>*</span>
+                Lokasi
               </label>
               <input
                 type="text"
-                value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                placeholder={selectedSchedule.type === "TEST" ? "Online System" : "Kantor KAI Services"}
+                value={scheduleForm.location}
+                onChange={(e) => setScheduleForm({ ...scheduleForm, location: e.target.value })}
+                placeholder={scheduleType === "INTERVIEW" ? "Contoh: Ruang Meeting Lantai 3" : "Online System"}
                 style={{
                   width: "100%",
                   padding: "12px 14px",
@@ -672,12 +1063,12 @@ export default function SchedulePage() {
 
             <div style={{ marginBottom: "24px" }}>
               <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
-                Catatan
+                Pesan untuk Pelamar
               </label>
               <textarea
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                placeholder="Catatan tambahan (opsional)"
+                value={scheduleForm.message}
+                onChange={(e) => setScheduleForm({ ...scheduleForm, message: e.target.value })}
+                placeholder="Contoh: Pastikan datang tepat waktu dan bawa KTP asli..."
                 rows={3}
                 style={{
                   width: "100%",
@@ -687,13 +1078,22 @@ export default function SchedulePage() {
                   fontSize: "14px",
                   outline: "none",
                   resize: "vertical",
+                  fontFamily: "inherit",
                 }}
               />
+              <p style={{ fontSize: "11px", color: "#888", marginTop: "4px" }}>
+                Pesan ini akan ditampilkan kepada pelamar saat mereka melihat jadwal tes.
+              </p>
             </div>
 
             <div style={{ display: "flex", gap: "12px" }}>
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => {
+                  setShowAddModal(false);
+                  setSelectedJobId("");
+                  setScheduleType("TEST");
+                  setScheduleForm({ scheduledDate: "", scheduledTime: "", location: "Online System", message: "", interviewer: "", interviewType: "ONLINE" });
+                }}
                 style={{
                   flex: 1,
                   padding: "14px 24px",
@@ -709,12 +1109,12 @@ export default function SchedulePage() {
                 Batal
               </button>
               <button
-                onClick={handleSubmitSchedule}
+                onClick={handleAddSchedule}
                 disabled={saving}
                 style={{
                   flex: 1,
                   padding: "14px 24px",
-                  background: selectedSchedule.type === "TEST" ? "#2563eb" : "#be185d",
+                  background: "#2563eb",
                   color: "#fff",
                   border: "none",
                   borderRadius: "12px",
@@ -725,258 +1125,6 @@ export default function SchedulePage() {
                 }}
               >
                 {saving ? "Menyimpan..." : "Simpan Jadwal"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Batch Schedule Modal */}
-      {showBatchModal && (
-        <div style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: "rgba(0,0,0,0.6)",
-          backdropFilter: "blur(4px)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 1000,
-          padding: "20px",
-        }}>
-          <div style={{
-            background: "#ffffff",
-            borderRadius: "20px",
-            padding: "32px",
-            width: "100%",
-            maxWidth: "600px",
-            maxHeight: "90vh",
-            overflowY: "auto",
-            boxShadow: "0 25px 80px rgba(0,0,0,0.25)",
-          }}>
-            <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#111", marginBottom: "8px" }}>
-              Jadwalkan Batch Tes
-            </h2>
-            <p style={{ fontSize: "14px", color: "#666", marginBottom: "24px" }}>
-              Jadwalkan tes secara bersamaan untuk semua pelamar satu lowongan
-            </p>
-
-            <div style={{ marginBottom: "16px" }}>
-              <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
-                Lowongan <span style={{ color: "#FF5E00" }}>*</span>
-              </label>
-              <select
-                value={batchData.jobPostingId}
-                onChange={(e) => {
-                  setBatchData({ ...batchData, jobPostingId: e.target.value });
-                  if (e.target.value) {
-                    fetchBatchApplicants(e.target.value);
-                  } else {
-                    setBatchApplicants([]);
-                  }
-                }}
-                style={{
-                  width: "100%",
-                  padding: "12px 14px",
-                  border: "2px solid #e5e5e5",
-                  borderRadius: "10px",
-                  fontSize: "14px",
-                  outline: "none",
-                }}
-              >
-                <option value="">Pilih Lowongan</option>
-                {jobPostings.map((job) => (
-                  <option key={job.id} value={job.id}>{job.title} - {divisionLabels[job.division] || job.division}</option>
-                ))}
-              </select>
-            </div>
-
-            {batchData.jobPostingId && (
-              <div style={{ marginBottom: "16px" }}>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
-                  Pelamar yang akan dijadwalkan
-                </label>
-                <div style={{ background: "#f8f9fa", borderRadius: "12px", padding: "16px", maxHeight: "150px", overflowY: "auto" }}>
-                  {loadingApplicants ? (
-                    <p style={{ color: "#666", textAlign: "center" }}>Memuat...</p>
-                  ) : batchApplicants.length === 0 ? (
-                    <p style={{ color: "#dc2626", textAlign: "center" }}>Tidak ada pelamar dengan status TEST_SCHEDULED</p>
-                  ) : (
-                    batchApplicants.map((app: any, index: number) => (
-                      <div key={index} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 0", borderBottom: index < batchApplicants.length - 1 ? "1px solid #eee" : "none" }}>
-                        <User className="w-4 h-4" style={{ color: "#666" }} />
-                        <span style={{ fontSize: "14px", color: "#111" }}>{app.applicantName}</span>
-                        <span style={{ fontSize: "12px", color: "#888" }}>NIK: {app.nik}</span>
-                      </div>
-                    ))
-                  )}
-                </div>
-                {batchApplicants.length > 0 && (
-                  <p style={{ fontSize: "12px", color: "#16a34a", marginTop: "8px" }}>
-                    {batchApplicants.length} pelamar akan dijadwalkan
-                  </p>
-                )}
-              </div>
-            )}
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-              <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
-                  Tanggal <span style={{ color: "#FF5E00" }}>*</span>
-                </label>
-                <input
-                  type="date"
-                  value={batchData.scheduledDate}
-                  onChange={(e) => setBatchData({ ...batchData, scheduledDate: e.target.value })}
-                  style={{
-                    width: "100%",
-                    padding: "12px 14px",
-                    border: "2px solid #e5e5e5",
-                    borderRadius: "10px",
-                    fontSize: "14px",
-                    outline: "none",
-                  }}
-                />
-              </div>
-              <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
-                  Waktu <span style={{ color: "#FF5E00" }}>*</span>
-                </label>
-                <input
-                  type="time"
-                  value={batchData.scheduledTime}
-                  onChange={(e) => setBatchData({ ...batchData, scheduledTime: e.target.value })}
-                  style={{
-                    width: "100%",
-                    padding: "12px 14px",
-                    border: "2px solid #e5e5e5",
-                    borderRadius: "10px",
-                    fontSize: "14px",
-                    outline: "none",
-                  }}
-                />
-              </div>
-            </div>
-
-            <div style={{ marginTop: "16px" }}>
-              <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
-                Lokasi
-              </label>
-              <input
-                type="text"
-                value={batchData.location}
-                onChange={(e) => setBatchData({ ...batchData, location: e.target.value })}
-                placeholder="Online System"
-                style={{
-                  width: "100%",
-                  padding: "12px 14px",
-                  border: "2px solid #e5e5e5",
-                  borderRadius: "10px",
-                  fontSize: "14px",
-                  outline: "none",
-                }}
-              />
-            </div>
-
-            <div style={{ marginTop: "16px" }}>
-              <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
-                Pesan untuk Pelamar
-              </label>
-              <textarea
-                value={batchData.message}
-                onChange={(e) => setBatchData({ ...batchData, message: e.target.value })}
-                placeholder="Contoh: Harap hadir 15 menit sebelum tes dimulai. Bawa KTP asli dan fotokopi."
-                rows={3}
-                style={{
-                  width: "100%",
-                  padding: "12px 14px",
-                  border: "2px solid #e5e5e5",
-                  borderRadius: "10px",
-                  fontSize: "14px",
-                  outline: "none",
-                  resize: "vertical",
-                }}
-              />
-            </div>
-
-            <div style={{ display: "flex", gap: "12px", marginTop: "24px" }}>
-              <button
-                onClick={() => {
-                  setShowBatchModal(false);
-                  setBatchData({ jobPostingId: "", scheduledDate: "", scheduledTime: "", location: "Online System", message: "" });
-                  setBatchApplicants([]);
-                }}
-                style={{
-                  flex: 1,
-                  padding: "14px 24px",
-                  background: "#fff",
-                  color: "#666",
-                  border: "2px solid #e5e5e5",
-                  borderRadius: "12px",
-                  fontSize: "14px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                Batal
-              </button>
-              <button
-                onClick={async () => {
-                  if (!batchData.jobPostingId || !batchData.scheduledDate || !batchData.scheduledTime) {
-                    showToast("Mohon isi semua field yang wajib", "error");
-                    return;
-                  }
-                  if (batchApplicants.length === 0) {
-                    showToast("Tidak ada pelamar untuk dijadwalkan", "error");
-                    return;
-                  }
-
-                  setSaving(true);
-                  try {
-                    const scheduledAt = `${batchData.scheduledDate}T${batchData.scheduledTime}:00`;
-                    const response = await fetch("/api/admin/test-schedule", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        jobPostingId: batchData.jobPostingId,
-                        scheduledAt,
-                        location: batchData.location,
-                      }),
-                    });
-                    const result = await response.json();
-                    if (result.success) {
-                      showToast(result.message, "success");
-                      setShowBatchModal(false);
-                      setBatchData({ jobPostingId: "", scheduledDate: "", scheduledTime: "", location: "Online System" });
-                      setBatchApplicants([]);
-                      fetchSchedules();
-                    } else {
-                      showToast(result.error, "error");
-                    }
-                  } catch (err) {
-                    showToast("Terjadi kesalahan saat menyimpan", "error");
-                  } finally {
-                    setSaving(false);
-                  }
-                }}
-                disabled={saving || batchApplicants.length === 0}
-                style={{
-                  flex: 1,
-                  padding: "14px 24px",
-                  background: batchApplicants.length > 0 ? "#00205B" : "#ccc",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: "12px",
-                  fontSize: "14px",
-                  fontWeight: 700,
-                  cursor: saving || batchApplicants.length === 0 ? "not-allowed" : "pointer",
-                  opacity: saving ? 0.6 : 1,
-                }}
-              >
-                {saving ? "Menyimpan..." : `Jadwalkan ${batchApplicants.length} Pelamar`}
               </button>
             </div>
           </div>

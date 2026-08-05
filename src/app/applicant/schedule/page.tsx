@@ -15,9 +15,11 @@ interface ScheduleItem {
     location: string;
     status: string;
     sessionId?: string;
+    message?: string | null;
   };
   interview?: {
     scheduledAt: string;
+    endTime?: string | null;
     location: string;
     interviewer: string;
     type: string;
@@ -238,21 +240,43 @@ export default function SchedulePage() {
                               <MapPin className="w-4 h-4" style={{ color: "#666" }} />
                               <span style={{ fontSize: "13px", color: "#111" }}>{schedule.test.location}</span>
                             </div>
-                            {canStartTest(schedule.test.scheduledAt) && schedule.test.sessionId && (
-                              <Link href={`/applicant/test/${schedule.test.sessionId}`}>
+                            {schedule.test?.message && (
+                              <div style={{ marginTop: "12px", padding: "12px", background: "#fef3c7", borderRadius: "8px", display: "flex", alignItems: "flex-start", gap: "10px" }}>
+                                <AlertCircle className="w-5 h-5" style={{ color: "#d97706", flexShrink: 0 }} />
+                                <p style={{ fontSize: "12px", color: "#92400e", margin: 0, lineHeight: 1.5 }}>
+                                  <strong>Pesan dari Admin:</strong> {schedule.test.message}
+                                </p>
+                              </div>
+                            )}
+                            {schedule.test && (
+                              <Link href={`/applicant/test/${schedule.test.sessionId || schedule.applicationId}`}>
                                 <button style={{
                                   marginTop: "16px",
                                   width: "100%",
                                   padding: "12px 20px",
-                                  background: "#16a34a",
+                                  background: canStartTest(schedule.test.scheduledAt) ? "#16a34a" : "#d97706",
                                   color: "#fff",
                                   border: "none",
                                   borderRadius: "10px",
                                   fontSize: "14px",
                                   fontWeight: 700,
                                   cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  gap: "8px",
                                 }}>
-                                  Mulai Tes Sekarang
+                                  {canStartTest(schedule.test.scheduledAt) ? (
+                                    <>
+                                      <Play className="w-4 h-4" />
+                                      Mulai Tes Sekarang
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Clock className="w-4 h-4" />
+                                      Lihat Detail Tes
+                                    </>
+                                  )}
                                 </button>
                               </Link>
                             )}
@@ -288,7 +312,10 @@ export default function SchedulePage() {
                               </div>
                               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                                 <Clock className="w-4 h-4" style={{ color: "#666" }} />
-                                <span style={{ fontSize: "13px", color: "#111" }}>{formatTime(schedule.interview.scheduledAt)} WIB</span>
+                                <span style={{ fontSize: "13px", color: "#111" }}>
+                                  {formatTime(schedule.interview.scheduledAt)}
+                                  {schedule.interview.endTime ? ` - ${formatTime(schedule.interview.endTime)}` : ""} WIB
+                                </span>
                               </div>
                             </div>
                             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "8px" }}>
@@ -305,12 +332,7 @@ export default function SchedulePage() {
                         )}
 
                         {/* Reminder */}
-                        <div style={{ marginTop: "16px", padding: "12px", background: "#fef3c7", borderRadius: "8px", display: "flex", alignItems: "flex-start", gap: "10px" }}>
-                          <AlertCircle className="w-5 h-5" style={{ color: "#d97706", flexShrink: 0 }} />
-                          <p style={{ fontSize: "12px", color: "#92400e", margin: 0, lineHeight: 1.5 }}>
-                            Pastikan Anda hadir tepat waktu. Bawa dokumen identitas (KTP) dan dokumen pendukung lainnya.
-                          </p>
-                        </div>
+                        {/* Removed per user request */}
                       </div>
                     );
                   })}
