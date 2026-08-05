@@ -69,6 +69,7 @@ export default function ApplicantsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [divisionFilter, setDivisionFilter] = useState("all");
+  const [educationFilter, setEducationFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
 
   const [applicants, setApplicants] = useState<ApplicantData[]>([]);
@@ -102,9 +103,11 @@ export default function ApplicantsPage() {
     const matchStatus = statusFilter === "all" ||
       statusFilter === "BELUM_MELAMAR" && !app.hasApplied ||
       app.applications.some(a => a.status === statusFilter);
+    const matchEducation = educationFilter === "all" ||
+      app.education.toLowerCase() === educationFilter.toLowerCase();
 
-    if (statusFilter === "BELUM_MELAR") return !app.hasApplied && matchSearch && matchDivision;
-    return matchSearch && matchStatus && matchDivision;
+    if (statusFilter === "BELUM_MELAR") return !app.hasApplied && matchSearch && matchDivision && matchEducation;
+    return matchSearch && matchStatus && matchDivision && matchEducation;
   });
 
   return (
@@ -177,6 +180,21 @@ export default function ApplicantsPage() {
               <option value="LOGISTICS">Logistics</option>
               <option value="ADMIN">Admin</option>
               <option value="RES_PARKING">ResParking</option>
+            </select>
+
+            {/* Education Filter */}
+            <select
+              value={educationFilter}
+              onChange={(e) => setEducationFilter(e.target.value)}
+              style={{ padding: "12px 40px 12px 16px", border: "2px solid #eeeeee", borderRadius: "12px", fontSize: "14px", outline: "none", background: "#ffffff", cursor: "pointer", appearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", backgroundSize: "16px" }}
+            >
+              <option value="all">Semua Pendidikan</option>
+              <option value="SMA">SMA / SMK</option>
+              <option value="D3">D3</option>
+              <option value="D4">D4</option>
+              <option value="S1">S1</option>
+              <option value="S2">S2</option>
+              <option value="S3">S3</option>
             </select>
           </div>
         </div>
