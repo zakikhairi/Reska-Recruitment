@@ -1,22 +1,35 @@
 import { PrismaClient } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { Pool } from "pg";
+import { PrismaLibSql } from "@prisma/adapter-libsql";
+import path from "path";
+import { fileURLToPath } from "url";
+
+// Get __dirname equivalent in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
 function createPrismaClient() {
-  const connectionString = process.env.DATABASE_URL;
+  // Try multiple possible locations for dev.db
+  const possiblePaths = [
+    path.join(process.cwd(), "prisma", "dev.db"),
+    path.join(__dirname, "..", "..", "prisma", "dev.db"),
+    path.join(__dirname, "..", "prisma", "dev.db"),
+  ];
 
-  if (!connectionString) {
-    throw new Error("DATABASE_URL environment variable is not set");
+  let dbPath = possiblePaths[0];
+  const fs = require('fs');
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      dbPath = p;
+      break;
+    }
   }
 
-  // Create pg pool for Neon PostgreSQL
-  const pool = new Pool({ connectionString });
-  const adapter = new PrismaPg(pool);
-
+  console.log("[DB] Using database at:", dbPath);
+  const adapter = new PrismaLibSql({ url: `file:${dbPath}` });
   return new PrismaClient({ adapter });
 }
 

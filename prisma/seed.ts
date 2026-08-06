@@ -1,27 +1,25 @@
+import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-import pg from "pg";
-import dotenv from "dotenv";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import Database from "better-sqlite3";
 
-dotenv.config();
+const url = process.env.DATABASE_URL || "file:./prisma/dev.db";
+const dbPath = url.replace("file:", "");
+const database = new Database(dbPath);
+const adapter = new PrismaBetterSqlite3(database);
+const prisma = new PrismaClient({ adapter });
 
 // Simple hash function
 function simpleHash(str: string): string {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
     hash = hash & hash;
   }
   return "demo_" + Math.abs(hash).toString(16);
 }
 
 const DEMO_HASH = simpleHash("demo123");
-
-const connectionString = process.env.DATABASE_URL;
-const pool = new pg.Pool({ connectionString });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
 
 async function main() {
   console.log("🌱 Starting database seed...\n");
