@@ -214,7 +214,25 @@ export default function AdminDashboardPage() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [dismissedNotificationIds, setDismissedNotificationIds] = useState<string[]>([]);
   const notificationRef = useRef<HTMLDivElement>(null);
+
+  // Load dismissed notification IDs from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('dismissedNotifications');
+    if (saved) {
+      try {
+        setDismissedNotificationIds(JSON.parse(saved));
+      } catch (e) {
+        console.error('Failed to parse dismissed notifications:', e);
+      }
+    }
+  }, []);
+
+  // Save dismissed notification IDs to localStorage
+  const saveDismissedIds = (ids: string[]) => {
+    localStorage.setItem('dismissedNotifications', JSON.stringify(ids));
+  };
 
   // Close notification when clicking outside
   useEffect(() => {
@@ -457,8 +475,12 @@ export default function AdminDashboardPage() {
           });
         }
 
-        setNotifications(newNotifications);
-        setUnreadCount(newNotifications.filter(n => !n.isRead).length);
+        // Remove dismissed notifications from the list (persisted in localStorage)
+        const filteredNotifications = newNotifications.filter(
+          n => !dismissedNotificationIds.includes(n.id)
+        );
+        setNotifications(filteredNotifications);
+        setUnreadCount(filteredNotifications.filter(n => !n.isRead).length);
       }
     } catch (err) {
       console.error("Error loading data:", err);
@@ -490,16 +512,23 @@ export default function AdminDashboardPage() {
   };
 
   // Clear all notifications
-  const clearAllNotifications = () => {
-    setNotifications([]);
-    setUnreadCount(0);
+  // Remove notification from list and save to localStorage
+  const removeNotification = (id: string) => {
+    const newDismissed = [...dismissedNotificationIds, id];
+    setDismissedNotificationIds(newDismissed);
+    saveDismissedIds(newDismissed);
+    setNotifications(prev => prev.filter(n => n.id !== id));
+    setUnreadCount(prev => Math.max(0, prev - 1));
     setShowNotifications(false);
   };
 
-  // Remove notification from list
-  const removeNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-    setUnreadCount(prev => Math.max(0, prev - 1));
+  // Clear all notifications
+  const clearAllNotifications = () => {
+    const allIds = notifications.map(n => n.id);
+    setDismissedNotificationIds(allIds);
+    saveDismissedIds(allIds);
+    setNotifications([]);
+    setUnreadCount(0);
     setShowNotifications(false);
   };
 
