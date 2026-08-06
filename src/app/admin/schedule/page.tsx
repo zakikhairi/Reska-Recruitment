@@ -179,8 +179,14 @@ export default function SchedulePage() {
   };
 
   const handleAddSchedule = async () => {
-    if (!selectedJobId || !scheduleForm.scheduledDate || !scheduleForm.scheduledTime) {
-      setToast({ message: "Mohon isi semua field yang wajib", type: "error" });
+    if (!selectedJobId || selectedJobId.trim() === "") {
+      setToast({ message: "Pilih lowongan terlebih dahulu", type: "error" });
+      setTimeout(() => setToast(null), 3000);
+      return;
+    }
+
+    if (!scheduleForm.scheduledDate || !scheduleForm.scheduledTime) {
+      setToast({ message: "Mohon isi tanggal dan waktu", type: "error" });
       setTimeout(() => setToast(null), 3000);
       return;
     }
@@ -197,20 +203,24 @@ export default function SchedulePage() {
       const endTime = scheduleForm.endTime ? `${scheduleForm.scheduledDate}T${scheduleForm.endTime}:00` : null;
       const apiEndpoint = scheduleType === "TEST" ? "/api/admin/test-schedule" : "/api/admin/interview-schedule";
 
+      // Build request body
+      const requestBody: any = {
+        jobPostingId: selectedJobId,
+        scheduledAt,
+        endTime,
+        location: scheduleForm.location,
+        message: scheduleForm.message,
+      };
+
+      if (scheduleType === "INTERVIEW") {
+        requestBody.interviewer = scheduleForm.interviewer;
+        requestBody.interviewType = scheduleForm.interviewType;
+      }
+
       const response = await fetch(apiEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jobPostingId: selectedJobId,
-          scheduledAt,
-          endTime,
-          location: scheduleForm.location,
-          message: scheduleForm.message,
-          ...(scheduleType === "INTERVIEW" && {
-            interviewer: scheduleForm.interviewer,
-            interviewType: scheduleForm.interviewType,
-          }),
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const result = await response.json();
