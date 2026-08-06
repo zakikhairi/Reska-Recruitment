@@ -489,16 +489,18 @@ export default function AdminDashboardPage() {
     }
   };
 
-  // Mark all notifications as read
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+  // Clear all notifications
+  const clearAllNotifications = () => {
+    setNotifications([]);
     setUnreadCount(0);
+    setShowNotifications(false);
   };
 
-  // Mark single notification as read
-  const markAsRead = (id: string) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+  // Remove notification from list
+  const removeNotification = (id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
     setUnreadCount(prev => Math.max(0, prev - 1));
+    setShowNotifications(false);
   };
 
   // Filter and sort applications based on search query
@@ -624,7 +626,7 @@ export default function AdminDashboardPage() {
                     <div style={{ display: "flex", gap: "8px" }}>
                       {unreadCount > 0 && (
                         <button
-                          onClick={markAllAsRead}
+                          onClick={clearAllNotifications}
                           style={{
                             padding: "6px 12px",
                             background: "transparent",
@@ -636,7 +638,7 @@ export default function AdminDashboardPage() {
                             cursor: "pointer"
                           }}
                         >
-                          Tandai semua dibaca
+                          Hapus semua
                         </button>
                       )}
                       <button
@@ -669,10 +671,7 @@ export default function AdminDashboardPage() {
                         <Link
                           key={notification.id}
                           href={notification.actionUrl || "#"}
-                          onClick={() => {
-                            markAsRead(notification.id);
-                            setShowNotifications(false);
-                          }}
+                          onClick={() => removeNotification(notification.id)}
                           style={{
                             display: "flex",
                             gap: "14px",
