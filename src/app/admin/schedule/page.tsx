@@ -271,95 +271,85 @@ export default function SchedulePage() {
         </div>
       </header>
 
-      {/* Google Calendar Style */}
-      <div style={{ background: "#ffffff", borderBottom: "1px solid #e0e0e0", padding: "16px 32px" }}>
-        <div style={{ maxWidth: "1600px", margin: "0 auto" }}>
-          {/* Calendar Toolbar */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-              <h2 style={{ fontSize: "22px", fontWeight: 600, color: "#202124", margin: 0 }}>
+      {/* Split Layout: Left = Calendar, Right = Schedule List */}
+      <div style={{ display: "flex", minHeight: "calc(100vh - 100px)" }}>
+
+        {/* LEFT SIDE: Calendar */}
+        <div style={{ flex: "1", borderRight: "1px solid #e0e0e0", background: "#ffffff", padding: "20px" }}>
+
+          {/* Calendar Header */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <h2 style={{ fontSize: "20px", fontWeight: 600, color: "#202124", margin: 0 }}>
                 {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
               </h2>
-              <button onClick={goToToday} style={{ padding: "6px 16px", background: "#ffffff", border: "1px solid #dadce0", borderRadius: "4px", fontSize: "13px", fontWeight: 500, color: "#3c4043", cursor: "pointer" }}>
+              <button onClick={goToToday} style={{ padding: "6px 12px", background: "#ffffff", border: "1px solid #dadce0", borderRadius: "4px", fontSize: "12px", fontWeight: 500, color: "#3c4043", cursor: "pointer" }}>
                 Hari Ini
               </button>
               <div style={{ display: "flex", gap: "4px" }}>
-                <button onClick={prevMonth} style={{ padding: "8px", background: "#ffffff", border: "1px solid #dadce0", borderRadius: "4px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <ChevronLeft className="w-5 h-5" style={{ color: "#5f6368" }} />
+                <button onClick={prevMonth} style={{ padding: "6px", background: "#ffffff", border: "1px solid #dadce0", borderRadius: "4px", cursor: "pointer" }}>
+                  <ChevronLeft className="w-4 h-4" style={{ color: "#5f6368" }} />
                 </button>
-                <button onClick={nextMonth} style={{ padding: "8px", background: "#ffffff", border: "1px solid #dadce0", borderRadius: "4px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <ChevronRight className="w-5 h-5" style={{ color: "#5f6368" }} />
+                <button onClick={nextMonth} style={{ padding: "6px", background: "#ffffff", border: "1px solid #dadce0", borderRadius: "4px", cursor: "pointer" }}>
+                  <ChevronRight className="w-4 h-4" style={{ color: "#5f6368" }} />
                 </button>
               </div>
-            </div>
-            <div style={{ display: "flex", gap: "8px" }}>
-              <button onClick={() => setViewMode("month")} style={{ padding: "8px 16px", background: viewMode === "month" ? "#e8f0fe" : "#ffffff", border: viewMode === "month" ? "1px solid #4285f4" : "1px solid #dadce0", borderRadius: "4px", fontSize: "13px", fontWeight: 500, color: viewMode === "month" ? "#4285f4" : "#5f6368", cursor: "pointer" }}>
-                Bulan
-              </button>
-              <button onClick={() => setViewMode("week")} style={{ padding: "8px 16px", background: viewMode === "week" ? "#e8f0fe" : "#ffffff", border: viewMode === "week" ? "1px solid #4285f4" : "1px solid #dadce0", borderRadius: "4px", fontSize: "13px", fontWeight: 500, color: viewMode === "week" ? "#4285f4" : "#5f6368", cursor: "pointer" }}>
-                Minggu
-              </button>
             </div>
           </div>
 
           {/* Day Headers */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", borderBottom: "1px solid #e0e0e0" }}>
             {dayNames.map((day) => (
-              <div key={day} style={{ padding: "12px 8px", textAlign: "center", fontSize: "12px", fontWeight: 500, color: "#70757a", borderRight: "1px solid #e0e0e0" }}>
+              <div key={day} style={{ padding: "8px 4px", textAlign: "center", fontSize: "11px", fontWeight: 500, color: "#70757a" }}>
                 {day}
               </div>
             ))}
           </div>
 
-          {/* Calendar Grid - Google Calendar Style */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", borderLeft: "1px solid #e0e0e0" }}>
+          {/* Calendar Grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)" }}>
             {getMonthDays().map((dayInfo, index) => {
               const events = getEventsForDay(dayInfo.date);
               const todayClass = isToday(dayInfo.date);
-
               return (
                 <div
                   key={index}
                   onClick={() => events.length > 0 && setSelectedSchedule(events[0])}
                   style={{
-                    minHeight: "120px",
+                    minHeight: "90px",
                     borderRight: "1px solid #e0e0e0",
                     borderBottom: "1px solid #e0e0e0",
                     background: dayInfo.isCurrentMonth ? "#ffffff" : "#f8f9fa",
                     padding: "4px",
                     cursor: events.length > 0 ? "pointer" : "default",
-                    transition: "background 0.15s",
                   }}
                 >
-                  {/* Date Number */}
                   <div style={{
-                    width: "28px",
-                    height: "28px",
+                    width: "26px",
+                    height: "26px",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     borderRadius: "50%",
-                    fontSize: "13px",
+                    fontSize: "12px",
                     fontWeight: todayClass ? 600 : 400,
                     color: todayClass ? "#ffffff" : dayInfo.isCurrentMonth ? "#3c4043" : "#9aa0a6",
                     background: todayClass ? "#4285f4" : "transparent",
-                    marginBottom: "4px",
+                    marginBottom: "2px",
                   }}>
                     {dayInfo.date.getDate()}
                   </div>
-
-                  {/* Events */}
                   <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                    {events.slice(0, 3).map((event) => (
+                    {events.slice(0, 2).map((event) => (
                       <div
                         key={event.id}
                         onClick={(e) => { e.stopPropagation(); setSelectedSchedule(event); }}
                         style={{
-                          padding: "2px 6px",
+                          padding: "2px 4px",
                           background: event.type === "TEST" ? "#e8f0fe" : "#fce8f3",
                           borderLeft: `3px solid ${event.type === "TEST" ? "#4285f4" : "#ea4335"}`,
                           borderRadius: "4px",
-                          fontSize: "11px",
+                          fontSize: "10px",
                           fontWeight: 500,
                           color: event.type === "TEST" ? "#1967d2" : "#c5221f",
                           overflow: "hidden",
@@ -368,15 +358,12 @@ export default function SchedulePage() {
                           cursor: "pointer",
                         }}
                       >
-                        <span style={{ fontWeight: 600 }}>
-                          {event.type === "TEST" ? "TES" : "INT"}
-                        </span>{" "}
-                        {event.position.length > 15 ? event.position.substring(0, 15) + "..." : event.position}
+                        {event.type === "TEST" ? "TES" : "INT"} {event.position.substring(0, 12)}
                       </div>
                     ))}
-                    {events.length > 3 && (
-                      <div style={{ fontSize: "10px", color: "#5f6368", padding: "0 4px", fontWeight: 500 }}>
-                        +{events.length - 3} lainnya
+                    {events.length > 2 && (
+                      <div style={{ fontSize: "9px", color: "#5f6368", padding: "0 4px" }}>
+                        +{events.length - 2}
                       </div>
                     )}
                   </div>
@@ -384,24 +371,93 @@ export default function SchedulePage() {
               );
             })}
           </div>
+        </div>
 
-          {/* Legend */}
-          <div style={{ display: "flex", gap: "24px", marginTop: "16px", paddingTop: "16px", borderTop: "1px solid #e0e0e0" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <div style={{ width: "12px", height: "12px", background: "#4285f4", borderRadius: "2px" }} />
-              <span style={{ fontSize: "12px", color: "#5f6368" }}>Tes</span>
+        {/* RIGHT SIDE: Schedule List */}
+        <div style={{ width: "480px", background: "#f8f9fa", padding: "20px", overflowY: "auto" }}>
+          <h3 style={{ fontSize: "16px", fontWeight: 600, color: "#202124", marginBottom: "16px" }}>Jadwal Tes & Interview</h3>
+
+          {/* Test Schedules */}
+          <div style={{ marginBottom: "24px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
+              <div style={{ width: "8px", height: "8px", background: "#4285f4", borderRadius: "2px" }} />
+              <span style={{ fontSize: "13px", fontWeight: 600, color: "#202124" }}>Tes</span>
+              <span style={{ fontSize: "11px", color: "#5f6368" }}>({schedules.filter(s => s.type === "TEST").length})</span>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <div style={{ width: "12px", height: "12px", background: "#ea4335", borderRadius: "2px" }} />
-              <span style={{ fontSize: "12px", color: "#5f6368" }}>Interview</span>
+            {schedules.filter(s => s.type === "TEST").length === 0 ? (
+              <div style={{ padding: "20px", textAlign: "center", background: "#ffffff", borderRadius: "8px", border: "1px solid #e0e0e0" }}>
+                <p style={{ fontSize: "12px", color: "#9aa0a6", margin: 0 }}>Belum ada jadwal tes</p>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {schedules.filter(s => s.type === "TEST").slice(0, 5).map((schedule) => (
+                  <div
+                    key={schedule.id}
+                    onClick={() => setSelectedSchedule(schedule)}
+                    style={{
+                      padding: "12px",
+                      background: selectedSchedule?.id === schedule.id ? "#e8f0fe" : "#ffffff",
+                      border: `1px solid ${selectedSchedule?.id === schedule.id ? "#4285f4" : "#e0e0e0"}`,
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
+                      <span style={{ fontSize: "13px", fontWeight: 600, color: "#202124" }}>{schedule.position}</span>
+                      <span style={{ fontSize: "10px", color: "#5f6368" }}>{formatTime(schedule.scheduledAt)}</span>
+                    </div>
+                    <div style={{ fontSize: "11px", color: "#5f6368" }}>{schedule.applicantName}</div>
+                    <div style={{ fontSize: "11px", color: "#5f6368", marginTop: "4px" }}>{formatDate(schedule.scheduledAt)} • {schedule.location}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Interview Schedules */}
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
+              <div style={{ width: "8px", height: "8px", background: "#ea4335", borderRadius: "2px" }} />
+              <span style={{ fontSize: "13px", fontWeight: 600, color: "#202124" }}>Interview</span>
+              <span style={{ fontSize: "11px", color: "#5f6368" }}>({schedules.filter(s => s.type === "INTERVIEW").length})</span>
             </div>
+            {schedules.filter(s => s.type === "INTERVIEW").length === 0 ? (
+              <div style={{ padding: "20px", textAlign: "center", background: "#ffffff", borderRadius: "8px", border: "1px solid #e0e0e0" }}>
+                <p style={{ fontSize: "12px", color: "#9aa0a6", margin: 0 }}>Belum ada jadwal interview</p>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {schedules.filter(s => s.type === "INTERVIEW").slice(0, 5).map((schedule) => (
+                  <div
+                    key={schedule.id}
+                    onClick={() => setSelectedSchedule(schedule)}
+                    style={{
+                      padding: "12px",
+                      background: selectedSchedule?.id === schedule.id ? "#fce8f3" : "#ffffff",
+                      border: `1px solid ${selectedSchedule?.id === schedule.id ? "#ea4335" : "#e0e0e0"}`,
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
+                      <span style={{ fontSize: "13px", fontWeight: 600, color: "#202124" }}>{schedule.position}</span>
+                      <span style={{ fontSize: "10px", color: "#5f6368" }}>{formatTime(schedule.scheduledAt)}</span>
+                    </div>
+                    <div style={{ fontSize: "11px", color: "#5f6368" }}>{schedule.applicantName}</div>
+                    <div style={{ fontSize: "11px", color: "#5f6368", marginTop: "4px" }}>{formatDate(schedule.scheduledAt)} • {schedule.location}</div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Selected Event Detail */}
+      {/* Selected Event Detail Modal */}
       {selectedSchedule && (
-        <div style={{ maxWidth: "1600px", margin: "24px auto", padding: "0 32px" }}>
+        <div style={{ maxWidth: "800px", margin: "24px auto", padding: "0 32px" }}>
           <div style={{ background: "#ffffff", borderRadius: "8px", boxShadow: "0 1px 2px rgba(0,0,0,0.1)", border: "1px solid #e0e0e0", overflow: "hidden" }}>
             <div style={{ padding: "16px 20px", borderBottom: "1px solid #e0e0e0", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f8f9fa" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -454,45 +510,6 @@ export default function SchedulePage() {
           </div>
         </div>
       )}
-
-      {/* Quick Stats */}
-      <div style={{ maxWidth: "1600px", margin: "0 auto", padding: "24px 32px 60px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "20px" }}>
-          <div style={{ background: "#ffffff", borderRadius: "8px", padding: "20px", boxShadow: "0 1px 2px rgba(0,0,0,0.1)", border: "1px solid #e0e0e0" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <div style={{ width: "48px", height: "48px", background: "#e8f0fe", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Briefcase className="w-6 h-6" style={{ color: "#4285f4" }} />
-              </div>
-              <div>
-                <p style={{ fontSize: "28px", fontWeight: 600, color: "#202124", margin: 0 }}>{totalSchedules}</p>
-                <p style={{ fontSize: "13px", color: "#5f6368", margin: 0 }}>Lowongan Terjadwal</p>
-              </div>
-            </div>
-          </div>
-          <div style={{ background: "#ffffff", borderRadius: "8px", padding: "20px", boxShadow: "0 1px 2px rgba(0,0,0,0.1)", border: "1px solid #e0e0e0" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <div style={{ width: "48px", height: "48px", background: "#fce8f3", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Users className="w-6 h-6" style={{ color: "#ea4335" }} />
-              </div>
-              <div>
-                <p style={{ fontSize: "28px", fontWeight: 600, color: "#202124", margin: 0 }}>{totalApplicants}</p>
-                <p style={{ fontSize: "13px", color: "#5f6368", margin: 0 }}>Total Pelamar</p>
-              </div>
-            </div>
-          </div>
-          <div style={{ background: "#ffffff", borderRadius: "8px", padding: "20px", boxShadow: "0 1px 2px rgba(0,0,0,0.1)", border: "1px solid #e0e0e0" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <div style={{ width: "48px", height: "48px", background: "#fef7e0", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Calendar className="w-6 h-6" style={{ color: "#fbbc04" }} />
-              </div>
-              <div>
-                <p style={{ fontSize: "28px", fontWeight: 600, color: "#202124", margin: 0 }}>{schedules.filter(s => s.type === "TEST").length}</p>
-                <p style={{ fontSize: "13px", color: "#5f6368", margin: 0 }}>Jadwal Tes</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Toast */}
       {toast && (
