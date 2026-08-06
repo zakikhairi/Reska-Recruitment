@@ -25,7 +25,7 @@ export async function GET() {
     });
 
     // Count by status
-    const statusCounts = allApplications.reduce((acc, app) => {
+    const statusCounts = allApplications.reduce((acc: Record<string, number>, app: typeof allApplications[number]) => {
       acc[app.status] = (acc[app.status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
@@ -102,21 +102,22 @@ export async function GET() {
       _count: { jobPostingId: true }
     });
 
-    const jobPostings = await prisma.jobPosting.findMany({
-      where: { id: { in: divisionStats.map(d => d.jobPostingId) } },
+    type JobPostingSimple = { id: string; title: string; division: string };
+    const jobPostings: JobPostingSimple[] = await prisma.jobPosting.findMany({
+      where: { id: { in: divisionStats.map((d: typeof divisionStats[number]) => d.jobPostingId) } },
       select: { id: true, title: true, division: true }
     });
 
-    const divisionMap = new Map(jobPostings.map(j => [j.id, j]));
+    const divisionMap = new Map<string, JobPostingSimple>(jobPostings.map((j) => [j.id, j]));
 
     const divStats = await Promise.all(
-      divisionStats.map(async (d) => {
+      divisionStats.map(async (d: typeof divisionStats[number]) => {
         const job = divisionMap.get(d.jobPostingId);
         const apps = await prisma.application.findMany({
           where: { jobPostingId: d.jobPostingId },
           include: { testSession: true }
         });
-        const passed = apps.filter(a => a.testSession?.passed).length;
+        const passed = apps.filter((a: typeof apps[number]) => a.testSession?.passed).length;
         const rate = apps.length > 0 ? Math.round((passed / apps.length) * 100) : 0;
         return {
           division: job?.title || "Unknown",
@@ -150,7 +151,7 @@ export async function GET() {
       }
     });
 
-    const candidates = topCandidates.map(session => ({
+    const candidates = topCandidates.map((session: typeof topCandidates[number]) => ({
       name: session.application.applicant.fullName,
       position: session.application.jobPosting.title,
       score: session.totalScore || 0,
@@ -158,7 +159,7 @@ export async function GET() {
     }));
 
     // ===== STATUS DISTRIBUTION =====
-    const statusDistribution = Object.entries(statusCounts).map(([status, count]) => ({
+    const statusDistribution = Object.entries(statusCounts as Record<string, number>).map(([status, count]) => ({
       name: status.replace("_", " "),
       count,
       color: getStatusColor(status)
@@ -187,7 +188,7 @@ export async function GET() {
       }
     }
 
-    const testTypeStats = Object.entries(categoryCount).map(([name, participants], i) => ({
+    const testTypeStats = Object.entries(categoryCount).map(([name, participants]: [string, number], i: number) => ({
       name,
       participants,
       avgScore: 65 + (i * 3), // Placeholder - would need actual calculation
