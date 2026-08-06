@@ -8,7 +8,7 @@ const prisma = new PrismaClient({ adapter });
 
 async function main() {
   await prisma.admin.deleteMany({});
-  await prisma.user.deleteMany({ where: { role: { in: ['HR_ADMIN', 'SUPER_ADMIN'] } });
+  await prisma.user.deleteMany({ where: { role: { in: ['HR_ADMIN', 'SUPER_ADMIN'] } } });
   console.log('Deleted old admins');
 
   // Create admin user

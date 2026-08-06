@@ -67,7 +67,7 @@ export async function GET(
           university: application.applicant.university,
           height: application.applicant.height,
           weight: application.applicant.weight,
-          documents: application.applicant.documents.map(doc => ({
+          documents: application.applicant.documents.map((doc: typeof application.applicant.documents[number]) => ({
             id: doc.id,
             type: doc.type,
             fileName: doc.fileName,

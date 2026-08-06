@@ -118,7 +118,7 @@ export async function GET(
     }
 
     // Remove correct answers from questions for client
-    const safeQuestions = questions.map(q => ({
+    const safeQuestions = questions.map((q: typeof questions[number]) => ({
       id: q.id,
       category: q.category,
       stem: q.stem,

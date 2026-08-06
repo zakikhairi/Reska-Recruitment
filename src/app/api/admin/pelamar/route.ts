@@ -36,7 +36,7 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      applicants: applicants.map((app) => ({
+      applicants: applicants.map((app: typeof applicants[number]) => ({
         id: app.id,
         userId: app.userId,
         fullName: app.fullName,
@@ -45,7 +45,7 @@ export async function GET() {
         phone: app.phone,
         education: app.education,
         createdAt: app.user?.createdAt || app.createdAt,
-        applications: app.applications.map((a) => ({
+        applications: app.applications.map((a: typeof app.applications[number]) => ({
           id: a.id,
           status: a.status,
           jobTitle: a.jobPosting.title,

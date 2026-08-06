@@ -28,7 +28,7 @@ export async function GET() {
     });
 
     // Transform data
-    const applicants = users.map((user) => {
+    const applicants = users.map((user: typeof users[number]) => {
       const applications = user.applicant?.applications || [];
       const app = applications[0];
       return {

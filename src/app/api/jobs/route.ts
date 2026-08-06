@@ -20,7 +20,7 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      jobs: jobs.map(job => ({
+      jobs: jobs.map((job: typeof jobs[number]) => ({
         id: job.id,
         title: job.title,
         division: job.division,
