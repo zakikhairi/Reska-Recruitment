@@ -271,11 +271,11 @@ export default function SchedulePage() {
         </div>
       </header>
 
-      {/* Split Layout: Left = Calendar, Right = Schedule List */}
+      {/* Split Layout: Left = Calendar (Square), Right = Schedule List */}
       <div style={{ display: "flex", minHeight: "calc(100vh - 100px)" }}>
 
-        {/* LEFT SIDE: Calendar */}
-        <div style={{ flex: "1", borderRight: "1px solid #e0e0e0", background: "#ffffff", padding: "20px" }}>
+        {/* LEFT SIDE: Calendar (Square) */}
+        <div style={{ width: "400px", background: "#ffffff", padding: "20px", borderRight: "1px solid #e0e0e0" }}>
 
           {/* Calendar Header */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
@@ -306,8 +306,8 @@ export default function SchedulePage() {
             ))}
           </div>
 
-          {/* Calendar Grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)" }}>
+          {/* Calendar Grid - Square cells */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", width: "360px", aspectRatio: "1/1" }}>
             {getMonthDays().map((dayInfo, index) => {
               const events = getEventsForDay(dayInfo.date);
               const todayClass = isToday(dayInfo.date);
@@ -316,40 +316,41 @@ export default function SchedulePage() {
                   key={index}
                   onClick={() => events.length > 0 && setSelectedSchedule(events[0])}
                   style={{
-                    minHeight: "60px",
+                    aspectRatio: "1/1",
                     borderRight: "1px solid #e0e0e0",
                     borderBottom: "1px solid #e0e0e0",
                     background: dayInfo.isCurrentMonth ? "#ffffff" : "#f8f9fa",
-                    padding: "4px",
+                    padding: "2px",
                     cursor: events.length > 0 ? "pointer" : "default",
+                    overflow: "hidden",
                   }}
                 >
                   <div style={{
-                    width: "26px",
-                    height: "26px",
+                    width: "20px",
+                    height: "20px",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     borderRadius: "50%",
-                    fontSize: "12px",
+                    fontSize: "10px",
                     fontWeight: todayClass ? 600 : 400,
                     color: todayClass ? "#ffffff" : dayInfo.isCurrentMonth ? "#3c4043" : "#9aa0a6",
                     background: todayClass ? "#4285f4" : "transparent",
-                    marginBottom: "2px",
+                    marginBottom: "1px",
                   }}>
                     {dayInfo.date.getDate()}
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                    {events.slice(0, 2).map((event) => (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
+                    {events.slice(0, 1).map((event) => (
                       <div
                         key={event.id}
                         onClick={(e) => { e.stopPropagation(); setSelectedSchedule(event); }}
                         style={{
-                          padding: "2px 4px",
+                          padding: "1px 3px",
                           background: event.type === "TEST" ? "#e8f0fe" : "#fce8f3",
-                          borderLeft: `3px solid ${event.type === "TEST" ? "#4285f4" : "#ea4335"}`,
-                          borderRadius: "4px",
-                          fontSize: "10px",
+                          borderLeft: `2px solid ${event.type === "TEST" ? "#4285f4" : "#ea4335"}`,
+                          borderRadius: "3px",
+                          fontSize: "8px",
                           fontWeight: 500,
                           color: event.type === "TEST" ? "#1967d2" : "#c5221f",
                           overflow: "hidden",
@@ -358,12 +359,12 @@ export default function SchedulePage() {
                           cursor: "pointer",
                         }}
                       >
-                        {event.type === "TEST" ? "TES" : "INT"} {event.position.substring(0, 12)}
+                        {event.type === "TEST" ? "TES" : "INT"}
                       </div>
                     ))}
-                    {events.length > 2 && (
-                      <div style={{ fontSize: "9px", color: "#5f6368", padding: "0 4px" }}>
-                        +{events.length - 2}
+                    {events.length > 1 && (
+                      <div style={{ fontSize: "7px", color: "#5f6368", padding: "0 2px" }}>
+                        +{events.length - 1}
                       </div>
                     )}
                   </div>
@@ -374,7 +375,7 @@ export default function SchedulePage() {
         </div>
 
         {/* RIGHT SIDE: Schedule List */}
-        <div style={{ width: "480px", background: "#f8f9fa", padding: "20px", overflowY: "auto" }}>
+        <div style={{ flex: 1, background: "#f8f9fa", padding: "20px", overflowY: "auto" }}>
           <h3 style={{ fontSize: "16px", fontWeight: 600, color: "#202124", marginBottom: "16px" }}>Jadwal Tes & Interview</h3>
 
           {/* Test Schedules */}
