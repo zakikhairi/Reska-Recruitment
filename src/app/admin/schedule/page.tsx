@@ -647,7 +647,6 @@ export default function SchedulePage() {
           </div>
         )}
       </div>
-    </div>
 
       {/* Add Schedule Modal */}
       {showAddModal && (
