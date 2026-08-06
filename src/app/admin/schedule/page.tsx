@@ -685,6 +685,20 @@ export default function SchedulePage() {
               />
             </div>
 
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
+                Pesan untuk Pelamar
+              </label>
+              <textarea
+                value={scheduleForm.message}
+                onChange={(e) => setScheduleForm({ ...scheduleForm, message: e.target.value })}
+                placeholder="Contoh: Pastikan datang tepat waktu 15 menit sebelumnya..."
+                rows={3}
+                style={{ width: "100%", padding: "10px 12px", border: "2px solid #e5e5e5", borderRadius: "8px", fontSize: "14px", outline: "none", resize: "vertical", fontFamily: "inherit" }}
+              />
+              <p style={{ fontSize: "11px", color: "#888", marginTop: "4px" }}>Pesan ini akan ditampilkan ke pelamar</p>
+            </div>
+
             <div style={{ display: "flex", gap: "12px" }}>
               <button
                 onClick={() => { setShowAddModal(false); setSelectedJobId(""); setScheduleForm({ scheduledDate: "", scheduledTime: "", endTime: "", location: "Online System", message: "", interviewer: "", interviewType: "ONLINE" }); }}
