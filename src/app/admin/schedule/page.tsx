@@ -274,8 +274,8 @@ export default function SchedulePage() {
       {/* Split Layout: Left = Calendar (Square), Right = Schedule List */}
       <div style={{ display: "flex", minHeight: "calc(100vh - 100px)" }}>
 
-        {/* LEFT SIDE: Calendar (Square) */}
-        <div style={{ width: "400px", background: "#ffffff", padding: "20px", borderRight: "1px solid #e0e0e0" }}>
+        {/* LEFT SIDE: Calendar (Square 50%) */}
+        <div style={{ width: "50%", background: "#ffffff", padding: "20px", borderRight: "1px solid #e0e0e0" }}>
 
           {/* Calendar Header */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
@@ -307,7 +307,7 @@ export default function SchedulePage() {
           </div>
 
           {/* Calendar Grid - Square cells */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", width: "360px", aspectRatio: "1/1" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", width: "100%", aspectRatio: "1" }}>
             {getMonthDays().map((dayInfo, index) => {
               const events = getEventsForDay(dayInfo.date);
               const todayClass = isToday(dayInfo.date);
@@ -374,8 +374,8 @@ export default function SchedulePage() {
           </div>
         </div>
 
-        {/* RIGHT SIDE: Schedule List */}
-        <div style={{ flex: 1, background: "#f8f9fa", padding: "20px", overflowY: "auto" }}>
+        {/* RIGHT SIDE: Schedule List (50%) */}
+        <div style={{ width: "50%", background: "#f8f9fa", padding: "20px", overflowY: "auto" }}>
           <h3 style={{ fontSize: "16px", fontWeight: 600, color: "#202124", marginBottom: "16px" }}>Jadwal Tes & Interview</h3>
 
           {/* Test Schedules */}
