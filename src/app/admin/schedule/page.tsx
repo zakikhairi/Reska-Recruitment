@@ -316,7 +316,7 @@ export default function SchedulePage() {
                   key={index}
                   onClick={() => events.length > 0 && setSelectedSchedule(events[0])}
                   style={{
-                    minHeight: "90px",
+                    minHeight: "60px",
                     borderRight: "1px solid #e0e0e0",
                     borderBottom: "1px solid #e0e0e0",
                     background: dayInfo.isCurrentMonth ? "#ffffff" : "#f8f9fa",
