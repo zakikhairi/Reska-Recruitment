@@ -71,12 +71,29 @@ export default function ApplicantsPage() {
   const [divisionFilter, setDivisionFilter] = useState("all");
   const [educationFilter, setEducationFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   const [applicants, setApplicants] = useState<ApplicantData[]>([]);
 
   useEffect(() => {
     loadApplicants();
   }, []);
+
+  // Close export menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.export-menu')) {
+        setShowExportMenu(false);
+      }
+    };
+    if (showExportMenu) {
+      document.addEventListener("click", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("click", handleClickOutside);
+    };
+  }, [showExportMenu]);
 
   const loadApplicants = async () => {
     setIsLoading(true);
@@ -91,6 +108,130 @@ export default function ApplicantsPage() {
       console.error("Error loading applicants:", err);
     }
     setIsLoading(false);
+  };
+
+  // Export applicants to CSV
+  const exportToCSV = () => {
+    if (filteredApplicants.length === 0) {
+      alert("Tidak ada data untuk di-export");
+      return;
+    }
+
+    // Create CSV header
+    const headers = [
+      "No",
+      "Nama Lengkap",
+      "Email",
+      "NIK",
+      "No. Telepon",
+      "Pendidikan",
+      "Lowongan",
+      "Divisi",
+      "Status",
+      "Tanggal Daftar"
+    ];
+
+    // Create CSV rows
+    const rows = filteredApplicants.map((app, index) => {
+      const latestApp = app.applications[0];
+      const status = latestApp ? getStatusConfig(latestApp.status).label : "Belum Lamar";
+      const divisionLabel = latestApp?.division?.replace(/_/g, " ") || "-";
+
+      return [
+        index + 1,
+        app.fullName,
+        app.email,
+        app.nik,
+        app.phone,
+        app.education,
+        latestApp?.jobTitle || "-",
+        divisionLabel,
+        status,
+        new Date(app.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })
+      ];
+    });
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
+    ].join("\n");
+
+    // Create download link
+    const blob = new Blob(["﻿" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Data_Pelamar_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    alert(`Berhasil export ${filteredApplicants.length} data pelamar ke CSV!`);
+  };
+
+  // Export to Excel format (same as CSV but with .xlsx extension)
+  const exportToExcel = () => {
+    if (filteredApplicants.length === 0) {
+      alert("Tidak ada data untuk di-export");
+      return;
+    }
+
+    // Create CSV content
+    const headers = [
+      "No",
+      "Nama Lengkap",
+      "Email",
+      "NIK",
+      "No. Telepon",
+      "Pendidikan",
+      "Lowongan",
+      "Divisi",
+      "Status",
+      "Tanggal Daftar"
+    ];
+
+    const rows = filteredApplicants.map((app, index) => {
+      const latestApp = app.applications[0];
+      const status = latestApp ? getStatusConfig(latestApp.status).label : "Belum Lamar";
+      const divisionLabel = latestApp?.division?.replace(/_/g, " ") || "-";
+
+      return [
+        index + 1,
+        app.fullName,
+        app.email,
+        app.nik,
+        app.phone,
+        app.education,
+        latestApp?.jobTitle || "-",
+        divisionLabel,
+        status,
+        new Date(app.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })
+      ];
+    });
+
+    // Create worksheet data
+    const wsData = [headers, ...rows];
+
+    // Build xlsx file manually (simple format)
+    // Using CSV with BOM for Excel compatibility
+    const csvContent = [
+      headers.join(";"),
+      ...rows.map(row => row.map(cell => String(cell).replace(/;/g, ",")).join(";"))
+    ].join("\n");
+
+    const blob = new Blob(["﻿" + csvContent], { type: "application/vnd.ms-excel;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Data_Pelamar_${new Date().toISOString().split("T")[0]}.xls`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    alert(`Berhasil export ${filteredApplicants.length} data pelamar ke Excel!`);
   };
 
   const filteredApplicants = applicants.filter((app) => {
@@ -124,10 +265,91 @@ export default function ApplicantsPage() {
               <RefreshCw className="w-4 h-4 mr-2" />
               Refresh
             </Button>
-            <Button variant="outline" size="sm">
-              <Download className="w-4 h-4 mr-2" />
-              Export Data
-            </Button>
+            {/* Export Dropdown */}
+            <div className="export-menu" style={{ position: "relative" }}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowExportMenu(!showExportMenu);
+                }}
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Export Data
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginLeft: "4px" }}>
+                  <path d="M6 9l6 6 6-6"/>
+                </svg>
+              </Button>
+              {showExportMenu && (
+                <div style={{
+                  position: "absolute",
+                  top: "calc(100% + 8px)",
+                  right: 0,
+                  background: "#ffffff",
+                  borderRadius: "12px",
+                  boxShadow: "0 10px 40px rgba(0,0,0,0.15)",
+                  border: "1px solid #eeeeee",
+                  zIndex: 1000,
+                  minWidth: "200px",
+                  overflow: "hidden",
+                  animation: "slideDown 0.15s ease-out"
+                }}>
+                  <button
+                    onClick={() => {
+                      setShowExportMenu(false);
+                      exportToCSV();
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "12px 16px",
+                      border: "none",
+                      background: "transparent",
+                      fontSize: "14px",
+                      fontWeight: 500,
+                      color: "#111111",
+                      cursor: "pointer",
+                      textAlign: "left",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                      transition: "background 0.15s"
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = "#f8f9fa"}
+                    onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                  >
+                    <FileText className="w-4 h-4" style={{ color: "#16a34a" }} />
+                    Export CSV
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowExportMenu(false);
+                      exportToExcel();
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "12px 16px",
+                      border: "none",
+                      background: "transparent",
+                      fontSize: "14px",
+                      fontWeight: 500,
+                      color: "#111111",
+                      cursor: "pointer",
+                      textAlign: "left",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                      transition: "background 0.15s"
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = "#f8f9fa"}
+                    onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                  >
+                    <FileText className="w-4 h-4" style={{ color: "#16a34a" }} />
+                    Export Excel (.xls)
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -318,6 +540,16 @@ export default function ApplicantsPage() {
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
+        }
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-8px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
       `}</style>
     </div>
