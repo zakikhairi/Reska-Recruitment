@@ -338,11 +338,11 @@ export default function SchedulePage() {
         </div>
       </header>
 
-      {/* Split Layout: Left = Calendar (Square), Right = Schedule List */}
+      {/* Split Layout: Calendar | List | Detail */}
       <div style={{ display: "flex", minHeight: "calc(100vh - 100px)" }}>
 
-        {/* LEFT SIDE: Calendar (Square 50%) */}
-        <div style={{ width: "50%", background: "#ffffff", padding: "20px", borderRight: "1px solid #e0e0e0" }}>
+        {/* LEFT: Calendar (40%) */}
+        <div style={{ width: "40%", background: "#ffffff", padding: "20px", borderRight: "1px solid #e0e0e0" }}>
 
           {/* Calendar Header */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
@@ -441,8 +441,8 @@ export default function SchedulePage() {
           </div>
         </div>
 
-        {/* RIGHT SIDE: Schedule List (50%) */}
-        <div style={{ width: "50%", background: "#f8f9fa", padding: "20px", overflowY: "auto" }}>
+        {/* MIDDLE: Schedule List (30%) */}
+        <div style={{ width: "30%", background: "#f8f9fa", padding: "20px", overflowY: "auto", borderRight: "1px solid #e0e0e0" }}>
           <h3 style={{ fontSize: "16px", fontWeight: 600, color: "#202124", marginBottom: "16px" }}>Jadwal Tes & Interview</h3>
 
           {/* Test Schedules */}
@@ -578,6 +578,76 @@ export default function SchedulePage() {
           </div>
         </div>
       )}
+
+      {/* RIGHT SIDE: Detail Panel */}
+      <div style={{ width: "30%", background: "#ffffff", padding: "20px", overflowY: "auto" }}>
+        {selectedSchedule ? (
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+              <h3 style={{ fontSize: "16px", fontWeight: 600, color: "#202124" }}>Detail Jadwal</h3>
+              <button onClick={() => setSelectedSchedule(null)} style={{ padding: "6px", background: "#f1f5f9", border: "none", borderRadius: "6px", cursor: "pointer" }}>
+                <X className="w-4 h-4" style={{ color: "#666" }} />
+              </button>
+            </div>
+            <div style={{ padding: "16px", background: selectedSchedule.type === "TEST" ? "#e8f0fe" : "#fce8f3", borderRadius: "12px", marginBottom: "16px" }}>
+              <span style={{ padding: "4px 8px", background: selectedSchedule.type === "TEST" ? "#4285f4" : "#ea4335", color: "#fff", borderRadius: "4px", fontSize: "11px", fontWeight: 600 }}>
+                {selectedSchedule.type === "TEST" ? "TES" : "INTERVIEW"}
+              </span>
+              <h4 style={{ fontSize: "16px", fontWeight: 600, color: "#202124", marginTop: "12px", marginBottom: "4px" }}>{selectedSchedule.position}</h4>
+              <p style={{ fontSize: "13px", color: "#5f6368", margin: 0 }}>{selectedSchedule.applicantName}</p>
+            </div>
+            <div style={{ display: "grid", gap: "12px", marginBottom: "20px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <Clock className="w-4 h-4" style={{ color: "#666" }} />
+                <div>
+                  <p style={{ fontSize: "11px", color: "#888", margin: 0 }}>Tanggal & Waktu</p>
+                  <p style={{ fontSize: "13px", fontWeight: 500, color: "#333", margin: 0 }}>{formatDate(selectedSchedule.scheduledAt)}, {formatTime(selectedSchedule.scheduledAt)}</p>
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <MapPin className="w-4 h-4" style={{ color: "#666" }} />
+                <div>
+                  <p style={{ fontSize: "11px", color: "#888", margin: 0 }}>Lokasi</p>
+                  <p style={{ fontSize: "13px", fontWeight: 500, color: "#333", margin: 0 }}>{selectedSchedule.location}</p>
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <Briefcase className="w-4 h-4" style={{ color: "#666" }} />
+                <div>
+                  <p style={{ fontSize: "11px", color: "#888", margin: 0 }}>Divisi</p>
+                  <p style={{ fontSize: "13px", fontWeight: 500, color: "#333", margin: 0 }}>{divisionLabels[selectedSchedule.division] || selectedSchedule.division}</p>
+                </div>
+              </div>
+              {selectedSchedule.interviewer && (
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <User className="w-4 h-4" style={{ color: "#666" }} />
+                  <div>
+                    <p style={{ fontSize: "11px", color: "#888", margin: 0 }}>Interviewer</p>
+                    <p style={{ fontSize: "13px", fontWeight: 500, color: "#333", margin: 0 }}>{selectedSchedule.interviewer}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <button style={{ padding: "10px 16px", background: "#fff", border: "1px solid #e0e0e0", borderRadius: "8px", fontSize: "13px", fontWeight: 500, color: "#333", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                <Calendar className="w-4 h-4" /> Ubah Jadwal
+              </button>
+              <button style={{ padding: "10px 16px", background: "#fff", border: "1px solid #e0e0e0", borderRadius: "8px", fontSize: "13px", fontWeight: 500, color: "#333", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                <FileText className="w-4 h-4" /> Lihat Pelamar
+              </button>
+              <button style={{ padding: "10px 16px", background: "#fee2e2", border: "1px solid #fecaca", borderRadius: "8px", fontSize: "13px", fontWeight: 500, color: "#dc2626", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                <Trash2 className="w-4 h-4" /> Hapus Jadwal
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ textAlign: "center", paddingTop: "100px", color: "#ccc" }}>
+            <Calendar className="w-12 h-12" style={{ marginBottom: "12px", color: "#ccc" }} />
+            <p style={{ fontSize: "13px", color: "#999" }}>Pilih jadwal untuk melihat detail</p>
+          </div>
+        )}
+      </div>
+    </div>
 
       {/* Add Schedule Modal */}
       {showAddModal && (
