@@ -178,6 +178,63 @@ export default function SchedulePage() {
     setCurrentDate(new Date());
   };
 
+  const handleAddSchedule = async () => {
+    if (!selectedJobId || !scheduleForm.scheduledDate || !scheduleForm.scheduledTime) {
+      setToast({ message: "Mohon isi semua field yang wajib", type: "error" });
+      setTimeout(() => setToast(null), 3000);
+      return;
+    }
+
+    if (scheduleType === "INTERVIEW" && !scheduleForm.interviewer) {
+      setToast({ message: "Nama interviewer wajib diisi", type: "error" });
+      setTimeout(() => setToast(null), 3000);
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const scheduledAt = `${scheduleForm.scheduledDate}T${scheduleForm.scheduledTime}:00`;
+      const endTime = scheduleForm.endTime ? `${scheduleForm.scheduledDate}T${scheduleForm.endTime}:00` : null;
+      const apiEndpoint = scheduleType === "TEST" ? "/api/admin/test-schedule" : "/api/admin/interview-schedule";
+
+      const response = await fetch(apiEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jobPostingId: selectedJobId,
+          scheduledAt,
+          endTime,
+          location: scheduleForm.location,
+          message: scheduleForm.message,
+          ...(scheduleType === "INTERVIEW" && {
+            interviewer: scheduleForm.interviewer,
+            interviewType: scheduleForm.interviewType,
+          }),
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setToast({ message: result.message, type: "success" });
+        setShowAddModal(false);
+        setSelectedJobId("");
+        setScheduleType("TEST");
+        setScheduleForm({ scheduledDate: "", scheduledTime: "", endTime: "", location: "Online System", message: "", interviewer: "", interviewType: "ONLINE" });
+        fetchSchedules();
+        setTimeout(() => setToast(null), 3000);
+      } else {
+        setToast({ message: result.error || "Gagal membuat jadwal", type: "error" });
+        setTimeout(() => setToast(null), 3000);
+      }
+    } catch (err) {
+      setToast({ message: "Terjadi kesalahan saat menyimpan", type: "error" });
+      setTimeout(() => setToast(null), 3000);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const formatTime = (dateStr: string) => {
     return new Date(dateStr).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
   };
@@ -261,10 +318,10 @@ export default function SchedulePage() {
             <p style={{ fontSize: "15px", color: "#666666" }}>{totalSchedules} jadwal • {totalApplicants} pelamar</p>
           </div>
           <div style={{ display: "flex", gap: "12px" }}>
-            <button onClick={() => setScheduleType("TEST")} style={{ padding: "12px 20px", background: "#2563eb", color: "#ffffff", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
+            <button onClick={() => { setScheduleType("TEST"); setShowAddModal(true); }} style={{ padding: "12px 20px", background: "#2563eb", color: "#ffffff", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
               <FileText className="w-4 h-4" /> Jadwalkan Tes
             </button>
-            <button onClick={() => setScheduleType("INTERVIEW")} style={{ padding: "12px 20px", background: "#be185d", color: "#ffffff", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
+            <button onClick={() => { setScheduleType("INTERVIEW"); setShowAddModal(true); }} style={{ padding: "12px 20px", background: "#be185d", color: "#ffffff", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
               <User className="w-4 h-4" /> Jadwalkan Interview
             </button>
           </div>
@@ -507,6 +564,141 @@ export default function SchedulePage() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Schedule Modal */}
+      {showAddModal && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0,0,0,0.6)",
+          backdropFilter: "blur(4px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
+          padding: "20px",
+        }}>
+          <div style={{
+            background: "#ffffff",
+            borderRadius: "16px",
+            padding: "24px",
+            width: "100%",
+            maxWidth: "480px",
+            boxShadow: "0 25px 80px rgba(0,0,0,0.25)",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
+              <div style={{ width: "40px", height: "40px", background: scheduleType === "TEST" ? "#2563eb" : "#be185d", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {scheduleType === "TEST" ? <FileText className="w-5 h-5" style={{ color: "#fff" }} /> : <User className="w-5 h-5" style={{ color: "#fff" }} />}
+              </div>
+              <h2 style={{ fontSize: "18px", fontWeight: 700, color: "#111" }}>
+                {scheduleType === "TEST" ? "Jadwalkan Tes" : "Jadwalkan Interview"}
+              </h2>
+            </div>
+
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
+                Lowongan <span style={{ color: "#FF5E00" }}>*</span>
+              </label>
+              <select
+                value={selectedJobId}
+                onChange={(e) => setSelectedJobId(e.target.value)}
+                style={{ width: "100%", padding: "10px 12px", border: "2px solid #e5e5e5", borderRadius: "8px", fontSize: "14px", outline: "none", background: "#fff" }}
+              >
+                <option value="">Pilih Lowongan</option>
+                {jobs.map((job) => (
+                  <option key={job.id} value={job.id}>{job.title} - {divisionLabels[job.division] || job.division}</option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
+                Tanggal <span style={{ color: "#FF5E00" }}>*</span>
+              </label>
+              <input
+                type="date"
+                value={scheduleForm.scheduledDate}
+                onChange={(e) => setScheduleForm({ ...scheduleForm, scheduledDate: e.target.value })}
+                style={{ width: "100%", padding: "10px 12px", border: "2px solid #e5e5e5", borderRadius: "8px", fontSize: "14px", outline: "none" }}
+              />
+            </div>
+
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
+                Waktu <span style={{ color: "#FF5E00" }}>*</span>
+              </label>
+              <input
+                type="time"
+                value={scheduleForm.scheduledTime}
+                onChange={(e) => setScheduleForm({ ...scheduleForm, scheduledTime: e.target.value })}
+                style={{ width: "100%", padding: "10px 12px", border: "2px solid #e5e5e5", borderRadius: "8px", fontSize: "14px", outline: "none" }}
+              />
+            </div>
+
+            {scheduleType === "INTERVIEW" && (
+              <>
+                <div style={{ marginBottom: "16px" }}>
+                  <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
+                    Nama Interviewer <span style={{ color: "#FF5E00" }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={scheduleForm.interviewer}
+                    onChange={(e) => setScheduleForm({ ...scheduleForm, interviewer: e.target.value })}
+                    placeholder="Contoh: Bpk. John Doe"
+                    style={{ width: "100%", padding: "10px 12px", border: "2px solid #e5e5e5", borderRadius: "8px", fontSize: "14px", outline: "none" }}
+                  />
+                </div>
+                <div style={{ marginBottom: "16px" }}>
+                  <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
+                    Tipe Interview
+                  </label>
+                  <select
+                    value={scheduleForm.interviewType}
+                    onChange={(e) => setScheduleForm({ ...scheduleForm, interviewType: e.target.value })}
+                    style={{ width: "100%", padding: "10px 12px", border: "2px solid #e5e5e5", borderRadius: "8px", fontSize: "14px", outline: "none", background: "#fff" }}
+                  >
+                    <option value="ONLINE">Online / Video Call</option>
+                    <option value="OFFLINE">Offline / Tatap Muka</option>
+                  </select>
+                </div>
+              </>
+            )}
+
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
+                Lokasi
+              </label>
+              <input
+                type="text"
+                value={scheduleForm.location}
+                onChange={(e) => setScheduleForm({ ...scheduleForm, location: e.target.value })}
+                placeholder="Online System"
+                style={{ width: "100%", padding: "10px 12px", border: "2px solid #e5e5e5", borderRadius: "8px", fontSize: "14px", outline: "none" }}
+              />
+            </div>
+
+            <div style={{ display: "flex", gap: "12px" }}>
+              <button
+                onClick={() => { setShowAddModal(false); setSelectedJobId(""); setScheduleForm({ scheduledDate: "", scheduledTime: "", endTime: "", location: "Online System", message: "", interviewer: "", interviewType: "ONLINE" }); }}
+                style={{ flex: 1, padding: "12px 20px", background: "#fff", color: "#666", border: "2px solid #e5e5e5", borderRadius: "8px", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleAddSchedule}
+                disabled={saving}
+                style={{ flex: 1, padding: "12px 20px", background: scheduleType === "TEST" ? "#2563eb" : "#be185d", color: "#fff", border: "none", borderRadius: "8px", fontSize: "14px", fontWeight: 600, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.6 : 1 }}
+              >
+                {saving ? "Menyimpan..." : "Simpan"}
+              </button>
             </div>
           </div>
         </div>
