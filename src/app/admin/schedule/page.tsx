@@ -11,12 +11,14 @@ import {
   XCircle,
   ChevronDown,
   ChevronRight,
+  ChevronLeft,
   AlertCircle,
   Trash2,
   Users,
   Briefcase,
   Plus,
   Info,
+  X,
 } from "lucide-react";
 import { useJobsStore, Job } from "@/stores/jobs";
 
