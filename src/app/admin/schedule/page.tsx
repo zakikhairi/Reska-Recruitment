@@ -420,7 +420,7 @@ export default function SchedulePage() {
           </div>
 
           {/* Calendar Grid - Fill full height */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", width: "100%", flex: 1 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", width: "100%", flex: 1, aspectRatio: "auto" }}>
             {getMonthDays().map((dayInfo, index) => {
               const events = getEventsForDay(dayInfo.date);
               const todayClass = isToday(dayInfo.date);
@@ -432,54 +432,54 @@ export default function SchedulePage() {
                     borderRight: "1px solid #e0e0e0",
                     borderBottom: "1px solid #e0e0e0",
                     background: dayInfo.isCurrentMonth ? "#ffffff" : "#f8f9fa",
-                    padding: "4px",
+                    padding: "6px",
                     cursor: events.length > 0 ? "pointer" : "default",
                     overflow: "hidden",
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "flex-start",
+                    minHeight: "80px",
                   }}
                 >
                   <div style={{
-                    width: "26px",
-                    height: "26px",
+                    width: "32px",
+                    height: "32px",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     borderRadius: "50%",
-                    fontSize: "12px",
+                    fontSize: "14px",
                     fontWeight: todayClass ? 600 : 400,
                     color: todayClass ? "#ffffff" : dayInfo.isCurrentMonth ? "#3c4043" : "#9aa0a6",
                     background: todayClass ? "#4285f4" : "transparent",
                   }}>
                     {dayInfo.date.getDate()}
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "1px", marginTop: "2px", width: "100%" }}>
-                    {events.slice(0, 1).map((event) => (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "2px", marginTop: "4px", width: "100%" }}>
+                    {events.slice(0, 2).map((event) => (
                       <div
                         key={event.id}
                         onClick={(e) => { e.stopPropagation(); setSelectedSchedule(event); }}
                         style={{
-                          padding: "1px 2px",
+                          padding: "2px 4px",
                           background: event.type === "TEST" ? "#e8f0fe" : "#fce8f3",
-                          borderLeft: `2px solid ${event.type === "TEST" ? "#4285f4" : "#ea4335"}`,
-                          borderRadius: "2px",
-                          fontSize: "9px",
+                          borderLeft: `3px solid ${event.type === "TEST" ? "#4285f4" : "#ea4335"}`,
+                          borderRadius: "3px",
+                          fontSize: "10px",
                           fontWeight: 500,
                           color: event.type === "TEST" ? "#1967d2" : "#c5221f",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
                           cursor: "pointer",
-                          textAlign: "center",
                         }}
                       >
-                        {event.type === "TEST" ? "TES" : "INT"}
+                        {event.type === "TEST" ? "TES" : "INT"} - {event.applicantName?.split(" ")[0]}
                       </div>
                     ))}
-                    {events.length > 1 && (
-                      <div style={{ fontSize: "9px", color: "#5f6368", textAlign: "center" }}>
-                        +{events.length - 1}
+                    {events.length > 2 && (
+                      <div style={{ fontSize: "10px", color: "#5f6368" }}>
+                        +{events.length - 2} more
                       </div>
                     )}
                   </div>
@@ -491,59 +491,115 @@ export default function SchedulePage() {
 
         {/* RIGHT: Jadwal per Lowongan + Detail Panel overlay */}
         <div style={{ width: "40%", background: "#f8f9fa", position: "relative", overflow: "hidden" }}>
+          {/* Tab Filter */}
+          <div style={{ background: "#ffffff", borderBottom: "1px solid #e0e0e0", padding: "12px 20px", display: "flex", gap: "8px" }}>
+            <button
+              onClick={() => setActiveTab("ALL")}
+              style={{
+                padding: "8px 16px",
+                borderRadius: "8px",
+                fontSize: "13px",
+                fontWeight: 500,
+                cursor: "pointer",
+                background: activeTab === "ALL" ? "#00205B" : "#f1f5f9",
+                color: activeTab === "ALL" ? "#ffffff" : "#64748b",
+                border: "none",
+              }}
+            >
+              Semua ({groupedByJob.length})
+            </button>
+            <button
+              onClick={() => setActiveTab("TEST")}
+              style={{
+                padding: "8px 16px",
+                borderRadius: "8px",
+                fontSize: "13px",
+                fontWeight: 500,
+                cursor: "pointer",
+                background: activeTab === "TEST" ? "#4285f4" : "#f1f5f9",
+                color: activeTab === "TEST" ? "#ffffff" : "#64748b",
+                border: "none",
+              }}
+            >
+              Tes ({groupedByJob.filter(j => j.type === "TEST").length})
+            </button>
+            <button
+              onClick={() => setActiveTab("INTERVIEW")}
+              style={{
+                padding: "8px 16px",
+                borderRadius: "8px",
+                fontSize: "13px",
+                fontWeight: 500,
+                cursor: "pointer",
+                background: activeTab === "INTERVIEW" ? "#ea4335" : "#f1f5f9",
+                color: activeTab === "INTERVIEW" ? "#ffffff" : "#64748b",
+                border: "none",
+              }}
+            >
+              Interview ({groupedByJob.filter(j => j.type === "INTERVIEW").length})
+            </button>
+          </div>
+
+          {/* Filtered jadwal */}
+          {(() => {
+            const filtered = activeTab === "ALL" ? groupedByJob : groupedByJob.filter(j => j.type === activeTab);
+            return (
+          <>
           {/* Jadwal per Lowongan List */}
-          <div style={{ width: "100%", height: "100%", background: "#f8f9fa", overflowY: "auto", padding: "16px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-              <h3 style={{ fontSize: "14px", fontWeight: 600, color: "#202124", margin: 0 }}>Jadwal per Lowongan</h3>
-              <span style={{ fontSize: "11px", color: "#5f6368", background: "#ffffff", padding: "3px 10px", borderRadius: "10px" }}>
-                {groupedByJob.length} jadwal
+          <div style={{ width: "100%", height: "100%", background: "#f8f9fa", overflowY: "auto", padding: "20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <h3 style={{ fontSize: "16px", fontWeight: 600, color: "#202124", margin: 0 }}>Jadwal per Lowongan</h3>
+              <span style={{ fontSize: "12px", color: "#5f6368", background: "#ffffff", padding: "4px 12px", borderRadius: "12px" }}>
+                {filtered.length} jadwal
               </span>
             </div>
 
-            {groupedByJob.length === 0 ? (
-              <div style={{ padding: "20px", textAlign: "center", background: "#ffffff", borderRadius: "8px", border: "1px solid #e0e0e0" }}>
-                <Briefcase className="w-8 h-8" style={{ margin: "0 auto 8px", color: "#ccc" }} />
-                <p style={{ fontSize: "12px", color: "#9aa0a6", margin: 0 }}>Belum ada jadwal</p>
+            {filtered.length === 0 ? (
+              <div style={{ padding: "30px", textAlign: "center", background: "#ffffff", borderRadius: "10px", border: "1px solid #e0e0e0" }}>
+                <Briefcase className="w-10 h-10" style={{ margin: "0 auto 10px", color: "#ccc" }} />
+                <p style={{ fontSize: "14px", color: "#9aa0a6", margin: 0 }}>
+                  {activeTab === "ALL" ? "Belum ada jadwal" : activeTab === "TEST" ? "Belum ada jadwal tes" : "Belum ada jadwal interview"}
+                </p>
               </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                {groupedByJob.map((job) => {
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {filtered.map((job) => {
                   const isExpanded = expandedJobs.has(job.jobKey);
                   return (
-                    <div key={job.jobKey} style={{ background: "#ffffff", borderRadius: "8px", border: `1px solid ${selectedJob === job.jobKey ? (job.type === "TEST" ? "#4285f4" : "#ea4335") : "#e0e0e0"}`, overflow: "hidden" }}>
+                    <div key={job.jobKey} style={{ background: "#ffffff", borderRadius: "12px", border: `1px solid ${selectedJob === job.jobKey ? (job.type === "TEST" ? "#4285f4" : "#ea4335") : "#e0e0e0"}`, overflow: "hidden" }}>
                       <div
                         onClick={() => { toggleJobExpand(job.jobKey); setSelectedJob(job.jobKey); }}
                         style={{
-                          padding: "10px 12px",
+                          padding: "14px 16px",
                           cursor: "pointer",
                           background: selectedJob === job.jobKey ? (job.type === "TEST" ? "#e8f0fe" : "#fce8f3") : "#ffffff",
                         }}
                       >
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                            <span style={{ padding: "2px 6px", background: job.type === "TEST" ? "#4285f4" : "#ea4335", color: "#fff", borderRadius: "3px", fontSize: "9px", fontWeight: 600 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                            <span style={{ padding: "4px 10px", background: job.type === "TEST" ? "#4285f4" : "#ea4335", color: "#fff", borderRadius: "6px", fontSize: "11px", fontWeight: 600 }}>
                               {job.type === "TEST" ? "TES" : "INT"}
                             </span>
                             <div>
-                              <p style={{ fontSize: "12px", fontWeight: 600, color: "#202124", margin: 0 }}>{job.position}</p>
-                              <p style={{ fontSize: "10px", color: "#5f6368", margin: "2px 0 0 0" }}>
+                              <p style={{ fontSize: "14px", fontWeight: 600, color: "#202124", margin: 0 }}>{job.position}</p>
+                              <p style={{ fontSize: "12px", color: "#5f6368", margin: "4px 0 0 0" }}>
                                 {divisionLabels[job.division] || job.division} • {job.totalApplicants} pelamar
                               </p>
                             </div>
                           </div>
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                             <div style={{ textAlign: "right" }}>
-                              <p style={{ fontSize: "10px", color: "#5f6368", margin: 0 }}>{formatDate(job.scheduledAt)}</p>
-                              <p style={{ fontSize: "10px", color: "#5f6368", margin: "2px 0 0 0" }}>{formatTime(job.scheduledAt)}</p>
+                              <p style={{ fontSize: "12px", color: "#5f6368", margin: 0 }}>{formatDate(job.scheduledAt)}</p>
+                              <p style={{ fontSize: "12px", color: "#5f6368", margin: "4px 0 0 0" }}>{formatTime(job.scheduledAt)}</p>
                             </div>
-                            <ChevronDown className="w-3 h-3" style={{ color: "#5f6368", transform: isExpanded ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s" }} />
+                            <ChevronDown className="w-5 h-5" style={{ color: "#5f6368", transform: isExpanded ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s" }} />
                           </div>
                         </div>
                       </div>
 
                       {isExpanded && (
-                        <div style={{ borderTop: "1px solid #e0e0e0", background: "#fafafa", padding: "8px 12px" }}>
-                          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                        <div style={{ borderTop: "1px solid #e0e0e0", background: "#fafafa", padding: "12px 16px" }}>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                             {job.schedules.map((schedule) => {
                               const statusStyle = statusConfig[schedule.status] || { bg: "#f1f5f9", text: "#64748b", label: schedule.status };
                               return (
@@ -551,18 +607,18 @@ export default function SchedulePage() {
                                   key={schedule.id}
                                   onClick={(e) => { e.stopPropagation(); setSelectedSchedule(schedule); }}
                                   style={{
-                                    padding: "6px 10px",
+                                    padding: "10px 14px",
                                     background: "#ffffff",
                                     border: "1px solid #e0e0e0",
-                                    borderRadius: "4px",
+                                    borderRadius: "8px",
                                     cursor: "pointer",
                                   }}
                                   onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#4285f4"; }}
                                   onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#e0e0e0"; }}
                                 >
                                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                    <span style={{ fontSize: "11px", fontWeight: 500, color: "#202124" }}>{schedule.applicantName}</span>
-                                    <span style={{ padding: "1px 5px", background: statusStyle.bg, color: statusStyle.text, borderRadius: "6px", fontSize: "8px", fontWeight: 600 }}>
+                                    <span style={{ fontSize: "13px", fontWeight: 500, color: "#202124" }}>{schedule.applicantName}</span>
+                                    <span style={{ padding: "3px 8px", background: statusStyle.bg, color: statusStyle.text, borderRadius: "8px", fontSize: "10px", fontWeight: 600 }}>
                                       {statusStyle.label}
                                     </span>
                                   </div>
@@ -578,7 +634,9 @@ export default function SchedulePage() {
               </div>
             )}
           </div>
-
+          </>
+            );
+          })()}
           {/* Detail Panel - Slide from right */}
           <div style={{
             position: "absolute",
