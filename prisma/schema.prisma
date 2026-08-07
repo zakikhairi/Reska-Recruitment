@@ -298,3 +298,36 @@ model ApplicantAnswer {
   pointsEarned   Int         @default(0)
   answeredAt     DateTime?
 }
+
+// ============================================
+// CONTACT MESSAGES (Chat System)
+// ============================================
+
+model ContactConversation {
+  id           String    @id @default(cuid())
+  applicantId  String?   // Nullable for non-logged in users
+  applicantEmail String
+  applicantName String
+  status       String    @default("ACTIVE") // ACTIVE, CLOSED
+  lastMessageAt DateTime @default(now())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  messages     ContactMessage[]
+}
+
+model ContactMessage {
+  id              String    @id @default(cuid())
+  conversationId  String
+  conversation    ContactConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  senderType      String    // APPLICANT, HR_ADMIN
+  senderName      String
+  senderEmail     String
+
+  message         String
+  isRead          Boolean   @default(false)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
