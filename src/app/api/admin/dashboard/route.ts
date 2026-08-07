@@ -79,7 +79,7 @@ export async function GET() {
       _count: { status: true },
     });
 
-    const statusDistribution = statusCounts.map((s) => ({
+    const statusDistribution = statusCounts.map((s: typeof statusCounts[number]) => ({
       name: s.status.replace("_", " "),
       value: s._count.status,
     }));
@@ -91,20 +91,24 @@ export async function GET() {
     });
 
     // Get job titles for divisions
-    const jobPostings = await prisma.jobPosting.findMany({
-      where: { id: { in: divisionCounts.map((d) => d.jobPostingId) } },
+    type JobPostingSimple = { id: string; title: string; division: string };
+    const jobPostings: JobPostingSimple[] = await prisma.jobPosting.findMany({
+      where: { id: { in: divisionCounts.map((d: typeof divisionCounts[number]) => d.jobPostingId) } },
       select: { id: true, title: true, division: true },
     });
 
-    const divisionMap = new Map(jobPostings.map((j) => [j.id, j]));
+    const divisionMap = new Map<string, JobPostingSimple>(jobPostings.map((j) => [j.id, j]));
 
     const topDivisions = divisionCounts
-      .map((d) => ({
-        name: divisionMap.get(d.jobPostingId)?.title || "Unknown",
-        division: divisionMap.get(d.jobPostingId)?.division || "",
-        applicants: d._count.jobPostingId,
-      }))
-      .sort((a, b) => b.applicants - a.applicants)
+      .map((d: typeof divisionCounts[number]) => {
+        const job = divisionMap.get(d.jobPostingId);
+        return {
+          name: job?.title || "Unknown",
+          division: job?.division || "",
+          applicants: d._count.jobPostingId,
+        };
+      })
+      .sort((a: { applicants: number }, b: { applicants: number }) => b.applicants - a.applicants)
       .slice(0, 5);
 
     // Calculate changes (comparing to previous period)

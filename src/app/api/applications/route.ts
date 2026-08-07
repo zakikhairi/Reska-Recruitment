@@ -134,7 +134,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      applications: applications.map(app => ({
+      applications: applications.map((app: typeof applications[number]) => ({
         id: app.id,
         status: app.status,
         jobTitle: app.jobPosting.title,

@@ -52,7 +52,22 @@ export async function POST(
       });
 
       if (application?.testSession) {
-        session = application.testSession;
+        // Fetch with answers included
+        session = await prisma.testSession.findUnique({
+          where: { id: application.testSession.id },
+          include: {
+            application: {
+              include: {
+                jobPosting: {
+                  include: {
+                    testConfig: true,
+                  },
+                },
+              },
+            },
+            answers: true,
+          },
+        });
       }
     }
 

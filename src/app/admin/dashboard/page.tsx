@@ -28,6 +28,7 @@ import {
   UserPlus,
   AlertTriangle,
   CheckCheck,
+  Check,
 } from "lucide-react";
 import { useJobsStore } from "@/stores/jobs";
 
@@ -209,6 +210,9 @@ export default function AdminDashboardPage() {
   const [statsData, setStatsData] = useState<typeof stats>([]);
   const [statusDist, setStatusDist] = useState<typeof statusDistribution>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [successStatus, setSuccessStatus] = useState("");
 
   // Notification state
   const [showNotifications, setShowNotifications] = useState(false);
@@ -500,12 +504,22 @@ export default function AdminDashboardPage() {
 
       if (result.success) {
         loadData(); // Refresh data
-        alert(`Status berhasil diubah ke: ${getStatusConfig(newStatus).label}`);
+        setSuccessStatus(getStatusConfig(newStatus).label);
+        setSuccessMessage(`Status berhasil diubah ke`);
+        setShowSuccessModal(true);
+        // Auto close after 3 seconds
+        setTimeout(() => setShowSuccessModal(false), 3000);
       } else {
-        alert(result.error || "Terjadi kesalahan");
+        setSuccessMessage(result.error || "Terjadi kesalahan");
+        setSuccessStatus("error");
+        setShowSuccessModal(true);
+        setTimeout(() => setShowSuccessModal(false), 3000);
       }
     } catch (err) {
-      alert("Terjadi kesalahan saat mengupdate status");
+      setSuccessMessage("Terjadi kesalahan saat mengupdate status");
+      setSuccessStatus("error");
+      setShowSuccessModal(true);
+      setTimeout(() => setShowSuccessModal(false), 3000);
     }
   };
 
@@ -1137,6 +1151,143 @@ export default function AdminDashboardPage() {
           background: #f8f9fa !important;
         }
       `}</style>
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0,0,0,0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 9999,
+          animation: "fadeIn 0.3s ease-out"
+        }}>
+          <style>{`
+            @keyframes fadeIn {
+              from { opacity: 0; }
+              to { opacity: 1; }
+            }
+            @keyframes slideUp {
+              from { transform: translateY(20px); opacity: 0; }
+              to { transform: translateY(0); opacity: 1; }
+            }
+            @keyframes checkmark {
+              0% { stroke-dashoffset: 100; }
+              100% { stroke-dashoffset: 0; }
+            }
+            @keyframes scaleIn {
+              0% { transform: scale(0.8); opacity: 0; }
+              50% { transform: scale(1.05); }
+              100% { transform: scale(1); opacity: 1; }
+            }
+          `}</style>
+          <div style={{
+            background: "#ffffff",
+            borderRadius: "24px",
+            padding: "48px 40px",
+            width: "100%",
+            maxWidth: "420px",
+            textAlign: "center",
+            boxShadow: "0 25px 80px rgba(0,32,91,0.25)",
+            animation: "slideUp 0.4s ease-out",
+            position: "relative",
+            overflow: "hidden"
+          }}>
+            {/* Background decoration */}
+            <div style={{ position: "absolute", top: "-40px", right: "-40px", width: "120px", height: "120px", background: "linear-gradient(135deg, #16a34120, transparent)", borderRadius: "50%" }} />
+            <div style={{ position: "absolute", bottom: "-30px", left: "-30px", width: "80px", height: "80px", background: "linear-gradient(135deg, #FF5E0015, transparent)", borderRadius: "50%" }} />
+
+            {/* Success Icon */}
+            <div style={{
+              width: "100px",
+              height: "100px",
+              background: successStatus === "error" ? "#fee2e2" : "#dcfce7",
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 24px",
+              animation: "scaleIn 0.5s ease-out"
+            }}>
+              {successStatus === "error" ? (
+                <XCircle className="w-12 h-12" style={{ color: "#dc2626" }} />
+              ) : (
+                <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 6L9 17l-5-5" style={{ strokeDasharray: 100, strokeDashoffset: 0, animation: "checkmark 0.6s ease-out 0.2s forwards" }} />
+                </svg>
+              )}
+            </div>
+
+            {/* Title */}
+            <h2 style={{
+              fontSize: "24px",
+              fontWeight: 800,
+              color: successStatus === "error" ? "#dc2626" : "#00205B",
+              marginBottom: "12px"
+            }}>
+              {successStatus === "error" ? "Terjadi Kesalahan" : "Berhasil!"}
+            </h2>
+
+            {/* Message */}
+            <p style={{
+              fontSize: "16px",
+              color: "#64748b",
+              marginBottom: successStatus === "error" ? "24px" : "8px",
+              lineHeight: 1.6
+            }}>
+              {successMessage}
+            </p>
+
+            {/* Status Badge */}
+            {successStatus !== "error" && (
+              <div style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "8px 20px",
+                background: "#dcfce7",
+                color: "#16a34a",
+                borderRadius: "24px",
+                fontSize: "14px",
+                fontWeight: 700,
+                marginBottom: "24px"
+              }}>
+                <Check className="w-4 h-4" />
+                {successStatus}
+              </div>
+            )}
+
+            {/* Action Button */}
+            <button
+              onClick={() => setShowSuccessModal(false)}
+              style={{
+                width: "100%",
+                padding: "14px 24px",
+                background: successStatus === "error" ? "#dc2626" : "linear-gradient(135deg, #FF5E00, #ff7a2f)",
+                color: "#ffffff",
+                border: "none",
+                borderRadius: "14px",
+                fontSize: "15px",
+                fontWeight: 700,
+                cursor: "pointer",
+                boxShadow: successStatus === "error"
+                  ? "0 4px 14px rgba(220,38,38,0.3)"
+                  : "0 4px 14px rgba(255,94,0,0.3)",
+                transition: "transform 0.2s, box-shadow 0.2s"
+              }}
+              onMouseOver={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; }}
+              onMouseOut={(e) => { e.currentTarget.style.transform = "translateY(0)"; }}
+            >
+              {successStatus === "error" ? "Tutup" : "OK"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -14,13 +14,13 @@ datasource db {
 // ============================================
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
+  id            String   @id @default(cuid())
+  email         String   @unique
   passwordHash  String
-  role          String    @default("APPLICANT") // APPLICANT, HR_ADMIN, SUPER_ADMIN
-  emailVerified Boolean   @default(false)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  role          String   @default("APPLICANT") // APPLICANT, HR_ADMIN, SUPER_ADMIN
+  emailVerified Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   applicant     Applicant?
   admin         Admin?
@@ -28,14 +28,14 @@ model User {
 }
 
 model Admin {
-  id          String    @id @default(cuid())
-  userId      String    @unique
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  fullName    String
-  employeeId  String    @unique
-  department  String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName   String
+  employeeId String   @unique
+  department String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 // ============================================
@@ -57,39 +57,40 @@ model PasswordReset {
 // ============================================
 
 model Applicant {
-  id          String    @id @default(cuid())
-  userId      String    @unique
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  nik         String    @unique
-  fullName    String
-  phone       String
-  dateOfBirth DateTime
+  nik          String   @unique
+  fullName     String
+  phone        String
+  dateOfBirth  DateTime
   placeOfBirth String
-  gender      String    // MALE, FEMALE
-  address     String
-  city        String
-  postalCode  String
-  height      Float?
-  weight      Float?
-  education   String    // SMA, D3, S1, S2
-  university  String?
+  gender       String // MALE, FEMALE
+  address      String
+  city         String
+  postalCode   String
+  height       Float?
+  weight       Float?
+  education    String // SMA, D3, S1, S2
+  university   String?
 
-  photoUrl    String?
-  cvUrl       String?
+  photoUrl String?
+  cvUrl    String?
 
   documents    Document[]
   applications Application[]
+  testSessions TestSession[]
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Document {
   id          String    @id @default(cuid())
   applicantId String
   applicant   Applicant @relation(fields: [applicantId], references: [id], onDelete: Cascade)
-  type        String    // PHOTO, CV, IJAZAH, TRANSCRIPT, CERTIFICATE, OTHER
+  type        String // PHOTO, CV, IJAZAH, TRANSCRIPT, CERTIFICATE, OTHER
   fileName    String
   fileUrl     String
   fileSize    Int
@@ -101,26 +102,26 @@ model Document {
 // ============================================
 
 model JobPosting {
-  id              String    @id @default(cuid())
-  title           String
-  division        String    // ON_TRAIN_SERVICE, RES_CLEAN, RES_PARKING, LOGISTICS, IT_STAFF, ADMIN
-  location        String
-  description     String
-  requirements    String
+  id           String @id @default(cuid())
+  title        String
+  division     String // ON_TRAIN_SERVICE, RES_CLEAN, RES_PARKING, LOGISTICS, IT_STAFF, ADMIN
+  location     String
+  description  String
+  requirements String
 
-  minHeight       Float?
-  minEducation    String    // SMA, D3, S1, S2
-  minAge          Int?
-  maxAge          Int?
+  minHeight    Float?
+  minEducation String // SMA, D3, S1, S2
+  minAge       Int?
+  maxAge       Int?
 
-  status          String    @default("ACTIVE") // DRAFT, ACTIVE, CLOSED, FILLED
-  deadline        DateTime
+  status   String   @default("ACTIVE") // DRAFT, ACTIVE, CLOSED, FILLED
+  deadline DateTime
 
-  applications    Application[]
-  testConfig      TestConfig?
+  applications Application[]
+  testConfig   TestConfig?
 
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // ============================================
@@ -128,36 +129,36 @@ model JobPosting {
 // ============================================
 
 model Application {
-  id              String    @id @default(cuid())
-  applicantId     String
-  applicant       Applicant @relation(fields: [applicantId], references: [id], onDelete: Cascade)
-  jobPostingId    String
-  jobPosting      JobPosting @relation(fields: [jobPostingId], references: [id], onDelete: Cascade)
+  id           String     @id @default(cuid())
+  applicantId  String
+  applicant    Applicant  @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  jobPostingId String
+  jobPosting   JobPosting @relation(fields: [jobPostingId], references: [id], onDelete: Cascade)
 
-  status          String    @default("PENDING") // PENDING, ADMIN_CHECK, TEST_SCHEDULED, IN_TEST, TEST_COMPLETED, INTERVIEW, MCU, OFFERED, ACCEPTED, REJECTED, WITHDRAWN
-  notes           String?
-  reviewedBy      String?
-  reviewedAt      DateTime?
+  status     String    @default("PENDING") // PENDING, ADMIN_CHECK, TEST_SCHEDULED, IN_TEST, TEST_COMPLETED, INTERVIEW, MCU, OFFERED, ACCEPTED, REJECTED, WITHDRAWN
+  notes      String?
+  reviewedBy String?
+  reviewedAt DateTime?
 
-  testSession     TestSession?
-  interview       Interview?
-  mcu             MedicalCheckup?
-  statusHistory   StatusHistory[]
+  testSession   TestSession?
+  interview     Interview?
+  mcu           MedicalCheckup?
+  statusHistory StatusHistory[]
 
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([applicantId, jobPostingId])
 }
 
 model StatusHistory {
-  id            String    @id @default(cuid())
+  id            String      @id @default(cuid())
   applicationId String
   application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   fromStatus    String?
   toStatus      String
   notes         String?
-  createdAt     DateTime  @default(now())
+  createdAt     DateTime    @default(now())
 }
 
 // ============================================
@@ -165,36 +166,36 @@ model StatusHistory {
 // ============================================
 
 model Interview {
-  id            String    @id @default(cuid())
-  applicationId String    @unique
+  id            String      @id @default(cuid())
+  applicationId String      @unique
   application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
   scheduledAt   DateTime
   endTime       DateTime? // Jam selesai interview
   location      String
   interviewer   String
-  type          String    @default("ONLINE") // ONLINE, OFFLINE
+  type          String    @default("ONLINE") // ONLINE, OFFLINE, RECORDING, face_to_face, HYBRID
   notes         String?
   score         Int?
   result        String?   // PASSED, FAILED, RESCHEDULE
   adminMessage  String?   // Pesan dari admin untuk pelamar
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model MedicalCheckup {
-  id            String    @id @default(cuid())
-  applicationId String    @unique
+  id            String      @id @default(cuid())
+  applicationId String      @unique
   application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
-  scheduledAt   DateTime
-  location      String
-  result        String?   // FIT, UNFIT, CONDITIONAL
-  notes         String?
+  scheduledAt DateTime
+  location    String
+  result      String? // FIT, UNFIT, CONDITIONAL
+  notes       String?
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // ============================================
@@ -202,34 +203,34 @@ model MedicalCheckup {
 // ============================================
 
 model TestConfig {
-  id              String    @id @default(cuid())
-  jobPostingId     String    @unique
-  jobPosting       JobPosting @relation(fields: [jobPostingId], references: [id], onDelete: Cascade)
+  id           String     @id @default(cuid())
+  jobPostingId String     @unique
+  jobPosting   JobPosting @relation(fields: [jobPostingId], references: [id], onDelete: Cascade)
 
   // Categories enabled (stored as comma-separated string)
   // AKHLAK, HOSPITALITY, TECHNICAL, FACILITY, APTITUDE
-  categories      String
+  categories String
 
   // JSON stored as text for SQLite
-  categoryWeights String    // {"AKHLAK": 20, "HOSPITALITY": 30, ...}
-  passingGrades   String    // {"AKHLAK": 60, "HOSPITALITY": 70, ...}
+  categoryWeights String // {"AKHLAK": 20, "HOSPITALITY": 30, ...}
+  passingGrades   String // {"AKHLAK": 60, "HOSPITALITY": 70, ...}
 
-  overallPassingGrade Int   @default(65)
+  overallPassingGrade Int @default(65)
 
-  totalDurationMinutes Int  @default(90)
+  totalDurationMinutes   Int  @default(90)
   timePerQuestionSeconds Int? @default(90)
 
-  questionsPerCategory Int  @default(10)
+  questionsPerCategory Int     @default(10)
   shuffleQuestions     Boolean @default(true)
   shuffleAnswers       Boolean @default(true)
 
-  allowTabSwitch      Boolean @default(false)
-  maxTabSwitches      Int     @default(5)
+  allowTabSwitch Boolean @default(false)
+  maxTabSwitches Int     @default(5)
 
-  isActive           Boolean  @default(true)
+  isActive Boolean @default(true)
 
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // ============================================
@@ -237,26 +238,26 @@ model TestConfig {
 // ============================================
 
 model Question {
-  id            String    @id @default(cuid())
-  category      String    // AKHLAK, HOSPITALITY, TECHNICAL, FACILITY, APTITUDE
-  jobDivision   String?   // Specific division or null for all
+  id          String  @id @default(cuid())
+  category    String // AKHLAK, HOSPITALITY, TECHNICAL, FACILITY, APTITUDE
+  jobDivision String? // Specific division or null for all
 
   stem          String
   optionA       String
   optionB       String
   optionC       String
   optionD       String
-  correctAnswer String    // A, B, C, D
+  correctAnswer String // A, B, C, D
 
-  difficulty    String    @default("MEDIUM") // EASY, MEDIUM, HARD
-  points        Int       @default(1)
+  difficulty String @default("MEDIUM") // EASY, MEDIUM, HARD
+  points     Int    @default(1)
 
-  explanation   String?
+  explanation String?
 
-  isActive      Boolean   @default(true)
+  isActive Boolean @default(true)
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // ============================================
@@ -264,9 +265,10 @@ model Question {
 // ============================================
 
 model TestSession {
-  id            String    @id @default(cuid())
-  applicationId String    @unique
+  id            String      @id @default(cuid())
+  applicationId String      @unique
   application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  applicant     Applicant   @relation(fields: [applicationId], references: [id])
 
   status        String    @default("SCHEDULED") // SCHEDULED, NOT_STARTED, IN_PROGRESS, PAUSED, SUBMITTED, SCORED, EXPIRED
 
@@ -275,28 +277,61 @@ model TestSession {
   submittedAt   DateTime?
   adminMessage  String?   // Pesan dari admin untuk pelamar
 
-  questions     String?   // JSON array of selected question IDs (shuffled)
-  tabSwitchCount Int      @default(0)
+  questions      String? // JSON array of selected question IDs (shuffled)
+  tabSwitchCount Int     @default(0)
   tabSwitchLogs  String? // JSON array of timestamps
 
-  rawScores     String?   // JSON: { "category": rawScore }
-  weightedScores String?   // JSON: { "category": weightedScore }
-  totalScore    Int?
-  passed        Boolean?
+  rawScores      String? // JSON: { "category": rawScore }
+  weightedScores String? // JSON: { "category": weightedScore }
+  totalScore     Int?
+  passed         Boolean?
 
-  answers       ApplicantAnswer[]
+  answers ApplicantAnswer[]
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model ApplicantAnswer {
-  id            String    @id @default(cuid())
-  testSessionId String
-  testSession   TestSession @relation(fields: [testSessionId], references: [id], onDelete: Cascade)
-  questionId    String
-  selectedAnswer String?   // A, B, C, D
-  isCorrect     Boolean?
-  pointsEarned  Int       @default(0)
-  answeredAt    DateTime?
+  id             String      @id @default(cuid())
+  testSessionId  String
+  testSession    TestSession @relation(fields: [testSessionId], references: [id], onDelete: Cascade)
+  questionId     String
+  selectedAnswer String? // A, B, C, D
+  isCorrect      Boolean?
+  pointsEarned   Int         @default(0)
+  answeredAt     DateTime?
+}
+
+// ============================================
+// CONTACT MESSAGES (Chat System)
+// ============================================
+
+model ContactConversation {
+  id           String    @id @default(cuid())
+  applicantId  String?   // Nullable for non-logged in users
+  applicantEmail String
+  applicantName String
+  status       String    @default("ACTIVE") // ACTIVE, CLOSED
+  lastMessageAt DateTime @default(now())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  messages     ContactMessage[]
+}
+
+model ContactMessage {
+  id              String    @id @default(cuid())
+  conversationId  String
+  conversation    ContactConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  senderType      String    // APPLICANT, HR_ADMIN
+  senderName      String
+  senderEmail     String
+
+  message         String
+  isRead          Boolean   @default(false)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }

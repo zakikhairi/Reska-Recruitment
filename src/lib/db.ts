@@ -30,6 +30,7 @@ function createPrismaClient() {
 
   console.log("[DB] Using database at:", dbPath);
   const adapter = new PrismaLibSql({ url: `file:${dbPath}` });
+
   return new PrismaClient({ adapter });
 }
 

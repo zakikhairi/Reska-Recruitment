@@ -117,11 +117,15 @@ export async function GET(
       });
       // Sort by the order in session.questions
       const orderMap = new Map(questionIds.map((id: string, idx: number) => [id, idx]));
-      questions.sort((a, b) => (orderMap.get(a.id) || 0) - (orderMap.get(b.id) || 0));
+      questions.sort((a: any, b: any) => {
+        const aIdx = Number(orderMap.get(String(a.id))) || 0;
+        const bIdx = Number(orderMap.get(String(b.id))) || 0;
+        return aIdx - bIdx;
+      });
     }
 
     // Remove correct answers from questions for client
-    const safeQuestions = questions.map(q => ({
+    const safeQuestions = questions.map((q: typeof questions[number]) => ({
       id: q.id,
       category: q.category,
       stem: q.stem,
