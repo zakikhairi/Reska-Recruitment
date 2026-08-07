@@ -13,7 +13,7 @@ function simpleHash(str: string): string {
   return "demo_" + Math.abs(hash).toString(16);
 }
 
-const DEMO_HASH = simpleHash("demo123");
+const DEMO_HASH = simpleHash("admin123");
 
 async function main() {
   console.log("🌱 Starting database seed...\n");
@@ -337,11 +337,11 @@ async function main() {
 
   console.log("\n🎉 Database seed completed!");
   console.log("\n📋 Test Credentials:");
-  console.log("   Admin:      admin@kai.co.id / demo123");
-  console.log("   Admin 2:   wubisonodhanu888@gmail.com / demo123");
-  console.log("   Pelamar 1: applicant@kai.co.id / demo123");
-  console.log("   Pelamar 2: siti@kai.co.id / demo123");
-  console.log("   Pelamar 3: pelamar@test.com / demo123");
+  console.log("   Admin:      admin@kai.co.id / admin123");
+  console.log("   Admin 2:   wubisonodhanu888@gmail.com / admin123");
+  console.log("   Pelamar 1: applicant@kai.co.id / admin123");
+  console.log("   Pelamar 2: siti@kai.co.id / admin123");
+  console.log("   Pelamar 3: pelamar@test.com / admin123");
 }
 
 main().catch(console.error);

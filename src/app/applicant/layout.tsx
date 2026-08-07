@@ -1,6 +1,7 @@
 "use client";
 
 import { Sidebar, CollapsibleSidebar } from "@/components/layout";
+import FloatingChat from "@/components/FloatingChat";
 import { useAuthStore } from "@/stores/auth";
 import { useSidebarStore } from "@/stores/sidebar";
 import { useRouter } from "next/navigation";
@@ -62,6 +63,7 @@ export default function ApplicantLayout({
       >
         <div className="min-h-screen">{children}</div>
       </main>
+      <FloatingChat />
     </div>
   );
 }
