@@ -38,6 +38,17 @@ interface Schedule {
   applicantId?: string;
 }
 
+interface GroupedByJob {
+  jobKey: string;
+  position: string;
+  division: string;
+  type: "TEST" | "INTERVIEW";
+  schedules: Schedule[];
+  scheduledAt: string;
+  location: string;
+  totalApplicants: number;
+}
+
 interface GroupedSchedule {
   position: string;
   division: string;
@@ -76,6 +87,7 @@ const divisionLabels: Record<string, string> = {
 export default function SchedulePage() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [groupedSchedules, setGroupedSchedules] = useState<GroupedSchedule[]>([]);
+  const [groupedByJob, setGroupedByJob] = useState<GroupedByJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedJobs, setExpandedJobs] = useState<Set<string>>(new Set());
   const [selectedJob, setSelectedJob] = useState<string | null>(null);
@@ -279,6 +291,8 @@ export default function SchedulePage() {
         setSchedules(result.schedules);
         const grouped = groupSchedulesByJob(result.schedules);
         setGroupedSchedules(grouped);
+        const byJob = groupSchedulesByJobPosting(result.schedules);
+        setGroupedByJob(byJob);
       }
     } catch (err) {
       console.error("Failed to fetch schedules:", err);
@@ -315,6 +329,38 @@ export default function SchedulePage() {
     return Object.values(groups).sort((a, b) => new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime());
   };
 
+  const groupSchedulesByJobPosting = (schedules: Schedule[]): GroupedByJob[] => {
+    const groups: Record<string, GroupedByJob> = {};
+    schedules.forEach((schedule) => {
+      const key = `${schedule.position}-${schedule.division}-${schedule.type}`;
+      if (!groups[key]) {
+        groups[key] = {
+          jobKey: key,
+          position: schedule.position,
+          division: schedule.division,
+          type: schedule.type,
+          scheduledAt: schedule.scheduledAt,
+          location: schedule.location,
+          schedules: [],
+          totalApplicants: 0,
+        };
+      }
+      groups[key].schedules.push(schedule);
+      groups[key].totalApplicants++;
+    });
+    return Object.values(groups).sort((a, b) => new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime());
+  };
+
+  const toggleJobExpand = (jobKey: string) => {
+    const newExpanded = new Set(expandedJobs);
+    if (newExpanded.has(jobKey)) {
+      newExpanded.delete(jobKey);
+    } else {
+      newExpanded.add(jobKey);
+    }
+    setExpandedJobs(newExpanded);
+  };
+
   const totalSchedules = groupedSchedules.length;
   const totalApplicants = groupedSchedules.reduce((sum, g) => sum + g.totalApplicants, 0);
 
@@ -338,7 +384,7 @@ export default function SchedulePage() {
         </div>
       </header>
 
-      {/* Split Layout: Calendar | List | Detail */}
+      {/* Split Layout: Calendar | Jadwal List + Detail */}
       <div style={{ display: "flex", minHeight: "calc(100vh - 100px)" }}>
 
         {/* LEFT: Calendar (40%) */}
@@ -441,211 +487,203 @@ export default function SchedulePage() {
           </div>
         </div>
 
-        {/* MIDDLE: Schedule List (30%) */}
-        <div style={{ width: "30%", background: "#f8f9fa", padding: "20px", overflowY: "auto", borderRight: "1px solid #e0e0e0" }}>
-          <h3 style={{ fontSize: "16px", fontWeight: 600, color: "#202124", marginBottom: "16px" }}>Jadwal Tes & Interview</h3>
-
-          {/* Test Schedules */}
-          <div style={{ marginBottom: "24px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-              <div style={{ width: "8px", height: "8px", background: "#4285f4", borderRadius: "2px" }} />
-              <span style={{ fontSize: "13px", fontWeight: 600, color: "#202124" }}>Tes</span>
-              <span style={{ fontSize: "11px", color: "#5f6368" }}>({schedules.filter(s => s.type === "TEST").length})</span>
-            </div>
-            {schedules.filter(s => s.type === "TEST").length === 0 ? (
-              <div style={{ padding: "20px", textAlign: "center", background: "#ffffff", borderRadius: "8px", border: "1px solid #e0e0e0" }}>
-                <p style={{ fontSize: "12px", color: "#9aa0a6", margin: 0 }}>Belum ada jadwal tes</p>
-              </div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                {schedules.filter(s => s.type === "TEST").slice(0, 5).map((schedule) => (
-                  <div
-                    key={schedule.id}
-                    onClick={() => setSelectedSchedule(schedule)}
-                    style={{
-                      padding: "12px",
-                      background: selectedSchedule?.id === schedule.id ? "#e8f0fe" : "#ffffff",
-                      border: `1px solid ${selectedSchedule?.id === schedule.id ? "#4285f4" : "#e0e0e0"}`,
-                      borderRadius: "8px",
-                      cursor: "pointer",
-                      transition: "all 0.15s",
-                    }}
-                  >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
-                      <span style={{ fontSize: "13px", fontWeight: 600, color: "#202124" }}>{schedule.position}</span>
-                      <span style={{ fontSize: "10px", color: "#5f6368" }}>{formatTime(schedule.scheduledAt)}</span>
-                    </div>
-                    <div style={{ fontSize: "11px", color: "#5f6368" }}>{schedule.applicantName}</div>
-                    <div style={{ fontSize: "11px", color: "#5f6368", marginTop: "4px" }}>{formatDate(schedule.scheduledAt)} • {schedule.location}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Interview Schedules */}
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-              <div style={{ width: "8px", height: "8px", background: "#ea4335", borderRadius: "2px" }} />
-              <span style={{ fontSize: "13px", fontWeight: 600, color: "#202124" }}>Interview</span>
-              <span style={{ fontSize: "11px", color: "#5f6368" }}>({schedules.filter(s => s.type === "INTERVIEW").length})</span>
-            </div>
-            {schedules.filter(s => s.type === "INTERVIEW").length === 0 ? (
-              <div style={{ padding: "20px", textAlign: "center", background: "#ffffff", borderRadius: "8px", border: "1px solid #e0e0e0" }}>
-                <p style={{ fontSize: "12px", color: "#9aa0a6", margin: 0 }}>Belum ada jadwal interview</p>
-              </div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                {schedules.filter(s => s.type === "INTERVIEW").slice(0, 5).map((schedule) => (
-                  <div
-                    key={schedule.id}
-                    onClick={() => setSelectedSchedule(schedule)}
-                    style={{
-                      padding: "12px",
-                      background: selectedSchedule?.id === schedule.id ? "#fce8f3" : "#ffffff",
-                      border: `1px solid ${selectedSchedule?.id === schedule.id ? "#ea4335" : "#e0e0e0"}`,
-                      borderRadius: "8px",
-                      cursor: "pointer",
-                      transition: "all 0.15s",
-                    }}
-                  >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
-                      <span style={{ fontSize: "13px", fontWeight: 600, color: "#202124" }}>{schedule.position}</span>
-                      <span style={{ fontSize: "10px", color: "#5f6368" }}>{formatTime(schedule.scheduledAt)}</span>
-                    </div>
-                    <div style={{ fontSize: "11px", color: "#5f6368" }}>{schedule.applicantName}</div>
-                    <div style={{ fontSize: "11px", color: "#5f6368", marginTop: "4px" }}>{formatDate(schedule.scheduledAt)} • {schedule.location}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Selected Event Detail Modal */}
-      {selectedSchedule && (
-        <div style={{ maxWidth: "800px", margin: "24px auto", padding: "0 32px" }}>
-          <div style={{ background: "#ffffff", borderRadius: "8px", boxShadow: "0 1px 2px rgba(0,0,0,0.1)", border: "1px solid #e0e0e0", overflow: "hidden" }}>
-            <div style={{ padding: "16px 20px", borderBottom: "1px solid #e0e0e0", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f8f9fa" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                <div style={{ width: "40px", height: "40px", background: selectedSchedule.type === "TEST" ? "#e8f0fe" : "#fce8f3", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  {selectedSchedule.type === "TEST" ? <FileText className="w-5 h-5" style={{ color: "#4285f4" }} /> : <User className="w-5 h-5" style={{ color: "#ea4335" }} />}
-                </div>
-                <div>
-                  <span style={{ padding: "4px 8px", background: selectedSchedule.type === "TEST" ? "#4285f4" : "#ea4335", color: "#ffffff", borderRadius: "4px", fontSize: "11px", fontWeight: 600 }}>
-                    {selectedSchedule.type === "TEST" ? "TES" : "INTERVIEW"}
-                  </span>
-                </div>
-              </div>
-              <button onClick={() => setSelectedSchedule(null)} style={{ padding: "8px", background: "transparent", border: "none", cursor: "pointer", borderRadius: "4px" }}>
-                <X className="w-5 h-5" style={{ color: "#5f6368" }} />
-              </button>
-            </div>
+        {/* RIGHT: Jadwal per Lowongan + Detail Panel overlay (60%) */}
+        <div style={{ width: "60%", background: "#f8f9fa", position: "relative", overflow: "hidden" }}>
+          {/* Jadwal per Lowongan List - Always visible */}
+          <div style={{
+            width: "100%",
+            height: "100%",
+            background: "#f8f9fa",
+            overflowY: "auto",
+          }}>
             <div style={{ padding: "20px" }}>
-              <h3 style={{ fontSize: "18px", fontWeight: 600, color: "#202124", marginBottom: "16px" }}>{selectedSchedule.position}</h3>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "16px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <Clock className="w-5 h-5" style={{ color: "#5f6368" }} />
-                  <div>
-                    <p style={{ fontSize: "12px", color: "#70757a", margin: 0 }}>Waktu</p>
-                    <p style={{ fontSize: "14px", fontWeight: 500, color: "#202124", margin: 0 }}>{formatDate(selectedSchedule.scheduledAt)} • {formatTime(selectedSchedule.scheduledAt)}</p>
-                  </div>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <MapPin className="w-5 h-5" style={{ color: "#5f6368" }} />
-                  <div>
-                    <p style={{ fontSize: "12px", color: "#70757a", margin: 0 }}>Lokasi</p>
-                    <p style={{ fontSize: "14px", fontWeight: 500, color: "#202124", margin: 0 }}>{selectedSchedule.location}</p>
-                  </div>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <User className="w-5 h-5" style={{ color: "#5f6368" }} />
-                  <div>
-                    <p style={{ fontSize: "12px", color: "#70757a", margin: 0 }}>Pelamar</p>
-                    <p style={{ fontSize: "14px", fontWeight: 500, color: "#202124", margin: 0 }}>{selectedSchedule.applicantName}</p>
-                  </div>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <Briefcase className="w-5 h-5" style={{ color: "#5f6368" }} />
-                  <div>
-                    <p style={{ fontSize: "12px", color: "#70757a", margin: 0 }}>Divisi</p>
-                    <p style={{ fontSize: "14px", fontWeight: 500, color: "#202124", margin: 0 }}>{divisionLabels[selectedSchedule.division] || selectedSchedule.division}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+              <h3 style={{ fontSize: "16px", fontWeight: 600, color: "#202124", marginBottom: "16px" }}>Jadwal per Lowongan</h3>
 
-      {/* RIGHT SIDE: Detail Panel */}
-      <div style={{ width: "30%", background: "#ffffff", padding: "20px", overflowY: "auto" }}>
-        {selectedSchedule ? (
-          <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-              <h3 style={{ fontSize: "16px", fontWeight: 600, color: "#202124" }}>Detail Jadwal</h3>
-              <button onClick={() => setSelectedSchedule(null)} style={{ padding: "6px", background: "#f1f5f9", border: "none", borderRadius: "6px", cursor: "pointer" }}>
-                <X className="w-4 h-4" style={{ color: "#666" }} />
-              </button>
-            </div>
-            <div style={{ padding: "16px", background: selectedSchedule.type === "TEST" ? "#e8f0fe" : "#fce8f3", borderRadius: "12px", marginBottom: "16px" }}>
-              <span style={{ padding: "4px 8px", background: selectedSchedule.type === "TEST" ? "#4285f4" : "#ea4335", color: "#fff", borderRadius: "4px", fontSize: "11px", fontWeight: 600 }}>
-                {selectedSchedule.type === "TEST" ? "TES" : "INTERVIEW"}
-              </span>
-              <h4 style={{ fontSize: "16px", fontWeight: 600, color: "#202124", marginTop: "12px", marginBottom: "4px" }}>{selectedSchedule.position}</h4>
-              <p style={{ fontSize: "13px", color: "#5f6368", margin: 0 }}>{selectedSchedule.applicantName}</p>
-            </div>
-            <div style={{ display: "grid", gap: "12px", marginBottom: "20px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <Clock className="w-4 h-4" style={{ color: "#666" }} />
-                <div>
-                  <p style={{ fontSize: "11px", color: "#888", margin: 0 }}>Tanggal & Waktu</p>
-                  <p style={{ fontSize: "13px", fontWeight: 500, color: "#333", margin: 0 }}>{formatDate(selectedSchedule.scheduledAt)}, {formatTime(selectedSchedule.scheduledAt)}</p>
+              {groupedByJob.length === 0 ? (
+                <div style={{ padding: "40px 20px", textAlign: "center", background: "#ffffff", borderRadius: "8px", border: "1px solid #e0e0e0" }}>
+                  <Briefcase className="w-10 h-10" style={{ margin: "0 auto 12px", color: "#ccc" }} />
+                  <p style={{ fontSize: "13px", color: "#9aa0a6", margin: 0 }}>Belum ada jadwal</p>
                 </div>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <MapPin className="w-4 h-4" style={{ color: "#666" }} />
-                <div>
-                  <p style={{ fontSize: "11px", color: "#888", margin: 0 }}>Lokasi</p>
-                  <p style={{ fontSize: "13px", fontWeight: 500, color: "#333", margin: 0 }}>{selectedSchedule.location}</p>
-                </div>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <Briefcase className="w-4 h-4" style={{ color: "#666" }} />
-                <div>
-                  <p style={{ fontSize: "11px", color: "#888", margin: 0 }}>Divisi</p>
-                  <p style={{ fontSize: "13px", fontWeight: 500, color: "#333", margin: 0 }}>{divisionLabels[selectedSchedule.division] || selectedSchedule.division}</p>
-                </div>
-              </div>
-              {selectedSchedule.interviewer && (
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <User className="w-4 h-4" style={{ color: "#666" }} />
-                  <div>
-                    <p style={{ fontSize: "11px", color: "#888", margin: 0 }}>Interviewer</p>
-                    <p style={{ fontSize: "13px", fontWeight: 500, color: "#333", margin: 0 }}>{selectedSchedule.interviewer}</p>
-                  </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  {groupedByJob.map((job) => {
+                    const isExpanded = expandedJobs.has(job.jobKey);
+                    return (
+                      <div key={job.jobKey} style={{ background: "#ffffff", borderRadius: "12px", border: `1px solid ${selectedJob === job.jobKey ? (job.type === "TEST" ? "#4285f4" : "#ea4335") : "#e0e0e0"}`, overflow: "hidden" }}>
+                        {/* Job Header - Click to Expand */}
+                        <div
+                          onClick={() => { toggleJobExpand(job.jobKey); setSelectedJob(job.jobKey); }}
+                          style={{
+                            padding: "14px 16px",
+                            cursor: "pointer",
+                            background: selectedJob === job.jobKey ? (job.type === "TEST" ? "#e8f0fe" : "#fce8f3") : "#ffffff",
+                            transition: "all 0.15s",
+                          }}
+                        >
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+                                <span style={{ padding: "3px 8px", background: job.type === "TEST" ? "#4285f4" : "#ea4335", color: "#fff", borderRadius: "4px", fontSize: "10px", fontWeight: 600 }}>
+                                  {job.type === "TEST" ? "TES" : "INTERVIEW"}
+                                </span>
+                                <span style={{ fontSize: "12px", color: "#5f6368" }}>
+                                  <Users className="w-3 h-3" style={{ display: "inline", marginRight: "4px" }} />
+                                  {job.totalApplicants} pelamar
+                                </span>
+                              </div>
+                              <h4 style={{ fontSize: "14px", fontWeight: 600, color: "#202124", margin: "0 0 4px 0" }}>{job.position}</h4>
+                              <p style={{ fontSize: "11px", color: "#5f6368", margin: 0 }}>
+                                {divisionLabels[job.division] || job.division} • {formatDate(job.scheduledAt)}, {formatTime(job.scheduledAt)}
+                              </p>
+                            </div>
+                            <ChevronDown
+                              className="w-5 h-5"
+                              style={{
+                                color: "#5f6368",
+                                transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                                transition: "transform 0.2s",
+                                flexShrink: 0,
+                                marginLeft: "8px",
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Expanded: Show Applicants */}
+                        {isExpanded && (
+                          <div style={{ borderTop: "1px solid #e0e0e0", background: "#fafafa" }}>
+                            <div style={{ padding: "12px" }}>
+                              <p style={{ fontSize: "11px", fontWeight: 600, color: "#5f6368", marginBottom: "10px", textTransform: "uppercase" }}>Daftar Pelamar</p>
+                              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                                {job.schedules.map((schedule) => {
+                                  const statusStyle = statusConfig[schedule.status] || { bg: "#f1f5f9", text: "#64748b", label: schedule.status };
+                                  return (
+                                    <div
+                                      key={schedule.id}
+                                      onClick={(e) => { e.stopPropagation(); setSelectedSchedule(schedule); }}
+                                      style={{
+                                        padding: "10px 12px",
+                                        background: "#ffffff",
+                                        border: "1px solid #e0e0e0",
+                                        borderRadius: "8px",
+                                        cursor: "pointer",
+                                        transition: "all 0.15s",
+                                      }}
+                                      onMouseEnter={(e) => e.currentTarget.style.borderColor = "#4285f4"}
+                                      onMouseLeave={(e) => e.currentTarget.style.borderColor = "#e0e0e0"}
+                                    >
+                                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                                        <span style={{ fontSize: "13px", fontWeight: 500, color: "#202124" }}>{schedule.applicantName}</span>
+                                        <span style={{ padding: "2px 8px", background: statusStyle.bg, color: statusStyle.text, borderRadius: "10px", fontSize: "10px", fontWeight: 600 }}>
+                                          {statusStyle.label}
+                                        </span>
+                                      </div>
+                                      <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "11px", color: "#5f6368" }}>
+                                        <span style={{ display: "flex", alignItems: "center", gap: "3px" }}>
+                                          <Clock className="w-3 h-3" /> {formatTime(schedule.scheduledAt)}
+                                        </span>
+                                        <span>•</span>
+                                        <span style={{ display: "flex", alignItems: "center", gap: "3px" }}>
+                                          <MapPin className="w-3 h-3" /> {schedule.location}
+                                        </span>
+                                      </div>
+                                      {schedule.interviewer && (
+                                        <div style={{ display: "flex", alignItems: "center", gap: "3px", fontSize: "11px", color: "#5f6368", marginTop: "4px" }}>
+                                          <User className="w-3 h-3" /> Interviewer: {schedule.interviewer}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              <button style={{ padding: "10px 16px", background: "#fff", border: "1px solid #e0e0e0", borderRadius: "8px", fontSize: "13px", fontWeight: 500, color: "#333", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-                <Calendar className="w-4 h-4" /> Ubah Jadwal
-              </button>
-              <button style={{ padding: "10px 16px", background: "#fff", border: "1px solid #e0e0e0", borderRadius: "8px", fontSize: "13px", fontWeight: 500, color: "#333", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-                <FileText className="w-4 h-4" /> Lihat Pelamar
-              </button>
-              <button style={{ padding: "10px 16px", background: "#fee2e2", border: "1px solid #fecaca", borderRadius: "8px", fontSize: "13px", fontWeight: 500, color: "#dc2626", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-                <Trash2 className="w-4 h-4" /> Hapus Jadwal
-              </button>
+          </div>
+
+          {/* Detail Panel - Slides in from right OVER the list */}
+          <div style={{
+            position: "absolute",
+            top: 0,
+            right: selectedSchedule ? "0" : "-50%",
+            width: "50%",
+            height: "100%",
+            background: "#ffffff",
+            overflowY: "auto",
+            transition: "right 0.3s ease-out",
+            boxShadow: "-4px 0 20px rgba(0,0,0,0.15)",
+            zIndex: 20,
+          }}>
+            <div style={{ padding: "20px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                <h3 style={{ fontSize: "16px", fontWeight: 600, color: "#202124" }}>Detail Jadwal</h3>
+                <button onClick={() => setSelectedSchedule(null)} style={{ padding: "6px", background: "#f1f5f9", border: "none", borderRadius: "6px", cursor: "pointer" }}>
+                  <X className="w-4 h-4" style={{ color: "#666" }} />
+                </button>
+              </div>
+              {selectedSchedule && (
+                <>
+                  <div style={{ padding: "16px", background: selectedSchedule.type === "TEST" ? "#e8f0fe" : "#fce8f3", borderRadius: "12px", marginBottom: "16px" }}>
+                    <span style={{ padding: "4px 8px", background: selectedSchedule.type === "TEST" ? "#4285f4" : "#ea4335", color: "#fff", borderRadius: "4px", fontSize: "11px", fontWeight: 600 }}>
+                      {selectedSchedule.type === "TEST" ? "TES" : "INTERVIEW"}
+                    </span>
+                    <h4 style={{ fontSize: "16px", fontWeight: 600, color: "#202124", marginTop: "12px", marginBottom: "4px" }}>{selectedSchedule.position}</h4>
+                    <p style={{ fontSize: "13px", color: "#5f6368", margin: 0 }}>{selectedSchedule.applicantName}</p>
+                  </div>
+                  <div style={{ display: "grid", gap: "12px", marginBottom: "20px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <Clock className="w-4 h-4" style={{ color: "#666" }} />
+                      <div>
+                        <p style={{ fontSize: "11px", color: "#888", margin: 0 }}>Tanggal & Waktu</p>
+                        <p style={{ fontSize: "13px", fontWeight: 500, color: "#333", margin: 0 }}>{formatDate(selectedSchedule.scheduledAt)}, {formatTime(selectedSchedule.scheduledAt)}</p>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <MapPin className="w-4 h-4" style={{ color: "#666" }} />
+                      <div>
+                        <p style={{ fontSize: "11px", color: "#888", margin: 0 }}>Lokasi</p>
+                        <p style={{ fontSize: "13px", fontWeight: 500, color: "#333", margin: 0 }}>{selectedSchedule.location}</p>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <Briefcase className="w-4 h-4" style={{ color: "#666" }} />
+                      <div>
+                        <p style={{ fontSize: "11px", color: "#888", margin: 0 }}>Divisi</p>
+                        <p style={{ fontSize: "13px", fontWeight: 500, color: "#333", margin: 0 }}>{divisionLabels[selectedSchedule.division] || selectedSchedule.division}</p>
+                      </div>
+                    </div>
+                    {selectedSchedule.interviewer && (
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <User className="w-4 h-4" style={{ color: "#666" }} />
+                        <div>
+                          <p style={{ fontSize: "11px", color: "#888", margin: 0 }}>Interviewer</p>
+                          <p style={{ fontSize: "13px", fontWeight: 500, color: "#333", margin: 0 }}>{selectedSchedule.interviewer}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    <button style={{ padding: "10px 16px", background: "#fff", border: "1px solid #e0e0e0", borderRadius: "8px", fontSize: "13px", fontWeight: 500, color: "#333", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                      <Calendar className="w-4 h-4" /> Ubah Jadwal
+                    </button>
+                    <button style={{ padding: "10px 16px", background: "#fff", border: "1px solid #e0e0e0", borderRadius: "8px", fontSize: "13px", fontWeight: 500, color: "#333", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                      <FileText className="w-4 h-4" /> Lihat Pelamar
+                    </button>
+                    <button style={{ padding: "10px 16px", background: "#fee2e2", border: "1px solid #fecaca", borderRadius: "8px", fontSize: "13px", fontWeight: 500, color: "#dc2626", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                      <Trash2 className="w-4 h-4" /> Hapus Jadwal
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
-        ) : (
-          <div style={{ textAlign: "center", paddingTop: "100px", color: "#ccc" }}>
-            <Calendar className="w-12 h-12" style={{ marginBottom: "12px", color: "#ccc" }} />
-            <p style={{ fontSize: "13px", color: "#999" }}>Pilih jadwal untuk melihat detail</p>
-          </div>
-        )}
+        </div>
       </div>
 
       {/* Add Schedule Modal */}
