@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/auth";
+import { AlertCircle, User, FileText, ArrowRight } from "lucide-react";
 
 // Format division name for display
 const formatDivision = (division: string | undefined): string => {
@@ -48,10 +49,63 @@ export default function ApplicantDashboardPage() {
   const [applications, setApplications] = useState<ApplicationData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userName, setUserName] = useState("Pelamar");
+  const [showProfileReminder, setShowProfileReminder] = useState(false);
+  const [profileComplete, setProfileComplete] = useState(false);
 
   useEffect(() => {
     fetchData();
   }, [user]);
+
+  useEffect(() => {
+    // Check if profile is complete on mount
+    const checkAndShowReminder = async () => {
+      if (!user?.id) return;
+
+      // Reset states on mount
+      setShowProfileReminder(false);
+      setProfileComplete(false);
+
+      try {
+        // Fetch profile
+        const profileRes = await fetch(`/api/applicant/profile?userId=${user.id}`);
+        const profileData = await profileRes.json();
+
+        if (!profileData.profile) return;
+
+        const p = profileData.profile;
+        // Check if essential fields are filled
+        const isComplete = !!(p.fullName && p.nik && p.phone && p.address && p.city);
+
+        // If profile is complete, don't show reminder
+        if (isComplete) {
+          setProfileComplete(true);
+          setShowProfileReminder(false);
+          // Clear dismissed flag since profile is now complete
+          localStorage.removeItem(`profile_reminder_dismissed_${user.id}`);
+          return;
+        }
+
+        // Check if user has already dismissed the reminder
+        const dismissedKey = `profile_reminder_dismissed_${user.id}`;
+        if (localStorage.getItem(dismissedKey)) {
+          return;
+        }
+
+        // Check if user has any applications
+        const appRes = await fetch(`/api/apply?userId=${user.id}`);
+        const appData = await appRes.json();
+
+        // Show reminder only if no applications
+        if (!appData.applications || appData.applications.length === 0) {
+          setShowProfileReminder(true);
+        }
+      } catch (err) {
+        console.error("Failed to check profile:", err);
+      }
+    };
+
+    checkAndShowReminder();
+  }, [user?.id]);
 
   const fetchData = async () => {
     if (!user?.id) {
@@ -229,10 +283,158 @@ export default function ApplicantDashboardPage() {
         </div>
       </div>
 
+      {/* Profile Reminder Modal */}
+      {showProfileReminder && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0,0,0,0.6)",
+          backdropFilter: "blur(4px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
+          padding: "20px",
+        }}>
+          <div style={{
+            background: "#ffffff",
+            borderRadius: "20px",
+            padding: "32px",
+            width: "100%",
+            maxWidth: "480px",
+            boxShadow: "0 25px 80px rgba(0,0,0,0.25)",
+            animation: "modalSlideIn 0.3s ease",
+            textAlign: "center",
+          }}>
+            {/* Warning Icon */}
+            <div style={{
+              width: "80px",
+              height: "80px",
+              background: "linear-gradient(135deg, #FF5E00 0%, #e65100 100%)",
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 24px",
+            }}>
+              <AlertCircle className="w-12 h-12" style={{ color: "#ffffff" }} />
+            </div>
+
+            <h2 style={{
+              fontSize: "24px",
+              fontWeight: 800,
+              color: "#111111",
+              marginBottom: "12px"
+            }}>
+              Lengkapi Profil Anda!
+            </h2>
+
+            <p style={{
+              fontSize: "15px",
+              color: "#666666",
+              marginBottom: "24px",
+              lineHeight: 1.6
+            }}>
+              Untuk dapat melamar pekerjaan, silakan lengkapi data profil Anda terlebih dahulu. Data yang diperlukan meliputi Nama Lengkap, NIK, Nomor HP, Alamat, dan Kota.
+            </p>
+
+            {/* Profile Icon */}
+            <div style={{
+              background: "#fff7ed",
+              borderRadius: "12px",
+              padding: "20px",
+              marginBottom: "24px",
+              display: "flex",
+              alignItems: "center",
+              gap: "16px",
+            }}>
+              <div style={{
+                width: "48px",
+                height: "48px",
+                background: "#FF5E00",
+                borderRadius: "12px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}>
+                <User className="w-6 h-6" style={{ color: "#ffffff" }} />
+              </div>
+              <div style={{ textAlign: "left" }}>
+                <p style={{ fontSize: "14px", fontWeight: 600, color: "#111111", margin: 0 }}>Data yang perlu dilengkapi:</p>
+                <p style={{ fontSize: "13px", color: "#888888", margin: "4px 0 0 0" }}>Nama, NIK, No. HP, Alamat, Kota</p>
+              </div>
+            </div>
+
+            {/* Action Button */}
+            <Link href="/applicant/profile" style={{ textDecoration: "none" }}>
+              <button
+                onClick={() => setShowProfileReminder(false)}
+                style={{
+                  width: "100%",
+                  padding: "16px 24px",
+                  background: "linear-gradient(135deg, #FF5E00 0%, #e65100 100%)",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "12px",
+                  fontSize: "15px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  boxShadow: "0 4px 14px rgba(255, 94, 0, 0.4)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "10px",
+                  transition: "all 0.2s",
+                }}
+              >
+                Lengkapi Profil Sekarang
+                <ArrowRight className="w-5 h-5" />
+              </button>
+            </Link>
+
+            {/* Skip Button */}
+            <button
+              onClick={() => {
+                // Save to localStorage so it won't show again for this user
+                localStorage.setItem(`profile_reminder_dismissed_${user?.id}`, "true");
+                setShowProfileReminder(false);
+              }}
+              style={{
+                width: "100%",
+                marginTop: "12px",
+                padding: "12px 24px",
+                background: "transparent",
+                color: "#888888",
+                border: "none",
+                borderRadius: "12px",
+                fontSize: "14px",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Nanti saja
+            </button>
+          </div>
+        </div>
+      )}
+
       <style>{`
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
+        }
+        @keyframes modalSlideIn {
+          from {
+            opacity: 0;
+            transform: translateY(-20px) scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
         }
       `}</style>
     </div>

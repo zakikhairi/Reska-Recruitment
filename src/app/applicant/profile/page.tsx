@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth";
+import { CheckCircle, XCircle } from "lucide-react";
 
 // Strict validation - only allow specific characters per field
 const sanitizeInput = (value: string, fieldName: string): string => {
@@ -23,8 +25,10 @@ const sanitizeInput = (value: string, fieldName: string): string => {
 };
 
 export default function ProfilePage() {
+  const router = useRouter();
   const { user } = useAuthStore();
   const [isEditing, setIsEditing] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [form, setForm] = useState({
     fullName: "",
     nik: "",
@@ -50,8 +54,8 @@ export default function ProfilePage() {
       fetch(`/api/applicant/profile?userId=${user.id}`)
         .then(res => res.json())
         .then(data => {
-          if (data.applicant) {
-            const a = data.applicant;
+          if (data.profile || data.applicant) {
+            const a = data.profile || data.applicant;
             setForm({
               fullName: a.fullName || "",
               nik: a.nik || "",
@@ -86,6 +90,11 @@ export default function ProfilePage() {
       height: sanitizeInput(prev.height, "height"),
     }));
   }, [form.nik, form.phone, form.city, form.postalCode, form.height]);
+
+  const showToast = (message: string, type: "success" | "error") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -141,7 +150,7 @@ export default function ProfilePage() {
 
     // Validate
     if (!validateForm()) {
-      alert("Mohon lengkapi data dengan benar");
+      showToast("Mohon lengkapi data dengan benar", "error");
       return;
     }
 
@@ -158,12 +167,17 @@ export default function ProfilePage() {
       if (response.ok) {
         setIsEditing(false);
         setErrors({});
-        alert("Profil berhasil diperbarui!");
+        showToast("Profil berhasil diperbarui!", "success");
+        // Redirect to dashboard after short delay
+        setTimeout(() => {
+          router.push("/applicant/dashboard");
+        }, 1500);
       } else {
-        alert("Gagal menyimpan profil");
+        const data = await response.json();
+        showToast(data.error || "Gagal menyimpan profil", "error");
       }
     } catch (err) {
-      alert("Terjadi kesalahan koneksi");
+      showToast("Terjadi kesalahan koneksi", "error");
     }
   };
 
@@ -468,6 +482,51 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Toast Notification */}
+      {toast && (
+        <div style={{
+          position: "fixed",
+          top: "24px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          zIndex: 9999,
+          animation: "toastSlideIn 0.3s ease",
+        }}>
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+            padding: "16px 24px",
+            background: toast.type === "success" ? "#10B981" : "#EF4444",
+            color: "#ffffff",
+            borderRadius: "12px",
+            boxShadow: "0 10px 40px rgba(0,0,0,0.2)",
+            fontSize: "14px",
+            fontWeight: 600,
+          }}>
+            {toast.type === "success" ? (
+              <CheckCircle className="w-5 h-5" />
+            ) : (
+              <XCircle className="w-5 h-5" />
+            )}
+            {toast.message}
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes toastSlideIn {
+          from {
+            opacity: 0;
+            transform: translateX(-50%) translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+          }
+        }
+      `}</style>
     </div>
   );
 }

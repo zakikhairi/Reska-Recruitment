@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
-import { calculateTestScore, selectQuestionsForTest } from "@/lib/scoring";
+import { selectQuestionsForTest } from "@/lib/scoring";
 import { TestCategory } from "@/types";
 
 // GET: Get test configuration and questions
@@ -65,8 +65,12 @@ export async function GET(
           },
         });
       } else if (application.jobPosting.testConfig) {
-        // No session yet, return config info only
+        // No session yet, but check if scheduled time exists
         const config = application.jobPosting.testConfig;
+        const scheduledAt = application.testSession?.scheduledAt;
+        const now = new Date();
+        const canStart = !scheduledAt || now >= new Date(scheduledAt);
+
         return NextResponse.json({
           success: true,
           session: null,
@@ -75,6 +79,9 @@ export async function GET(
             totalDurationMinutes: config.totalDurationMinutes,
             categories: config.categories.split(","),
           },
+          questions: [],
+          canStart,
+          scheduledAt,
         });
       } else {
         return NextResponse.json(
@@ -84,13 +91,13 @@ export async function GET(
       }
     }
 
-    // Parse config
     if (!session) {
       return NextResponse.json(
-        { success: false, error: "Session tidak ditemukan" },
-        { status: 400 }
+        { success: false, error: "Sesi test tidak ditemukan" },
+        { status: 404 }
       );
     }
+
     const application = session.application;
     if (!application?.jobPosting.testConfig) {
       return NextResponse.json(
@@ -128,11 +135,67 @@ export async function GET(
       optionD: q.optionD,
     }));
 
+    // Check if test is scheduled and if time has arrived
+    const now = new Date();
+
+    // Check if already submitted or scored
+    if (session.status === "SUBMITTED" || session.status === "SCORED") {
+      return NextResponse.json({
+        success: true,
+        session: {
+          id: session.id,
+          status: session.status,
+          scheduledAt: session.scheduledAt,
+          submittedAt: session.submittedAt,
+          totalScore: session.totalScore,
+          passed: session.passed,
+          startedAt: session.startedAt,
+          tabSwitchCount: session.tabSwitchCount,
+        },
+        jobTitle: application.jobPosting.title,
+        questions: safeQuestions,
+        config: {
+          totalDurationMinutes: config.totalDurationMinutes,
+          categories: config.categories.split(","),
+        },
+        canStart: false, // Already done
+        scheduledAt: session.scheduledAt,
+      });
+    }
+
+    // Check if scheduled time hasn't arrived yet
+    if (session.scheduledAt && now < session.scheduledAt) {
+      const timeUntilStart = session.scheduledAt.getTime() - now.getTime();
+      const minutesUntilStart = Math.ceil(timeUntilStart / (1000 * 60));
+
+      return NextResponse.json({
+        success: true,
+        session: {
+          id: session.id,
+          status: session.status,
+          scheduledAt: session.scheduledAt,
+          startedAt: session.startedAt,
+          tabSwitchCount: session.tabSwitchCount,
+        },
+        jobTitle: application.jobPosting.title,
+        questions: safeQuestions,
+        config: {
+          totalDurationMinutes: config.totalDurationMinutes,
+          categories: config.categories.split(","),
+        },
+        canStart: false, // Time hasn't arrived
+        minutesUntilStart,
+        scheduledAt: session.scheduledAt,
+      });
+    }
+
+    // Allow access - either not scheduled or time has arrived
     return NextResponse.json({
       success: true,
       session: {
         id: session.id,
         status: session.status,
+        scheduledAt: session.scheduledAt,
         startedAt: session.startedAt,
         tabSwitchCount: session.tabSwitchCount,
       },
@@ -142,6 +205,8 @@ export async function GET(
         totalDurationMinutes: config.totalDurationMinutes,
         categories: config.categories.split(","),
       },
+      canStart: true, // Can start now
+      scheduledAt: session.scheduledAt,
     });
   } catch (error) {
     console.error("Error fetching test:", error);
@@ -160,17 +225,40 @@ export async function POST(
   try {
     const { sessionId } = await params;
 
-    // Check if test session already exists (by application ID)
-    const existingSession = await prisma.testSession.findFirst({
+    // Check if test session already exists
+    let existingSession = await prisma.testSession.findFirst({
       where: {
-        application: { id: sessionId },
+        OR: [
+          { id: sessionId },
+          { applicationId: sessionId },
+        ],
+      },
+      include: {
+        application: {
+          include: {
+            jobPosting: {
+              include: {
+                testConfig: true,
+              },
+            },
+          },
+        },
       },
     });
 
     if (existingSession) {
+      // Check if already submitted
       if (existingSession.status === "SUBMITTED" || existingSession.status === "SCORED") {
         return NextResponse.json(
           { success: false, error: "Test sudah selesai" },
+          { status: 400 }
+        );
+      }
+
+      // Check if scheduled time hasn't arrived
+      if (existingSession.scheduledAt && new Date() < existingSession.scheduledAt) {
+        return NextResponse.json(
+          { success: false, error: "Belum waktunya memulai tes" },
           { status: 400 }
         );
       }
@@ -184,7 +272,7 @@ export async function POST(
         },
       });
 
-      const questions = existingSession.questions
+      const questionIds = existingSession.questions
         ? JSON.parse(existingSession.questions)
         : [];
 
@@ -192,7 +280,7 @@ export async function POST(
         success: true,
         sessionId: updatedSession.id,
         status: updatedSession.status,
-        questions,
+        questions: questionIds,
         startedAt: updatedSession.startedAt,
       });
     }
@@ -204,6 +292,7 @@ export async function POST(
         jobPosting: {
           include: {
             testConfig: true,
+            testSessions: true,
           },
         },
       },
@@ -221,6 +310,17 @@ export async function POST(
         { success: false, error: "Test belum dikonfigurasi" },
         { status: 400 }
       );
+    }
+
+    // Check if there's a scheduled time and if it hasn't arrived yet
+    if (application.testSessions.length > 0) {
+      const existingSession = application.testSessions[0];
+      if (existingSession.scheduledAt && new Date() < existingSession.scheduledAt) {
+        return NextResponse.json(
+          { success: false, error: "Belum waktunya memulai tes" },
+          { status: 400 }
+        );
+      }
     }
 
     const config = application.jobPosting.testConfig;

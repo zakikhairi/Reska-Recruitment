@@ -22,6 +22,12 @@ import {
   Plus,
   ChevronRight,
   RefreshCw,
+  X,
+  FileText,
+  Calendar,
+  UserPlus,
+  AlertTriangle,
+  CheckCheck,
   Check,
 } from "lucide-react";
 import { useJobsStore } from "@/stores/jobs";
@@ -83,6 +89,20 @@ const statusLabels: Record<string, string> = {
   ACCEPTED: "Diterima",
   REJECTED: "Ditolak",
 };
+
+// Types for notifications
+interface Notification {
+  id: string;
+  type: "new_applicant" | "status_change" | "test_due" | "deadline" | "system";
+  title: string;
+  message: string;
+  time: string;
+  isRead: boolean;
+  actionUrl?: string;
+  icon: React.ReactNode;
+  iconBg: string;
+  iconColor: string;
+}
 
 function StatusFilterDropdown({ statusFilter, setStatusFilter }: { statusFilter: string; setStatusFilter: (v: string) => void }) {
   const [show, setShow] = useState(false);
@@ -194,6 +214,42 @@ export default function AdminDashboardPage() {
   const [successMessage, setSuccessMessage] = useState("");
   const [successStatus, setSuccessStatus] = useState("");
 
+  // Notification state
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const notificationRef = useRef<HTMLDivElement>(null);
+
+  // Helper to get dismissed IDs directly from localStorage (not from state)
+  const getDismissedIdsFromStorage = (): string[] => {
+    try {
+      const saved = localStorage.getItem('dismissedNotifications');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  };
+
+  // Helper to save dismissed IDs to localStorage
+  const saveDismissedIds = (ids: string[]) => {
+    localStorage.setItem('dismissedNotifications', JSON.stringify(ids));
+  };
+
+  // Close notification when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
+      }
+    };
+    if (showNotifications) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showNotifications]);
+
   // Monthly data state - initialize with proper data
   const [monthlyData, setMonthlyData] = useState<Array<{month: string; pelamar: number; lulus: number}>>([
     { month: "Jan", pelamar: 0, lulus: 0 },
@@ -297,6 +353,136 @@ export default function AdminDashboardPage() {
           pelamar: monthlyApplicants[i],
           lulus: monthlyPassed[i],
         })));
+
+        // Generate notifications from application data
+        const newNotifications: Notification[] = [];
+        const now = new Date();
+
+        // Check for applications needing verification (ADMIN_CHECK status)
+        const pendingVerification = apps.filter((a: any) => a.status === "ADMIN_CHECK");
+        if (pendingVerification.length > 0) {
+          newNotifications.push({
+            id: "pending-verification",
+            type: "new_applicant",
+            title: "Verifikasi Tertunda",
+            message: `${pendingVerification.length} pelamar menunggu verifikasi dokumen`,
+            time: "Baru saja",
+            isRead: false,
+            actionUrl: "/admin/applicants",
+            icon: <AlertCircle className="w-5 h-5" />,
+            iconBg: "#fef3c7",
+            iconColor: "#d97706",
+          });
+        }
+
+        // Check for applications in test (IN_TEST)
+        const inTest = apps.filter((a: any) => a.status === "IN_TEST");
+        if (inTest.length > 0) {
+          newNotifications.push({
+            id: "in-test",
+            type: "test_due",
+            title: "Tes Sedang Berlangsung",
+            message: `${inTest.length} pelamar sedang mengerjakan tes`,
+            time: "Sekarang",
+            isRead: false,
+            actionUrl: "/admin/schedule",
+            icon: <FileText className="w-5 h-5" />,
+            iconBg: "#dbeafe",
+            iconColor: "#2563eb",
+          });
+        }
+
+        // Check for interview scheduled
+        const interviewScheduled = apps.filter((a: any) => a.status === "INTERVIEW");
+        if (interviewScheduled.length > 0) {
+          newNotifications.push({
+            id: "interview-scheduled",
+            type: "status_change",
+            title: "Interview Terjadwal",
+            message: `${interviewScheduled.length} pelamar menunggu interview`,
+            time: "Hari ini",
+            isRead: false,
+            actionUrl: "/admin/schedule",
+            icon: <Calendar className="w-5 h-5" />,
+            iconBg: "#e0e7ff",
+            iconColor: "#4f46e5",
+          });
+        }
+
+        // Check for new applications (most recent - ADMIN_CHECK or PENDING)
+        const newApps = apps
+          .filter((a: any) => ["ADMIN_CHECK", "PENDING"].includes(a.status))
+          .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+          .slice(0, 3);
+
+        newApps.forEach((app: any, index: number) => {
+          const appDate = new Date(app.createdAt);
+          const diffHours = Math.floor((now.getTime() - appDate.getTime()) / (1000 * 60 * 60));
+          const timeAgo = diffHours < 1 ? "Baru saja" : diffHours < 24 ? `${diffHours} jam lalu` : `${Math.floor(diffHours / 24)} hari lalu`;
+
+          newNotifications.push({
+            id: `new-app-${app.id}`,
+            type: "new_applicant",
+            title: "Lamaran Baru",
+            message: `${app.applicantName} melamar ${app.jobTitle}`,
+            time: timeAgo,
+            isRead: false,
+            actionUrl: `/admin/applicants/${app.id}`,
+            icon: <UserPlus className="w-5 h-5" />,
+            iconBg: "#dcfce7",
+            iconColor: "#16a34a",
+          });
+        });
+
+        // Check for jobs with approaching deadline
+        const approachingDeadline = jobs.filter((j: any) => {
+          if (j.status !== "ACTIVE") return false;
+          const deadline = new Date(j.deadline);
+          const daysLeft = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          return daysLeft <= 7 && daysLeft > 0;
+        });
+
+        if (approachingDeadline.length > 0) {
+          approachingDeadline.forEach((job: any) => {
+            const deadline = new Date(job.deadline);
+            const daysLeft = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            newNotifications.push({
+              id: `deadline-${job.id}`,
+              type: "deadline",
+              title: "Deadline Mendekat",
+              message: `Lowongan "${job.title}" deadline dalam ${daysLeft} hari`,
+              time: `${daysLeft} hari lagi`,
+              isRead: false,
+              actionUrl: `/admin/jobs/${job.id}`,
+              icon: <AlertTriangle className="w-5 h-5" />,
+              iconBg: "#fee2e2",
+              iconColor: "#dc2626",
+            });
+          });
+        }
+
+        // Add system notification if no important notifications
+        if (newNotifications.length === 0) {
+          newNotifications.push({
+            id: "system-welcome",
+            type: "system",
+            title: "Selamat Datang",
+            message: "Tidak ada notifikasi penting saat ini",
+            time: "Sekarang",
+            isRead: true,
+            icon: <CheckCheck className="w-5 h-5" />,
+            iconBg: "#f1f5f9",
+            iconColor: "#64748b",
+          });
+        }
+
+        // Remove dismissed notifications from the list (persisted in localStorage)
+        const dismissedIds = getDismissedIdsFromStorage();
+        const filteredNotifications = newNotifications.filter(
+          n => !dismissedIds.includes(n.id)
+        );
+        setNotifications(filteredNotifications);
+        setUnreadCount(filteredNotifications.filter(n => !n.isRead).length);
       }
     } catch (err) {
       console.error("Error loading data:", err);
@@ -335,6 +521,27 @@ export default function AdminDashboardPage() {
       setShowSuccessModal(true);
       setTimeout(() => setShowSuccessModal(false), 3000);
     }
+  };
+
+  // Remove notification from list and save to localStorage
+  const removeNotification = (id: string) => {
+    const currentDismissed = getDismissedIdsFromStorage();
+    const newDismissed = [...currentDismissed, id];
+    saveDismissedIds(newDismissed);
+    setNotifications(prev => prev.filter(n => n.id !== id));
+    setUnreadCount(prev => Math.max(0, prev - 1));
+    setShowNotifications(false);
+  };
+
+  // Clear all notifications
+  const clearAllNotifications = () => {
+    const allIds = notifications.map(n => n.id);
+    const currentDismissed = getDismissedIdsFromStorage();
+    const newDismissed = [...currentDismissed, ...allIds.filter(id => !currentDismissed.includes(id))];
+    saveDismissedIds(newDismissed);
+    setNotifications([]);
+    setUnreadCount(0);
+    setShowNotifications(false);
   };
 
   // Filter and sort applications based on search query
@@ -381,10 +588,212 @@ export default function AdminDashboardPage() {
             >
               <RefreshCw className="w-5 h-5" style={{ color: "#64748b" }} />
             </button>
-            <button style={{ position: "relative", padding: "10px", background: "#f1f5f9", border: "none", borderRadius: "12px", cursor: "pointer" }}>
-              <Bell className="w-5 h-5" style={{ color: "#64748b" }} />
-              <span style={{ position: "absolute", top: "8px", right: "8px", width: "8px", height: "8px", background: "#ef4444", borderRadius: "50%" }} />
-            </button>
+            {/* Notification Bell Button */}
+            <div ref={notificationRef} style={{ position: "relative" }}>
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                style={{
+                  position: "relative",
+                  padding: "10px",
+                  background: showNotifications ? "#fff7f0" : "#f1f5f9",
+                  border: showNotifications ? "2px solid #FF5E00" : "2px solid transparent",
+                  borderRadius: "12px",
+                  cursor: "pointer",
+                  transition: "all 0.2s"
+                }}
+              >
+                <Bell className="w-5 h-5" style={{ color: showNotifications ? "#FF5E00" : "#64748b" }} />
+                {unreadCount > 0 && (
+                  <span style={{
+                    position: "absolute",
+                    top: "6px",
+                    right: "6px",
+                    minWidth: "18px",
+                    height: "18px",
+                    background: "#ef4444",
+                    borderRadius: "9px",
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    color: "#ffffff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "0 4px"
+                  }}>
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Notification Panel */}
+              {showNotifications && (
+                <div style={{
+                  position: "absolute",
+                  top: "calc(100% + 12px)",
+                  right: 0,
+                  width: "380px",
+                  background: "#ffffff",
+                  borderRadius: "16px",
+                  boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
+                  border: "1px solid #eeeeee",
+                  zIndex: 1000,
+                  overflow: "hidden",
+                  animation: "slideDown 0.2s ease-out"
+                }}>
+                  {/* Header */}
+                  <div style={{
+                    padding: "16px 20px",
+                    borderBottom: "1px solid #eeeeee",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    background: "#fafafa"
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "#111111" }}>Notifikasi</h3>
+                      {unreadCount > 0 && (
+                        <span style={{
+                          padding: "2px 8px",
+                          background: "#ef4444",
+                          borderRadius: "10px",
+                          fontSize: "11px",
+                          fontWeight: 700,
+                          color: "#ffffff"
+                        }}>
+                          {unreadCount} baru
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={clearAllNotifications}
+                          style={{
+                            padding: "6px 12px",
+                            background: "transparent",
+                            border: "1px solid #eeeeee",
+                            borderRadius: "8px",
+                            fontSize: "12px",
+                            fontWeight: 600,
+                            color: "#666666",
+                            cursor: "pointer"
+                          }}
+                        >
+                          Hapus semua
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setShowNotifications(false)}
+                        style={{
+                          padding: "6px",
+                          background: "transparent",
+                          border: "none",
+                          borderRadius: "6px",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        <X className="w-4 h-4" style={{ color: "#666666" }} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Notification List */}
+                  <div style={{ maxHeight: "400px", overflowY: "auto" }}>
+                    {notifications.length === 0 ? (
+                      <div style={{ padding: "40px 20px", textAlign: "center" }}>
+                        <Bell className="w-12 h-12" style={{ color: "#cccccc", margin: "0 auto 12px" }} />
+                        <p style={{ color: "#888888", fontSize: "14px", margin: 0 }}>Tidak ada notifikasi</p>
+                      </div>
+                    ) : (
+                      notifications.map((notification) => (
+                        <Link
+                          key={notification.id}
+                          href={notification.actionUrl || "#"}
+                          onClick={() => removeNotification(notification.id)}
+                          style={{
+                            display: "flex",
+                            gap: "14px",
+                            padding: "16px 20px",
+                            borderBottom: "1px solid #f1f5f9",
+                            textDecoration: "none",
+                            background: notification.isRead ? "#ffffff" : "#fafbfc",
+                            transition: "background 0.15s"
+                          }}
+                        >
+                          {/* Icon */}
+                          <div style={{
+                            width: "44px",
+                            height: "44px",
+                            borderRadius: "12px",
+                            background: notification.iconBg,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                            color: notification.iconColor
+                          }}>
+                            {notification.icon}
+                          </div>
+
+                          {/* Content */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "4px" }}>
+                              <p style={{ margin: 0, fontSize: "14px", fontWeight: notification.isRead ? 500 : 700, color: "#111111" }}>
+                                {notification.title}
+                              </p>
+                              {!notification.isRead && (
+                                <span style={{
+                                  width: "8px",
+                                  height: "8px",
+                                  background: "#FF5E00",
+                                  borderRadius: "50%",
+                                  flexShrink: 0,
+                                  marginLeft: "8px",
+                                  marginTop: "4px"
+                                }} />
+                              )}
+                            </div>
+                            <p style={{ margin: 0, fontSize: "13px", color: "#666666", lineHeight: 1.4 }}>
+                              {notification.message}
+                            </p>
+                            <p style={{ margin: "6px 0 0", fontSize: "11px", color: "#999999" }}>
+                              {notification.time}
+                            </p>
+                          </div>
+
+                          {/* Arrow */}
+                          <ChevronRight className="w-4 h-4" style={{ color: "#cccccc", flexShrink: 0, marginTop: "16px" }} />
+                        </Link>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Footer */}
+                  <div style={{
+                    padding: "12px 20px",
+                    borderTop: "1px solid #eeeeee",
+                    background: "#fafafa",
+                    textAlign: "center"
+                  }}>
+                    <Link
+                      href="/admin/applicants"
+                      onClick={() => setShowNotifications(false)}
+                      style={{
+                        fontSize: "13px",
+                        fontWeight: 600,
+                        color: "#FF5E00",
+                        textDecoration: "none"
+                      }}
+                    >
+                      Lihat semua aktivitas →
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
             <Link href="/admin/jobs/create">
               <button style={{ padding: "12px 20px", background: "#FF5E00", color: "#ffffff", border: "none", borderRadius: "12px", fontSize: "14px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", boxShadow: "0 4px 16px rgba(255,94,0,0.3)" }}>
                 <Plus className="w-4 h-4" />
@@ -722,12 +1131,25 @@ export default function AdminDashboardPage() {
       </div>
 
       <style>{`
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
         @media (max-width: 1200px) {
           .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
           .main-grid { grid-template-columns: 1fr !important; }
         }
         button:hover { border-color: #FF5E00 !important; }
         input:focus { border-color: #FF5E00 !important; }
+        .notification-item:hover {
+          background: #f8f9fa !important;
+        }
       `}</style>
 
       {/* Success Modal */}

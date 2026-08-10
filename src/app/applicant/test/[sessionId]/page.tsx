@@ -22,6 +22,32 @@ interface TestData {
   categories: string[];
 }
 
+interface SessionData {
+  id: string;
+  status: string;
+  scheduledAt?: string;
+  startedAt?: string;
+  submittedAt?: string;
+  totalScore?: number;
+  passed?: boolean;
+}
+
+function formatDateTime(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function formatTimeOnly(dateStr: string) {
+  return new Date(dateStr).toLocaleTimeString("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 function formatTime(seconds: number) {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
@@ -52,6 +78,7 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
 
   const [testState, setTestState] = useState<"intro" | "testing" | "submitted" | "loading">("loading");
   const [testData, setTestData] = useState<TestData | null>(null);
+  const [sessionData, setSessionData] = useState<SessionData | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
@@ -59,7 +86,11 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [tabSwitchCount, setTabSwitchCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [canStart, setCanStart] = useState(false);
+  const [countdownToStart, setCountdownToStart] = useState<number | null>(null);
+  const [scheduledTime, setScheduledTime] = useState<string | null>(null);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
+  const countdownToStartRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch test session data
   useEffect(() => {
@@ -72,8 +103,21 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
       const result = await response.json();
 
       if (result.success) {
+        // Check if test can be started
+        if (result.canStart !== undefined) {
+          setCanStart(result.canStart);
+          setScheduledTime(result.scheduledAt || null);
+
+          if (!result.canStart && result.minutesUntilStart !== undefined && result.minutesUntilStart > 0) {
+            // Time hasn't arrived yet - set countdown
+            setCountdownToStart(result.minutesUntilStart * 60);
+            startCountdownToStart(result.minutesUntilStart * 60);
+          }
+        }
+
         if (result.session) {
           // Has existing session - load questions
+          setSessionData(result.session);
           setTestData({
             id: result.session.id,
             jobTitle: result.jobTitle || "Tes Kompetensi",
@@ -104,6 +148,37 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
       setTestState("intro");
     }
   };
+
+  // Countdown to test start time
+  const startCountdownToStart = (seconds: number) => {
+    if (countdownToStartRef.current) {
+      clearInterval(countdownToStartRef.current);
+    }
+
+    countdownToStartRef.current = setInterval(() => {
+      setCountdownToStart((prev) => {
+        if (prev === null || prev <= 1) {
+          if (countdownToStartRef.current) {
+            clearInterval(countdownToStartRef.current);
+          }
+          // Time's up - refresh to check if can start now
+          setCanStart(true);
+          fetchTestSession();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  // Cleanup countdown on unmount
+  useEffect(() => {
+    return () => {
+      if (countdownToStartRef.current) {
+        clearInterval(countdownToStartRef.current);
+      }
+    };
+  }, []);
 
   // Timer countdown
   useEffect(() => {
@@ -294,21 +369,67 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
             )}
           </div>
 
+          {/* Countdown Timer - shown when time hasn't arrived */}
+          {!canStart && countdownToStart !== null && countdownToStart > 0 && (
+            <div style={{ background: "#fffbeb", borderRadius: "14px", padding: "24px", marginBottom: "24px", textAlign: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", marginBottom: "12px" }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M12 6v6l4 2"/>
+                </svg>
+                <p style={{ fontSize: "14px", fontWeight: 600, color: "#92400e", margin: 0 }}>
+                  Tes akan dimulai pada:
+                </p>
+              </div>
+              {scheduledTime && (
+                <>
+                  <p style={{ fontSize: "18px", fontWeight: 700, color: "#111", marginBottom: "4px" }}>
+                    {formatDateTime(scheduledTime)} - {formatTimeOnly(scheduledTime)} WIB
+                  </p>
+                </>
+              )}
+              <div style={{ background: "#fef3c7", borderRadius: "10px", padding: "16px", marginTop: "16px" }}>
+                <p style={{ fontSize: "12px", color: "#92400e", marginBottom: "8px" }}>Waktu tersisa:</p>
+                <p style={{ fontSize: "36px", fontWeight: 800, color: "#d97706", fontFamily: "monospace", margin: 0 }}>
+                  {formatTime(countdownToStart)}
+                </p>
+              </div>
+            </div>
+          )}
+
           <div style={{ background: "#fef3c7", borderRadius: "12px", padding: "16px", marginBottom: "28px" }}>
             <p style={{ fontSize: "13px", color: "#92400e", margin: 0, display: "flex", alignItems: "flex-start", gap: "10px" }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, marginTop: "2px" }}>
                 <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
               </svg>
-              <span>Pastikan koneksi internet stabil.切换 tab atau minimize jendela akan tercatat.</span>
+              <span>Pastikan koneksi internet stabil. Switch tab atau minimize jendela akan tercatat.</span>
             </p>
           </div>
 
           <button
             onClick={handleStart}
-            style={{ width: "100%", height: "56px", background: "linear-gradient(135deg, #FF5E00, #ff7a2f)", color: "#fff", border: "none", borderRadius: "14px", fontSize: "16px", fontWeight: 700, cursor: "pointer" }}
+            disabled={!canStart}
+            style={{
+              width: "100%",
+              height: "56px",
+              background: canStart ? "linear-gradient(135deg, #FF5E00, #ff7a2f)" : "#9ca3af",
+              color: "#fff",
+              border: "none",
+              borderRadius: "14px",
+              fontSize: "16px",
+              fontWeight: 700,
+              cursor: canStart ? "pointer" : "not-allowed",
+              opacity: canStart ? 1 : 0.7,
+            }}
           >
-            Mulai Tes
+            {canStart ? "Mulai Tes" : "Menunggu Waktu Tes..."}
           </button>
+
+          {!canStart && (
+            <p style={{ textAlign: "center", fontSize: "12px", color: "#888", marginTop: "12px" }}>
+              Tombol akan aktif otomatis saat waktu tes tiba
+            </p>
+          )}
         </div>
       </div>
     );
@@ -316,6 +437,9 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
 
   // Submitted Screen
   if (testState === "submitted") {
+    const score = sessionData?.totalScore;
+    const passed = sessionData?.passed;
+
     return (
       <div style={{ fontFamily: "Inter, system-ui, sans-serif", minHeight: "100vh", background: "linear-gradient(135deg, #f8f9fa 0%, #e8f4f8 100%)", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
         {/* Confetti effect */}
