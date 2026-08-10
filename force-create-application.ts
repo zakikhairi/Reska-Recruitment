@@ -60,7 +60,7 @@ async function main() {
     });
     
     // Get first ACTIVE job
-    const job = await prisma.jobPosting.findFirst({ where: { status: "ACTIVE" });
+    const job = await prisma.jobPosting.findFirst({ where: { status: "ACTIVE" } });
     if (!job) {
       console.log("No active job!");
       return;

@@ -34,6 +34,7 @@ export default function FloatingChat() {
   const [newMessage, setNewMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -93,9 +94,31 @@ export default function FloatingChat() {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !user) return;
+
+    console.log("[CHAT] handleSendMessage called");
+    console.log("[CHAT] user:", user);
+    console.log("[CHAT] newMessage:", newMessage);
+    console.log("[CHAT] isAuthenticated:", isAuthenticated);
+
+    if (!newMessage.trim()) {
+      console.log("[CHAT] Blocked: empty message");
+      return;
+    }
+
+    if (!user) {
+      console.log("[CHAT] Blocked: no user");
+      setError("Silakan login terlebih dahulu");
+      return;
+    }
+
+    if (!user.email) {
+      console.log("[CHAT] Blocked: no user email");
+      setError("Data email tidak ditemukan");
+      return;
+    }
 
     setIsSubmitting(true);
+    setError(null);
 
     try {
       const payload = {
@@ -105,11 +128,14 @@ export default function FloatingChat() {
         message: newMessage.trim(),
       };
 
+      console.log("[CHAT] Payload:", payload);
+
       let response;
       let result;
 
       if (activeConversation) {
         // Reply to existing conversation
+        console.log("[CHAT] Sending reply to conversation:", activeConversation.id);
         response = await fetch("/api/contact", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -117,6 +143,7 @@ export default function FloatingChat() {
         });
       } else {
         // Create new conversation
+        console.log("[CHAT] Creating new conversation");
         response = await fetch("/api/contact", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -124,13 +151,16 @@ export default function FloatingChat() {
         });
       }
 
+      console.log("[CHAT] Response status:", response.status);
       result = await response.json();
+      console.log("[CHAT] Send result:", result);
 
       if (result.success) {
         setNewMessage("");
 
-        if (!activeConversation && result.data.conversationId) {
+        if (!activeConversation && result.data?.conversationId) {
           // New conversation created, open it
+          console.log("[CHAT] New conversation created:", result.data.conversationId);
           setActiveConversation({
             id: result.data.conversationId,
             applicantEmail: user.email,
@@ -140,13 +170,18 @@ export default function FloatingChat() {
             messages: [],
           });
           fetchMessages(result.data.conversationId);
-        } else {
+        } else if (activeConversation) {
           // Refresh messages
-          fetchMessages(activeConversation!.id);
+          console.log("[CHAT] Refreshing messages for:", activeConversation.id);
+          fetchMessages(activeConversation.id);
         }
+      } else {
+        console.log("[CHAT] Error:", result.error);
+        setError(result.error || "Gagal mengirim pesan");
       }
     } catch (err) {
       console.error("Error sending message:", err);
+      setError("Terjadi kesalahan saat mengirim pesan");
     }
 
     setIsSubmitting(false);
@@ -444,6 +479,11 @@ export default function FloatingChat() {
                   </div>
 
                   {/* Message Input */}
+                  {error && (
+                    <div style={{ padding: "8px 12px", background: "#fee2e2", borderBottom: "1px solid #fecaca" }}>
+                      <p style={{ fontSize: "12px", color: "#dc2626", margin: 0 }}>❌ {error}</p>
+                    </div>
+                  )}
                   <form onSubmit={handleSendMessage} style={{ padding: "12px", borderTop: "1px solid #eee", background: "#fff" }}>
                     <div style={{ display: "flex", gap: "8px", alignItems: "flex-end" }}>
                       <input
@@ -490,46 +530,55 @@ export default function FloatingChat() {
 
               {/* New Chat Button (when no active conversation) */}
               {!activeConversation && (
-                <form onSubmit={handleSendMessage} style={{ padding: "12px", borderTop: "1px solid #eee", background: "#fff" }}>
-                  <div style={{ background: "#f8f9fa", borderRadius: "12px", padding: "12px", marginBottom: "10px" }}>
-                    <p style={{ fontSize: "12px", color: "#666", margin: 0, lineHeight: 1.5 }}>
-                      👋 Mulai percakapan baru dengan tim HRD
-                    </p>
-                  </div>
-                  <div style={{ display: "flex", gap: "8px" }}>
-                    <input
-                      type="text"
-                      placeholder="Ketik pesan..."
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      style={{
-                        flex: 1,
-                        padding: "10px 14px",
-                        border: "2px solid #eee",
-                        borderRadius: "20px",
-                        fontSize: "13px",
-                        outline: "none",
-                      }}
-                    />
-                    <button
-                      type="submit"
-                      disabled={isSubmitting || !newMessage.trim()}
-                      style={{
-                        width: "40px",
-                        height: "40px",
-                        background: newMessage.trim() ? "linear-gradient(135deg, #FF5E00, #ff7a2f)" : "#ddd",
-                        border: "none",
-                        borderRadius: "50%",
-                        cursor: newMessage.trim() ? "pointer" : "not-allowed",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <Send className="w-4 h-4" style={{ color: "#fff" }} />
-                    </button>
-                  </div>
-                </form>
+                <>
+                  {!isAuthenticated || !user?.email ? (
+                    <div style={{ padding: "16px", textAlign: "center" }}>
+                      <p style={{ fontSize: "13px", color: "#dc2626", margin: "0 0 8px" }}>⚠️ Silakan login terlebih dahulu</p>
+                      <a href="/auth/login" style={{ fontSize: "12px", color: "#FF5E00", textDecoration: "underline" }}>Login di sini</a>
+                    </div>
+                  ) : (
+                  <form onSubmit={handleSendMessage} style={{ padding: "12px", borderTop: "1px solid #eee", background: "#fff" }}>
+                    <div style={{ background: "#f8f9fa", borderRadius: "12px", padding: "12px", marginBottom: "10px" }}>
+                      <p style={{ fontSize: "12px", color: "#666", margin: 0, lineHeight: 1.5 }}>
+                        👋 Mulai percakapan baru dengan tim HRD
+                      </p>
+                    </div>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <input
+                        type="text"
+                        placeholder="Ketik pesan..."
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        style={{
+                          flex: 1,
+                          padding: "10px 14px",
+                          border: "2px solid #eee",
+                          borderRadius: "20px",
+                          fontSize: "13px",
+                          outline: "none",
+                        }}
+                      />
+                      <button
+                        type="submit"
+                        disabled={isSubmitting || !newMessage.trim()}
+                        style={{
+                          width: "40px",
+                          height: "40px",
+                          background: newMessage.trim() ? "linear-gradient(135deg, #FF5E00, #ff7a2f)" : "#ddd",
+                          border: "none",
+                          borderRadius: "50%",
+                          cursor: newMessage.trim() ? "pointer" : "not-allowed",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Send className="w-4 h-4" style={{ color: "#fff" }} />
+                      </button>
+                    </div>
+                  </form>
+                  )}
+                </>
               )}
             </div>
           )}

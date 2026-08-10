@@ -19,7 +19,6 @@ import {
   AlertCircle,
   Briefcase,
   Send,
-  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui";
 
@@ -130,6 +129,7 @@ export default function ApplicantDetailPage() {
   const [showAcceptModal, setShowAcceptModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectNotes, setRejectNotes] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [isEditingPersonal, setIsEditingPersonal] = useState(false);
   const [isEditingEducation, setIsEditingEducation] = useState(false);
@@ -1563,123 +1563,33 @@ export default function ApplicantDetailPage() {
         }
       `}</style>
 
-      {/* Success Modal */}
-      {showSuccessModal && (
+      {/* Toast Notification */}
+      {toast && (
         <div style={{
           position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: "rgba(0,0,0,0.5)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
+          bottom: "24px",
+          right: "24px",
+          padding: "16px 24px",
+          background: toast.type === "success" ? "#16a34a" : "#dc2626",
+          color: "#fff",
+          borderRadius: "12px",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
           zIndex: 9999,
-          animation: "fadeIn 0.3s ease-out"
+          animation: "slideUp 0.3s ease-out",
+          fontSize: "14px",
+          fontWeight: 500,
         }}>
-          <div style={{
-            background: "#ffffff",
-            borderRadius: "24px",
-            padding: "48px 40px",
-            width: "100%",
-            maxWidth: "420px",
-            textAlign: "center",
-            boxShadow: "0 25px 80px rgba(0,32,91,0.25)",
-            animation: "slideUp 0.4s ease-out",
-            position: "relative",
-            overflow: "hidden"
-          }}>
-            {/* Background decoration */}
-            <div style={{ position: "absolute", top: "-40px", right: "-40px", width: "120px", height: "120px", background: "linear-gradient(135deg, #16a34120, transparent)", borderRadius: "50%" }} />
-            <div style={{ position: "absolute", bottom: "-30px", left: "-30px", width: "80px", height: "80px", background: "linear-gradient(135deg, #FF5E0015, transparent)", borderRadius: "50%" }} />
-
-            {/* Success Icon */}
-            <div style={{
-              width: "100px",
-              height: "100px",
-              background: successStatus === "error" ? "#fee2e2" : "#dcfce7",
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto 24px",
-              animation: "scaleIn 0.5s ease-out"
-            }}>
-              {successStatus === "error" ? (
-                <XCircle className="w-12 h-12" style={{ color: "#dc2626" }} />
-              ) : (
-                <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M20 6L9 17l-5-5" style={{ strokeDasharray: 100, strokeDashoffset: 0, animation: "checkmark 0.6s ease-out 0.2s forwards" }} />
-                </svg>
-              )}
-            </div>
-
-            {/* Title */}
-            <h2 style={{
-              fontSize: "24px",
-              fontWeight: 800,
-              color: successStatus === "error" ? "#dc2626" : "#00205B",
-              marginBottom: "12px"
-            }}>
-              {successStatus === "error" ? "Terjadi Kesalahan" : "Berhasil!"}
-            </h2>
-
-            {/* Message */}
-            <p style={{
-              fontSize: "16px",
-              color: "#64748b",
-              marginBottom: successStatus === "error" ? "24px" : "8px",
-              lineHeight: 1.6
-            }}>
-              {successMessage}
-            </p>
-
-            {/* Status Badge */}
-            {successStatus !== "error" && (
-              <div style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "8px",
-                padding: "8px 20px",
-                background: "#dcfce7",
-                color: "#16a34a",
-                borderRadius: "24px",
-                fontSize: "14px",
-                fontWeight: 700,
-                marginBottom: "24px"
-              }}>
-                <Check className="w-4 h-4" />
-                {successStatus}
-              </div>
-            )}
-
-            {/* Action Button */}
-            <button
-              onClick={() => setShowSuccessModal(false)}
-              style={{
-                width: "100%",
-                padding: "14px 24px",
-                background: successStatus === "error" ? "#dc2626" : "linear-gradient(135deg, #FF5E00, #ff7a2f)",
-                color: "#ffffff",
-                border: "none",
-                borderRadius: "14px",
-                fontSize: "15px",
-                fontWeight: 700,
-                cursor: "pointer",
-                boxShadow: successStatus === "error"
-                  ? "0 4px 14px rgba(220,38,38,0.3)"
-                  : "0 4px 14px rgba(255,94,0,0.3)",
-                transition: "transform 0.2s, box-shadow 0.2s"
-              }}
-              onMouseOver={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; }}
-              onMouseOut={(e) => { e.currentTarget.style.transform = "translateY(0)"; }}
-            >
-              {successStatus === "error" ? "Tutup" : "OK"}
-            </button>
-          </div>
+          {toast.message}
         </div>
       )}
+
+      {/* Toast Animation Styles */}
+      <style>{`
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }
