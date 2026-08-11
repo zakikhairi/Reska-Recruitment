@@ -161,7 +161,7 @@ export default function SchedulePage() {
     return `${secs} detik`;
   };
 
-  // Get past schedules
+  // Get past schedules (tests that have passed their scheduled time AND have expired)
   const pastSchedules = schedules.filter((s) => {
     // Check if there is a test or interview
     if (!s.test && !s.interview) return false;
@@ -172,26 +172,37 @@ export default function SchedulePage() {
     // If no scheduled time at all, don't count as past
     if (!testDate && !interviewDate) return false;
 
+    // Check if the test has expired (only if endTime is set)
+    if (s.test?.endTime) {
+      const endTime = new Date(s.test.endTime);
+      if (currentTime > endTime) return true;
+    }
+
+    // Otherwise check if scheduled time has passed
     const nextDate = testDate || interviewDate;
     return new Date(nextDate!) < currentTime;
   });
 
-  // Get upcoming schedules with scheduled tests
-  const upcomingSchedules = pastSchedules.length > 0
-    ? []
-    : schedules.filter((s) => {
-        // Check if there is a test or interview
-        if (!s.test && !s.interview) return false;
+  // Get upcoming schedules - separate from past
+  const upcomingSchedules = schedules.filter((s) => {
+    // Check if there is a test or interview
+    if (!s.test && !s.interview) return false;
 
-        const testDate = s.test?.scheduledAt;
-        const interviewDate = s.interview?.scheduledAt;
+    const testDate = s.test?.scheduledAt;
+    const interviewDate = s.interview?.scheduledAt;
 
-        // If no scheduled time, count as upcoming (waiting for schedule)
-        if (!testDate && !interviewDate) return true;
+    // If no scheduled time, count as upcoming (waiting for schedule)
+    if (!testDate && !interviewDate) return true;
 
-        const nextDate = testDate || interviewDate;
-        return new Date(nextDate!) >= currentTime;
-      });
+    // Check if the test has expired (only if endTime is set)
+    if (s.test?.endTime) {
+      const endTime = new Date(s.test.endTime);
+      if (currentTime > endTime) return false; // Don't show expired tests in upcoming
+    }
+
+    const nextDate = testDate || interviewDate;
+    return new Date(nextDate!) >= currentTime;
+  });
 
   return (
     <div style={{ fontFamily: "Inter, system-ui, sans-serif", minHeight: "100vh", background: "#f8f9fa" }}>
