@@ -6,7 +6,8 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // ============================================
@@ -266,7 +267,7 @@ model TestSession {
   id            String    @id @default(cuid())
   applicationId String    @unique
   application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-  applicant     Applicant @relation(fields: [applicationId], references: [id])
+  applicant     Applicant @relation(fields: [applicationId], references: [id], map: "TestSession_applicant_fkey")
 
   status        String    @default("NOT_STARTED") // NOT_STARTED, IN_PROGRESS, PAUSED, SUBMITTED, SCORED, EXPIRED
 
