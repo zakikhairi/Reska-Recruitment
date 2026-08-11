@@ -223,8 +223,14 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
         const result = await response.json();
 
         if (result.success) {
-          // Fetch again to get questions
+          // Fetch again to get questions - MUST wait for this
           await fetchTestSession();
+
+          // Check if questions are now loaded
+          if (!testData?.questions.length) {
+            setError("Gagal memuat soal. Silakan coba lagi.");
+            return;
+          }
         } else {
           setError(result.error || "Gagal memulai tes");
           return;
