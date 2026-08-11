@@ -163,9 +163,15 @@ export default function SchedulePage() {
 
   // Get past schedules
   const pastSchedules = schedules.filter((s) => {
+    // Check if there is a test or interview
+    if (!s.test && !s.interview) return false;
+
     const testDate = s.test?.scheduledAt;
     const interviewDate = s.interview?.scheduledAt;
+
+    // If no scheduled time at all, don't count as past
     if (!testDate && !interviewDate) return false;
+
     const nextDate = testDate || interviewDate;
     return new Date(nextDate!) < currentTime;
   });
@@ -174,9 +180,15 @@ export default function SchedulePage() {
   const upcomingSchedules = pastSchedules.length > 0
     ? []
     : schedules.filter((s) => {
+        // Check if there is a test or interview
+        if (!s.test && !s.interview) return false;
+
         const testDate = s.test?.scheduledAt;
         const interviewDate = s.interview?.scheduledAt;
-        if (!testDate && !interviewDate) return false;
+
+        // If no scheduled time, count as upcoming (waiting for schedule)
+        if (!testDate && !interviewDate) return true;
+
         const nextDate = testDate || interviewDate;
         return new Date(nextDate!) >= currentTime;
       });

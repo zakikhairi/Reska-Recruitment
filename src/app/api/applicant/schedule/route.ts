@@ -52,14 +52,14 @@ export async function GET(request: NextRequest) {
         status: app.status,
       };
 
-      // Add test schedule if exists (check scheduledAt OR startedAt)
-      if (app.testSession?.scheduledAt || app.testSession?.startedAt) {
+      // Add test schedule if exists (even if scheduledAt is null)
+      if (app.testSession) {
         schedule.test = {
-          scheduledAt: app.testSession.scheduledAt || app.testSession.startedAt,
+          scheduledAt: app.testSession.scheduledAt || app.testSession.startedAt || app.testSession.createdAt,
+          endTime: app.testSession.endTime,
           location: "Online System",
           status: app.testSession.status,
           sessionId: app.testSession.id,
-          message: app.testSession.adminMessage || null,
         };
       }
 
@@ -67,20 +67,21 @@ export async function GET(request: NextRequest) {
       if (app.interview) {
         schedule.interview = {
           scheduledAt: app.interview.scheduledAt,
-          endTime: app.interview.endTime,
           location: app.interview.location,
           interviewer: app.interview.interviewer,
           type: app.interview.type,
-          message: app.interview.adminMessage || null,
+          result: app.interview.result,
+          notes: app.interview.notes,
         };
       }
 
       return schedule;
     });
 
-    // Filter only applications with schedules
+    // Filter: Show applications that have test session OR interview
+    // Include those with null scheduledAt (waiting for schedule)
     const upcomingSchedules = schedules.filter(
-      (s) => s.test?.scheduledAt || s.interview?.scheduledAt
+      (s) => s.test || s.interview
     );
 
     return NextResponse.json({
