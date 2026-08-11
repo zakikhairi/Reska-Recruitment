@@ -140,8 +140,23 @@ export default function ReportsPage() {
     { label: "Tidak Lulus", value: testResults.filter((r: any) => r.passed === false).length, icon: XCircle, color: "#EF4444" },
   ];
 
-  // Calculate max value for chart scaling
-  const maxChartValue = Math.max(...chartData.map(d => d.applicants), 1);
+  // Calculate chart scaling
+  const maxValue = Math.max(...chartData.map(d => Math.max(d.applicants, d.passed)), 1);
+  const avgLine = chartData.length > 0
+    ? Math.round(chartData.reduce((sum, d) => sum + d.applicants, 0) / chartData.length)
+    : 0;
+
+  // Generate SVG path for line
+  const generateLinePath = (data: number[], height: number) => {
+    if (data.length < 2) return "";
+    const stepX = 100 / (data.length - 1);
+    const points = data.map((value, index) => {
+      const x = index * stepX;
+      const y = height - (value / maxValue) * height;
+      return `${x},${y}`;
+    });
+    return `M ${points.join(" L ")}`;
+  };
 
   return (
     <div style={{ fontFamily: "Inter, system-ui, sans-serif", minHeight: "100vh", background: "#f8f9fa" }}>
@@ -238,113 +253,229 @@ export default function ReportsPage() {
               <p style={{ fontSize: "13px", color: "#888888", margin: "4px 0 0" }}>Tren pelamar berdasarkan periode waktu</p>
             </div>
             <div style={{ display: "flex", gap: "8px" }}>
-              <button
-                onClick={() => setChartRange("day")}
-                style={{
-                  padding: "8px 16px",
-                  background: chartRange === "day" ? "#00205B" : "#f1f5f9",
-                  color: chartRange === "day" ? "#ffffff" : "#666666",
-                  border: "none",
-                  borderRadius: "8px",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                Harian
-              </button>
-              <button
-                onClick={() => setChartRange("week")}
-                style={{
-                  padding: "8px 16px",
-                  background: chartRange === "week" ? "#00205B" : "#f1f5f9",
-                  color: chartRange === "week" ? "#ffffff" : "#666666",
-                  border: "none",
-                  borderRadius: "8px",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                Mingguan
-              </button>
-              <button
-                onClick={() => setChartRange("month")}
-                style={{
-                  padding: "8px 16px",
-                  background: chartRange === "month" ? "#00205B" : "#f1f5f9",
-                  color: chartRange === "month" ? "#ffffff" : "#666666",
-                  border: "none",
-                  borderRadius: "8px",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                Bulanan
-              </button>
-              <button
-                onClick={() => setChartRange("year")}
-                style={{
-                  padding: "8px 16px",
-                  background: chartRange === "year" ? "#00205B" : "#f1f5f9",
-                  color: chartRange === "year" ? "#ffffff" : "#666666",
-                  border: "none",
-                  borderRadius: "8px",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                Tahunan
-              </button>
-            </div>
-          </div>
-
-          {/* Chart */}
-          <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-around", height: "200px", paddingBottom: "40px", position: "relative", borderBottom: "1px dashed #e5e5e5" }}>
-            {/* Y-axis labels */}
-            <div style={{ position: "absolute", left: 0, top: 0, bottom: "40px", display: "flex", flexDirection: "column", justifyContent: "space-between", fontSize: "11px", color: "#888888" }}>
-              <span>{maxChartValue}</span>
-              <span>{Math.round(maxChartValue * 0.75)}</span>
-              <span>{Math.round(maxChartValue * 0.5)}</span>
-              <span>{Math.round(maxChartValue * 0.25)}</span>
-              <span>0</span>
-            </div>
-
-            {/* Bars */}
-            <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-around", flex: 1, height: "100%", paddingLeft: "40px" }}>
-              {chartData.map((data, i) => (
-                <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
-                  <div style={{ display: "flex", gap: "4px", alignItems: "flex-end", height: `${(data.applicants / maxChartValue) * 160}px` }}>
-                    <div style={{
-                      width: "24px",
-                      background: "linear-gradient(180deg, #00205B 0%, #003380 100%)",
-                      borderRadius: "4px 4px 0 0",
-                      minHeight: "4px",
-                    }} title={`Pelamar: ${data.applicants}`} />
-                    <div style={{
-                      width: "24px",
-                      background: "linear-gradient(180deg, #16a34a 0%, #059669 100%)",
-                      borderRadius: "4px 4px 0 0",
-                      minHeight: "4px",
-                    }} title={`Lulus: ${data.passed}`} />
-                  </div>
-                  <span style={{ fontSize: "11px", color: "#888888", marginTop: "8px" }}>{data.label}</span>
-                </div>
+              {[
+                { key: "day", label: "Harian" },
+                { key: "week", label: "Mingguan" },
+                { key: "month", label: "Bulanan" },
+                { key: "year", label: "Tahunan" },
+              ].map((btn) => (
+                <button
+                  key={btn.key}
+                  onClick={() => setChartRange(btn.key)}
+                  style={{
+                    padding: "8px 16px",
+                    background: chartRange === btn.key ? "#00205B" : "#f1f5f9",
+                    color: chartRange === btn.key ? "#ffffff" : "#666666",
+                    border: "none",
+                    borderRadius: "8px",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  {btn.label}
+                </button>
               ))}
             </div>
           </div>
 
+          {/* Chart with Bars + Line */}
+          {chartData.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "60px", color: "#888" }}>
+              <BarChart3 className="w-12 h-12" style={{ margin: "0 auto 12px", opacity: 0.3 }} />
+              <p>Belum ada data untuk periode ini</p>
+            </div>
+          ) : (
+            <div style={{ position: "relative", height: "280px", paddingLeft: "50px", paddingBottom: "40px" }}>
+              {/* Y-axis labels */}
+              <div style={{ position: "absolute", left: 0, top: 0, bottom: "40px", display: "flex", flexDirection: "column", justifyContent: "space-between", fontSize: "11px", color: "#888888", width: "40px" }}>
+                <span>{maxValue}</span>
+                <span>{Math.round(maxValue * 0.75)}</span>
+                <span>{Math.round(maxValue * 0.5)}</span>
+                <span>{Math.round(maxValue * 0.25)}</span>
+                <span>0</span>
+              </div>
+
+              {/* Grid lines */}
+              <div style={{ position: "absolute", left: "50px", right: 0, top: 0, bottom: "40px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <div key={i} style={{ borderBottom: "1px dashed #e5e5e5", width: "100%" }} />
+                ))}
+              </div>
+
+              {/* Average line */}
+              <div style={{
+                position: "absolute",
+                left: "50px",
+                right: 0,
+                top: `${100 - (avgLine / maxValue) * 100}%`,
+                borderTop: "2px dashed #FF5E00",
+              }}>
+                <span style={{
+                  position: "absolute",
+                  right: 0,
+                  top: "-20px",
+                  fontSize: "10px",
+                  color: "#FF5E00",
+                  fontWeight: 600,
+                  background: "#fff",
+                  padding: "2px 4px",
+                }}>
+                  Avg: {avgLine}
+                </span>
+              </div>
+
+              {/* Bars and Line */}
+              <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-around", height: "100%", paddingLeft: "50px" }}>
+                {chartData.map((data, i) => {
+                  const barHeight = (data.applicants / maxValue) * 100;
+                  const passedHeight = (data.passed / maxValue) * 100;
+                  return (
+                    <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1, height: "100%", position: "relative" }}>
+                      {/* Bars */}
+                      <div style={{ display: "flex", gap: "4px", alignItems: "flex-end", height: "100%", justifyContent: "center" }}>
+                        {/* Total bar */}
+                        <div style={{
+                          width: "20px",
+                          height: `${barHeight}%`,
+                          background: "linear-gradient(180deg, #00205B 0%, #003380 100%)",
+                          borderRadius: "4px 4px 0 0",
+                          position: "relative",
+                          transition: "height 0.3s ease",
+                        }}>
+                          <div style={{
+                            position: "absolute",
+                            top: "-20px",
+                            left: "50%",
+                            transform: "translateX(-50%)",
+                            fontSize: "11px",
+                            fontWeight: 700,
+                            color: "#00205B",
+                          }}>
+                            {data.applicants}
+                          </div>
+                        </div>
+                        {/* Passed bar */}
+                        <div style={{
+                          width: "20px",
+                          height: `${passedHeight}%`,
+                          background: "linear-gradient(180deg, #10B981 0%, #059669 100%)",
+                          borderRadius: "4px 4px 0 0",
+                          position: "relative",
+                          transition: "height 0.3s ease",
+                        }}>
+                          <div style={{
+                            position: "absolute",
+                            top: "-20px",
+                            left: "50%",
+                            transform: "translateX(-50%)",
+                            fontSize: "11px",
+                            fontWeight: 700,
+                            color: "#10B981",
+                          }}>
+                            {data.passed}
+                          </div>
+                        </div>
+                      </div>
+                      {/* X-axis label */}
+                      <div style={{
+                        position: "absolute",
+                        bottom: "-30px",
+                        fontSize: "11px",
+                        color: "#888888",
+                        whiteSpace: "nowrap",
+                      }}>
+                        {data.label}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Line connecting top of bars */}
+              <svg style={{
+                position: "absolute",
+                left: "50px",
+                top: 0,
+                width: "calc(100% - 50px)",
+                height: "calc(100% - 40px)",
+                pointerEvents: "none",
+              }}>
+                <defs>
+                  <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#FF5E00" />
+                    <stop offset="100%" stopColor="#FF8B00" />
+                  </linearGradient>
+                </defs>
+                {/* Area fill */}
+                <path
+                  d={`
+                    M ${chartData.map((d, i) => {
+                      const x = i * (100 / (chartData.length - 1)) + (50 / (chartData.length - 1));
+                      const y = 100 - (d.applicants / maxValue) * 100;
+                      return `${x}% ${y}%`;
+                    }).join(" L ")}
+                    L 100% 100% L 0% 100% Z
+                  `}
+                  fill="url(#areaGradient)"
+                  fillOpacity={0.1}
+                />
+                <defs>
+                  <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#00205B" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="#00205B" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                {/* Line */}
+                <path
+                  d={`M ${chartData.map((d, i) => {
+                    const x = i * (100 / (chartData.length - 1)) + (50 / (chartData.length - 1));
+                    const y = 100 - (d.applicants / maxValue) * 100;
+                    return `${x}% ${y}%`;
+                  }).join(" L ")}`}
+                  fill="none"
+                  stroke="url(#lineGradient)"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                {/* Dots on line */}
+                {chartData.map((d, i) => {
+                  const x = i * (100 / (chartData.length - 1)) + (50 / (chartData.length - 1));
+                  const y = 100 - (d.applicants / maxValue) * 100;
+                  return (
+                    <circle
+                      key={i}
+                      cx={`${x}%`}
+                      cy={`${y}%`}
+                      r="4"
+                      fill="#FF5E00"
+                      stroke="#ffffff"
+                      strokeWidth="2"
+                    />
+                  );
+                })}
+              </svg>
+            </div>
+          )}
+
           {/* Legend */}
-          <div style={{ display: "flex", justifyContent: "center", gap: "24px", marginTop: "16px" }}>
+          <div style={{ display: "flex", justifyContent: "center", gap: "32px", marginTop: "40px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <div style={{ width: "12px", height: "12px", background: "#00205B", borderRadius: "2px" }} />
+              <div style={{ width: "16px", height: "16px", background: "linear-gradient(180deg, #00205B 0%, #003380 100%)", borderRadius: "3px" }} />
               <span style={{ fontSize: "13px", color: "#666666" }}>Total Pelamar</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <div style={{ width: "12px", height: "12px", background: "#16a34a", borderRadius: "2px" }} />
+              <div style={{ width: "16px", height: "16px", background: "linear-gradient(180deg, #10B981 0%, #059669 100%)", borderRadius: "3px" }} />
               <span style={{ fontSize: "13px", color: "#666666" }}>Lulus Tes</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <div style={{ width: "24px", height: "3px", background: "linear-gradient(90deg, #FF5E00, #FF8B00)", borderRadius: "2px" }} />
+              <span style={{ fontSize: "13px", color: "#666666" }}>Tren Garis</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <div style={{ width: "20px", borderTop: "2px dashed #FF5E00" }} />
+              <span style={{ fontSize: "13px", color: "#666666" }}>Rata-rata ({avgLine})</span>
             </div>
           </div>
         </div>
@@ -374,8 +505,16 @@ export default function ReportsPage() {
                       <td style={{ padding: "16px", fontSize: "14px", fontWeight: 600, color: "#111111" }}>{div.division}</td>
                       <td style={{ padding: "16px", fontSize: "14px", color: "#666666", textAlign: "center" }}>{div.total}</td>
                       <td style={{ padding: "16px", fontSize: "14px", color: "#666666", textAlign: "center" }}>{div.passed}</td>
-                      <td style={{ padding: "16px", textAlign: "center" }}><span style={{ padding: "6px 12px", background: div.rate >= 70 ? "#dcfce7" : "#fef3c7", color: div.rate >= 70 ? "#16a34a" : "#d97706", borderRadius: "9999px", fontSize: "13px", fontWeight: 600 }}>{div.rate}%</span></td>
-                      <td style={{ padding: "16px", textAlign: "center" }}><div style={{ width: "100px", height: "8px", background: "#f1f5f9", borderRadius: "4px", margin: "auto", overflow: "hidden" }}><div style={{ height: "100%", width: div.rate + "%", background: div.rate >= 70 ? "#10B981" : "#F59E0B", borderRadius: "4px" }} /></div></td>
+                      <td style={{ padding: "16px", textAlign: "center" }}>
+                        <span style={{ padding: "6px 12px", background: div.rate >= 70 ? "#dcfce7" : "#fef3c7", color: div.rate >= 70 ? "#16a34a" : "#d97706", borderRadius: "9999px", fontSize: "13px", fontWeight: 600 }}>
+                          {div.rate}%
+                        </span>
+                      </td>
+                      <td style={{ padding: "16px", textAlign: "center" }}>
+                        <div style={{ width: "100px", height: "8px", background: "#f1f5f9", borderRadius: "4px", margin: "auto", overflow: "hidden" }}>
+                          <div style={{ height: "100%", width: div.rate + "%", background: div.rate >= 70 ? "#10B981" : "#F59E0B", borderRadius: "4px" }} />
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -399,7 +538,7 @@ export default function ReportsPage() {
           {topCandidates.length === 0 ? (
             <div style={{ textAlign: "center", padding: "40px", color: "#888" }}>
               <Trophy className="w-12 h-12" style={{ margin: "0 auto 12px", opacity: 0.3 }} />
-              <p style={{ fontSize: "14px" }}>Belum ada data kandidat dengan nilai</p>
+              <p>Belum ada data kandidat dengan nilai</p>
             </div>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "16px" }}>
@@ -420,13 +559,15 @@ export default function ReportsPage() {
                       alignItems: "center",
                       justifyContent: "center",
                       fontSize: "12px",
-                      fontWeight: 700
+                      fontWeight: 700,
                     }}>
                       {i + 1}
                     </div>
                   )}
                   <div style={{ width: "56px", height: "56px", background: "#00205B", borderRadius: "50%", margin: "0 auto 12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <span style={{ color: "#ffffff", fontSize: "20px", fontWeight: 700 }}>{candidate.applicantName.charAt(0).toUpperCase()}</span>
+                    <span style={{ color: "#ffffff", fontSize: "20px", fontWeight: 700 }}>
+                      {candidate.applicantName.charAt(0).toUpperCase()}
+                    </span>
                   </div>
                   <p style={{ fontSize: "14px", fontWeight: 700, color: "#111111", marginBottom: "4px" }}>{candidate.applicantName}</p>
                   <p style={{ fontSize: "12px", color: "#888888", marginBottom: "12px" }}>{candidate.jobTitle}</p>
