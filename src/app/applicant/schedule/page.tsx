@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/auth";
-import { Calendar, Clock, MapPin, User, FileText, CheckCircle, AlertCircle, Play } from "lucide-react";
+import { Calendar, Clock, MapPin, User, FileText, CheckCircle, AlertCircle, Play, RefreshCw } from "lucide-react";
 
 interface ScheduleItem {
   applicationId: string;
@@ -11,16 +11,17 @@ interface ScheduleItem {
   division: string;
   status: string;
   test?: {
-    scheduledAt: string;
-    location: string;
-    status: string;
+    scheduledAt?: string;
+    endTime?: string | null;
+    location?: string;
+    status?: string;
     sessionId?: string;
     message?: string | null;
   };
   interview?: {
     scheduledAt: string;
     endTime?: string | null;
-    location: string;
+    location?: string;
     interviewer: string;
     type: string;
   };
@@ -51,16 +52,31 @@ export default function SchedulePage() {
   const { user } = useAuthStore();
   const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [refreshing, setRefreshing] = useState(false);
 
+  // Update current time every second for real-time countdown
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Refresh schedules periodically (every 30 seconds)
   useEffect(() => {
     fetchSchedules();
+    const refreshInterval = setInterval(() => {
+      fetchSchedules();
+    }, 30000);
+    return () => clearInterval(refreshInterval);
   }, [user]);
 
-  const fetchSchedules = async () => {
+  const fetchSchedules = useCallback(async () => {
     if (!user?.id) return;
 
     try {
-      setLoading(true);
+      if (!refreshing) setLoading(true);
       const response = await fetch(`/api/applicant/schedule?userId=${user.id}`);
       const result = await response.json();
 
@@ -71,10 +87,17 @@ export default function SchedulePage() {
       console.error("Failed to fetch schedules:", err);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  }, [user, refreshing]);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchSchedules();
   };
 
-  const formatDate = (dateStr: string) => {
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return "-";
     return new Date(dateStr).toLocaleDateString("id-ID", {
       weekday: "long",
       day: "numeric",
@@ -83,14 +106,16 @@ export default function SchedulePage() {
     });
   };
 
-  const formatTime = (dateStr: string) => {
+  const formatTime = (dateStr?: string) => {
+    if (!dateStr) return "-";
     return new Date(dateStr).toLocaleTimeString("id-ID", {
       hour: "2-digit",
       minute: "2-digit",
     });
   };
 
-  const getDaysUntil = (dateStr: string) => {
+  const getDaysUntil = (dateStr?: string) => {
+    if (!dateStr) return 0;
     const scheduleDate = new Date(dateStr);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -100,36 +125,40 @@ export default function SchedulePage() {
     return days;
   };
 
-  // Get upcoming schedules
-  const upcomingSchedules = schedules.filter((s) => {
-    const testDate = s.test?.scheduledAt;
-    const interviewDate = s.interview?.scheduledAt;
-    if (!testDate && !interviewDate) return false;
-    const nextDate = testDate || interviewDate;
-    return new Date(nextDate!) >= new Date();
-  });
+  // Check if test can be started (time has arrived) - uses currentTime for real-time updates
+  const canStartTest = useCallback((schedule: ScheduleItem) => {
+    const scheduledAt = schedule.test?.scheduledAt;
+    if (!scheduledAt) return true; // Can start if no scheduled time
+    return currentTime >= new Date(scheduledAt);
+  }, [currentTime]);
 
-  // Check if test can be started (time has arrived)
-  const canStartTest = (scheduledAt: string) => {
-    return new Date() >= new Date(scheduledAt);
+  // Check if test window has expired (past endTime)
+  const isTestExpired = useCallback((schedule: ScheduleItem) => {
+    const endTime = schedule.test?.endTime;
+    if (!endTime) return false; // No end time means no expiration
+    return currentTime > new Date(endTime);
+  }, [currentTime]);
+
+  // Get time remaining until test - returns seconds for countdown display
+  const getTimeRemainingSeconds = (scheduledAt?: string): number | null => {
+    if (!scheduledAt) return null;
+    const diff = new Date(scheduledAt).getTime() - currentTime.getTime();
+    return Math.max(0, Math.floor(diff / 1000));
   };
 
-  // Get time remaining until test
-  const getTimeRemaining = (scheduledAt: string) => {
-    const diff = new Date(scheduledAt).getTime() - new Date().getTime();
-    if (diff <= 0) return null;
+  // Format time remaining for display
+  const formatTimeRemaining = (seconds: number | null) => {
+    if (seconds === null || seconds <= 0) return null;
 
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
 
-    if (hours > 24) {
-      const days = Math.floor(hours / 24);
-      return `${days} hari`;
-    }
-    if (hours > 0) {
-      return `${hours} jam ${minutes} menit`;
-    }
-    return `${minutes} menit`;
+    if (days > 0) return `${days} hari ${hours} jam`;
+    if (hours > 0) return `${hours} jam ${minutes} menit`;
+    if (minutes > 0) return `${minutes} menit ${secs} detik`;
+    return `${secs} detik`;
   };
 
   // Get past schedules
@@ -138,8 +167,19 @@ export default function SchedulePage() {
     const interviewDate = s.interview?.scheduledAt;
     if (!testDate && !interviewDate) return false;
     const nextDate = testDate || interviewDate;
-    return new Date(nextDate!) < new Date();
+    return new Date(nextDate!) < currentTime;
   });
+
+  // Get upcoming schedules with scheduled tests
+  const upcomingSchedules = pastSchedules.length > 0
+    ? []
+    : schedules.filter((s) => {
+        const testDate = s.test?.scheduledAt;
+        const interviewDate = s.interview?.scheduledAt;
+        if (!testDate && !interviewDate) return false;
+        const nextDate = testDate || interviewDate;
+        return new Date(nextDate!) >= currentTime;
+      });
 
   return (
     <div style={{ fontFamily: "Inter, system-ui, sans-serif", minHeight: "100vh", background: "#f8f9fa" }}>
@@ -200,45 +240,123 @@ export default function SchedulePage() {
                             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
                               <FileText className="w-5 h-5" style={{ color: "#2563eb" }} />
                               <span style={{ fontSize: "14px", fontWeight: 600, color: "#2563eb" }}>Tes Kompetensi</span>
-                              {canStartTest(schedule.test.scheduledAt) ? (
-                                <span style={{
-                                  marginLeft: "auto",
-                                  padding: "4px 10px",
-                                  background: "#16a34a",
-                                  color: "#fff",
-                                  borderRadius: "20px",
-                                  fontSize: "11px",
-                                  fontWeight: 700
-                                }}>
-                                  Bisa Dimulai
-                                </span>
-                              ) : (
-                                <span style={{
-                                  marginLeft: "auto",
-                                  padding: "4px 10px",
-                                  background: "#fef3c7",
-                                  color: "#d97706",
-                                  borderRadius: "20px",
-                                  fontSize: "11px",
-                                  fontWeight: 700
-                                }}>
-                                  {getTimeRemaining(schedule.test.scheduledAt) || "Menunggu"}
-                                </span>
-                              )}
+                              {(() => {
+                                const canStart = canStartTest(schedule);
+                                const isExpired = isTestExpired(schedule);
+                                const timeRemaining = getTimeRemainingSeconds(schedule.test?.scheduledAt);
+                                if (isExpired) {
+                                  return (
+                                    <span style={{
+                                      marginLeft: "auto",
+                                      padding: "4px 10px",
+                                      background: "#fee2e2",
+                                      color: "#dc2626",
+                                      borderRadius: "20px",
+                                      fontSize: "11px",
+                                      fontWeight: 700
+                                    }}>
+                                      Waktu Habis
+                                    </span>
+                                  );
+                                }
+                                if (canStart) {
+                                  return (
+                                    <span style={{
+                                      marginLeft: "auto",
+                                      padding: "4px 10px",
+                                      background: "#16a34a",
+                                      color: "#fff",
+                                      borderRadius: "20px",
+                                      fontSize: "11px",
+                                      fontWeight: 700,
+                                      animation: "pulse 1.5s infinite"
+                                    }}>
+                                      Bisa Dimulai!
+                                    </span>
+                                  );
+                                }
+                                return (
+                                  <span style={{
+                                    marginLeft: "auto",
+                                    padding: "4px 10px",
+                                    background: "#fef3c7",
+                                    color: "#d97706",
+                                    borderRadius: "20px",
+                                    fontSize: "11px",
+                                    fontWeight: 700
+                                  }}>
+                                    {timeRemaining !== null ? formatTimeRemaining(timeRemaining) : "Menunggu"}
+                                  </span>
+                                );
+                              })()}
                             </div>
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                                 <Calendar className="w-4 h-4" style={{ color: "#666" }} />
-                                <span style={{ fontSize: "13px", color: "#111" }}>{formatDate(schedule.test.scheduledAt)}</span>
+                                <span style={{ fontSize: "13px", color: "#111" }}>{formatDate(schedule.test?.scheduledAt)}</span>
                               </div>
                               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                                 <Clock className="w-4 h-4" style={{ color: "#666" }} />
-                                <span style={{ fontSize: "13px", color: "#111" }}>{formatTime(schedule.test.scheduledAt)} WIB</span>
+                                <span style={{ fontSize: "13px", color: "#111" }}>{formatTime(schedule.test?.scheduledAt)} WIB</span>
                               </div>
                             </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "8px" }}>
+
+                            {/* Live Countdown Timer */}
+                            {(() => {
+                              const canStart = canStartTest(schedule);
+                              const isExpired = isTestExpired(schedule);
+                              const timeRemaining = getTimeRemainingSeconds(schedule.test?.scheduledAt);
+                              if (!canStart && !isExpired && timeRemaining !== null && timeRemaining > 0) {
+                                return (
+                                  <div style={{
+                                    marginTop: "16px",
+                                    padding: "20px",
+                                    background: "#fffbeb",
+                                    borderRadius: "12px",
+                                    textAlign: "center",
+                                    border: "2px solid #fcd34d"
+                                  }}>
+                                    <p style={{ fontSize: "12px", color: "#92400e", marginBottom: "8px", fontWeight: 600 }}>
+                                      Tes akan dimulai dalam:
+                                    </p>
+                                    <div style={{ display: "flex", justifyContent: "center", gap: "8px", alignItems: "center" }}>
+                                      {Math.floor(timeRemaining / 86400) > 0 && (
+                                        <>
+                                          <div style={{ textAlign: "center" }}>
+                                            <div style={{ fontSize: "28px", fontWeight: 800, color: "#d97706" }}>{Math.floor(timeRemaining / 86400)}</div>
+                                            <div style={{ fontSize: "10px", color: "#92400e" }}>Hari</div>
+                                          </div>
+                                          <span style={{ fontSize: "20px", color: "#d97706" }}>:</span>
+                                        </>
+                                      )}
+                                      {Math.floor((timeRemaining % 86400) / 3600) > 0 && (
+                                        <>
+                                          <div style={{ textAlign: "center" }}>
+                                            <div style={{ fontSize: "28px", fontWeight: 800, color: "#d97706" }}>{Math.floor((timeRemaining % 86400) / 3600)}</div>
+                                            <div style={{ fontSize: "10px", color: "#92400e" }}>Jam</div>
+                                          </div>
+                                          <span style={{ fontSize: "20px", color: "#d97706" }}>:</span>
+                                        </>
+                                      )}
+                                      <div style={{ textAlign: "center" }}>
+                                        <div style={{ fontSize: "28px", fontWeight: 800, color: "#d97706" }}>{Math.floor((timeRemaining % 3600) / 60)}</div>
+                                        <div style={{ fontSize: "10px", color: "#92400e" }}>Menit</div>
+                                      </div>
+                                      <span style={{ fontSize: "20px", color: "#d97706" }}>:</span>
+                                      <div style={{ textAlign: "center" }}>
+                                        <div style={{ fontSize: "28px", fontWeight: 800, color: "#d97706" }}>{String(timeRemaining % 60).padStart(2, "0")}</div>
+                                        <div style={{ fontSize: "10px", color: "#92400e" }}>Detik</div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()}
+
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: schedule.test && canStartTest(schedule) || isTestExpired(schedule) ? "0" : "12px" }}>
                               <MapPin className="w-4 h-4" style={{ color: "#666" }} />
-                              <span style={{ fontSize: "13px", color: "#111" }}>{schedule.test.location}</span>
+                              <span style={{ fontSize: "13px", color: "#111" }}>{schedule.test?.location || "Online System"}</span>
                             </div>
                             {schedule.test?.message && (
                               <div style={{ marginTop: "12px", padding: "12px", background: "#fef3c7", borderRadius: "8px", display: "flex", alignItems: "flex-start", gap: "10px" }}>
@@ -248,38 +366,65 @@ export default function SchedulePage() {
                                 </p>
                               </div>
                             )}
-                            {schedule.test && (
-                              <Link href={`/applicant/test/${schedule.test.sessionId || schedule.applicationId}`}>
-                                <button style={{
-                                  marginTop: "16px",
-                                  width: "100%",
-                                  padding: "12px 20px",
-                                  background: canStartTest(schedule.test.scheduledAt) ? "#16a34a" : "#d97706",
-                                  color: "#fff",
-                                  border: "none",
-                                  borderRadius: "10px",
-                                  fontSize: "14px",
-                                  fontWeight: 700,
-                                  cursor: "pointer",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  gap: "8px",
-                                }}>
-                                  {canStartTest(schedule.test.scheduledAt) ? (
-                                    <>
-                                      <Play className="w-4 h-4" />
-                                      Mulai Tes Sekarang
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Clock className="w-4 h-4" />
-                                      Lihat Detail Tes
-                                    </>
-                                  )}
-                                </button>
-                              </Link>
-                            )}
+                            {schedule.test && (() => {
+                              const canStart = canStartTest(schedule);
+                              const isExpired = isTestExpired(schedule);
+                              const testUrl = schedule.test.sessionId
+                                ? `/applicant/test/${schedule.test.sessionId}`
+                                : `/applicant/test/${schedule.applicationId}`;
+
+                              if (isExpired) {
+                                return (
+                                  <button style={{
+                                    marginTop: "16px",
+                                    width: "100%",
+                                    padding: "14px 20px",
+                                    background: "#9ca3af",
+                                    color: "#fff",
+                                    border: "none",
+                                    borderRadius: "10px",
+                                    fontSize: "14px",
+                                    fontWeight: 700,
+                                    cursor: "not-allowed",
+                                  }}
+                                    disabled>
+                                    <Clock className="w-4 h-4" style={{ display: "inline", marginRight: "8px" }} />
+                                    Waktu Tes Sudah Habis
+                                  </button>
+                                );
+                              }
+
+                              return (
+                                <Link href={testUrl}>
+                                  <button style={{
+                                    marginTop: "16px",
+                                    width: "100%",
+                                    padding: "14px 20px",
+                                    background: canStart ? "linear-gradient(135deg, #16a34a, #22c55e)" : "linear-gradient(135deg, #f59e0b, #d97706)",
+                                    color: "#fff",
+                                    border: "none",
+                                    borderRadius: "10px",
+                                    fontSize: "14px",
+                                    fontWeight: 700,
+                                    cursor: canStart ? "pointer" : "not-allowed",
+                                    boxShadow: canStart ? "0 4px 14px rgba(22, 163, 74, 0.4)" : "0 4px 14px rgba(245, 158, 11, 0.3)",
+                                    transition: "all 0.3s ease",
+                                  }}>
+                                    {canStart ? (
+                                      <>
+                                        <Play className="w-4 h-4" style={{ display: "inline", marginRight: "8px" }} />
+                                        Mulai Tes Sekarang
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Clock className="w-4 h-4" style={{ display: "inline", marginRight: "8px" }} />
+                                        Tunggu Sampai Waktu Tes
+                                      </>
+                                    )}
+                                  </button>
+                                </Link>
+                              );
+                            })()}
                           </div>
                         )}
 
@@ -298,34 +443,34 @@ export default function SchedulePage() {
                                 fontSize: "11px",
                                 fontWeight: 700
                               }}>
-                                {getDaysUntil(schedule.interview.scheduledAt) === 0
+                                {getDaysUntil(schedule.interview?.scheduledAt) === 0
                                   ? "Hari ini"
-                                  : getDaysUntil(schedule.interview.scheduledAt) === 1
+                                  : getDaysUntil(schedule.interview?.scheduledAt) === 1
                                   ? "Besok"
-                                  : `${getDaysUntil(schedule.interview.scheduledAt)} hari lagi`}
+                                  : `${getDaysUntil(schedule.interview?.scheduledAt)} hari lagi`}
                               </span>
                             </div>
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                                 <Calendar className="w-4 h-4" style={{ color: "#666" }} />
-                                <span style={{ fontSize: "13px", color: "#111" }}>{formatDate(schedule.interview.scheduledAt)}</span>
+                                <span style={{ fontSize: "13px", color: "#111" }}>{formatDate(schedule.interview?.scheduledAt)}</span>
                               </div>
                               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                                 <Clock className="w-4 h-4" style={{ color: "#666" }} />
                                 <span style={{ fontSize: "13px", color: "#111" }}>
-                                  {formatTime(schedule.interview.scheduledAt)}
-                                  {schedule.interview.endTime ? ` - ${formatTime(schedule.interview.endTime)}` : ""} WIB
+                                  {formatTime(schedule.interview?.scheduledAt)}
+                                  {schedule.interview?.endTime ? ` - ${formatTime(schedule.interview?.endTime)}` : ""} WIB
                                 </span>
                               </div>
                             </div>
                             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "8px" }}>
                               <MapPin className="w-4 h-4" style={{ color: "#666" }} />
-                              <span style={{ fontSize: "13px", color: "#111" }}>{schedule.interview.location}</span>
+                              <span style={{ fontSize: "13px", color: "#111" }}>{schedule.interview?.location || "Online System"}</span>
                             </div>
-                            {schedule.interview.interviewer && (
+                            {schedule.interview?.interviewer && (
                               <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "8px" }}>
                                 <User className="w-4 h-4" style={{ color: "#666" }} />
-                                <span style={{ fontSize: "13px", color: "#111" }}>Penguji: {schedule.interview.interviewer}</span>
+                                <span style={{ fontSize: "13px", color: "#111" }}>Penguji: {schedule.interview?.interviewer}</span>
                               </div>
                             )}
                           </div>

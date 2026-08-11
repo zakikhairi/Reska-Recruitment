@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Calendar,
   Clock,
@@ -28,8 +28,8 @@ interface Schedule {
   id: string;
   applicationId: string;
   type: "TEST" | "INTERVIEW";
-  scheduledAt: string;
-  location: string;
+  scheduledAt?: string;
+  location?: string;
   applicantName: string;
   position: string;
   division: string;
@@ -44,8 +44,8 @@ interface GroupedByJob {
   division: string;
   type: "TEST" | "INTERVIEW";
   schedules: Schedule[];
-  scheduledAt: string;
-  location: string;
+  scheduledAt?: string;
+  location?: string;
   totalApplicants: number;
 }
 
@@ -53,15 +53,15 @@ interface GroupedSchedule {
   position: string;
   division: string;
   type: "TEST" | "INTERVIEW";
-  scheduledAt: string;
-  location: string;
+  scheduledAt?: string;
+  location?: string;
   applicants: {
     id: string;
     applicationId: string;
     applicantName: string;
     status: string;
-    scheduledAt: string;
-    location: string;
+    scheduledAt?: string;
+    location?: string;
   }[];
   totalApplicants: number;
 }
@@ -117,6 +117,53 @@ export default function SchedulePage() {
   const [viewMode, setViewMode] = useState<"month" | "week">("month");
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
 
+  // Real-time clock for countdown timer
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Update current time every second for countdown display
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Calculate time remaining until scheduled time (in seconds)
+  const getTimeRemainingSeconds = (scheduledAt?: string): number | null => {
+    if (!scheduledAt) return null;
+    const diff = new Date(scheduledAt).getTime() - currentTime.getTime();
+    return Math.max(0, Math.floor(diff / 1000));
+  };
+
+  // Format time remaining for display
+  const formatTimeRemaining = (seconds: number | null) => {
+    if (seconds === null || seconds <= 0) return null;
+
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+
+    if (days > 0) return `${days} hari ${hours} jam`;
+    if (hours > 0) return `${hours} jam ${minutes} menit`;
+    if (minutes > 0) return `${minutes} menit ${secs} detik`;
+    return `${secs} detik`;
+  };
+
+  // Check if test can be started (time has arrived)
+  const canStartTest = useCallback((schedule: Schedule) => {
+    const scheduledAt = schedule.scheduledAt;
+    if (!scheduledAt) return true;
+    return currentTime >= new Date(scheduledAt);
+  }, [currentTime]);
+
+  // Check if test window has expired (past endTime)
+  const isTestExpired = useCallback((schedule: Schedule) => {
+    const endTime = (schedule as any).endTime;
+    if (!endTime) return false;
+    return currentTime > new Date(endTime);
+  }, [currentTime]);
+
   // Calendar helpers
   const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
   const dayNames = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
@@ -162,6 +209,7 @@ export default function SchedulePage() {
 
   const getEventsForDay = (date: Date) => {
     return schedules.filter((s) => {
+      if (!s.scheduledAt) return false;
       const eventDate = new Date(s.scheduledAt);
       return eventDate.getDate() === date.getDate() &&
              eventDate.getMonth() === date.getMonth() &&
@@ -175,7 +223,7 @@ export default function SchedulePage() {
   };
 
   const isSelected = (date: Date) => {
-    return selectedSchedule && date.toDateString() === new Date(selectedSchedule.scheduledAt).toDateString();
+    return selectedSchedule?.scheduledAt && date.toDateString() === new Date(selectedSchedule.scheduledAt).toDateString();
   };
 
   const prevMonth = () => {
@@ -257,11 +305,13 @@ export default function SchedulePage() {
     }
   };
 
-  const formatTime = (dateStr: string) => {
+  const formatTime = (dateStr?: string) => {
+    if (!dateStr) return "-";
     return new Date(dateStr).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
   };
 
-  const formatDate = (dateStr: string) => {
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return "-";
     return new Date(dateStr).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
   };
 
@@ -326,7 +376,11 @@ export default function SchedulePage() {
       });
       groups[key].totalApplicants++;
     });
-    return Object.values(groups).sort((a, b) => new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime());
+    return Object.values(groups).sort((a, b) => {
+      const dateA = a.scheduledAt ? new Date(a.scheduledAt).getTime() : 0;
+      const dateB = b.scheduledAt ? new Date(b.scheduledAt).getTime() : 0;
+      return dateB - dateA;
+    });
   };
 
   const groupSchedulesByJobPosting = (schedules: Schedule[]): GroupedByJob[] => {
@@ -348,7 +402,11 @@ export default function SchedulePage() {
       groups[key].schedules.push(schedule);
       groups[key].totalApplicants++;
     });
-    return Object.values(groups).sort((a, b) => new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime());
+    return Object.values(groups).sort((a, b) => {
+      const dateA = a.scheduledAt ? new Date(a.scheduledAt).getTime() : 0;
+      const dateB = b.scheduledAt ? new Date(b.scheduledAt).getTime() : 0;
+      return dateB - dateA;
+    });
   };
 
   const toggleJobExpand = (jobKey: string) => {
@@ -673,14 +731,16 @@ export default function SchedulePage() {
                       <Clock className="w-4 h-4" style={{ color: "#666" }} />
                       <div>
                         <p style={{ fontSize: "10px", color: "#888", margin: 0 }}>Tanggal & Waktu</p>
-                        <p style={{ fontSize: "12px", fontWeight: 500, color: "#333", margin: 0 }}>{formatDate(selectedSchedule.scheduledAt)}, {formatTime(selectedSchedule.scheduledAt)}</p>
+                        <p style={{ fontSize: "12px", fontWeight: 500, color: "#333", margin: 0 }}>
+                          {selectedSchedule.scheduledAt ? `${formatDate(selectedSchedule.scheduledAt)}, ${formatTime(selectedSchedule.scheduledAt)}` : "Menunggu jadwal"}
+                        </p>
                       </div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                       <MapPin className="w-4 h-4" style={{ color: "#666" }} />
                       <div>
                         <p style={{ fontSize: "10px", color: "#888", margin: 0 }}>Lokasi</p>
-                        <p style={{ fontSize: "12px", fontWeight: 500, color: "#333", margin: 0 }}>{selectedSchedule.location}</p>
+                        <p style={{ fontSize: "12px", fontWeight: 500, color: "#333", margin: 0 }}>{selectedSchedule.location || "Online System"}</p>
                       </div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -701,7 +761,110 @@ export default function SchedulePage() {
                     )}
                   </div>
 
+                  {/* Test Status & Countdown - Only for TEST type */}
+                  {selectedSchedule.type === "TEST" && (() => {
+                    const timeRemaining = getTimeRemainingSeconds(selectedSchedule.scheduledAt);
+                    const testCanStart = canStartTest(selectedSchedule);
+                    const testIsExpired = isTestExpired(selectedSchedule);
+
+                    return (
+                      <>
+                        {/* Status Badge */}
+                        <div style={{ marginBottom: "14px" }}>
+                          {testIsExpired ? (
+                            <div style={{ padding: "10px 14px", background: "#fee2e2", borderRadius: "8px", textAlign: "center" }}>
+                              <p style={{ fontSize: "12px", fontWeight: 700, color: "#dc2626", margin: 0 }}>⏰ Waktu Tes Sudah Habis</p>
+                            </div>
+                          ) : testCanStart ? (
+                            <div style={{ padding: "10px 14px", background: "#dcfce7", borderRadius: "8px", textAlign: "center" }}>
+                              <p style={{ fontSize: "12px", fontWeight: 700, color: "#16a34a", margin: 0 }}>✓ Tes Bisa Dimulai</p>
+                            </div>
+                          ) : timeRemaining !== null && timeRemaining > 0 ? (
+                            <div style={{ padding: "10px 14px", background: "#fef3c7", borderRadius: "8px", textAlign: "center" }}>
+                              <p style={{ fontSize: "11px", fontWeight: 600, color: "#92400e", margin: 0, marginBottom: "6px" }}>Menunggu waktu tes:</p>
+                              <p style={{ fontSize: "14px", fontWeight: 800, color: "#d97706", margin: 0 }}>{formatTimeRemaining(timeRemaining)}</p>
+                            </div>
+                          ) : null}
+                        </div>
+
+                        {/* Live Countdown Timer - Shows when not started yet */}
+                        {!testCanStart && !testIsExpired && timeRemaining !== null && timeRemaining > 0 && (
+                          <div style={{ background: "#fffbeb", borderRadius: "12px", padding: "16px", marginBottom: "14px", border: "2px solid #fcd34d" }}>
+                            <p style={{ fontSize: "11px", fontWeight: 600, color: "#92400e", margin: 0, marginBottom: "12px", textAlign: "center" }}>Waktumundur Menuju Tes</p>
+                            <div style={{ display: "flex", justifyContent: "center", gap: "6px", alignItems: "center" }}>
+                              {Math.floor(timeRemaining / 86400) > 0 && (
+                                <>
+                                  <div style={{ textAlign: "center" }}>
+                                    <div style={{ fontSize: "22px", fontWeight: 800, color: "#d97706" }}>{Math.floor(timeRemaining / 86400)}</div>
+                                    <div style={{ fontSize: "9px", color: "#92400e" }}>Hari</div>
+                                  </div>
+                                  <span style={{ fontSize: "16px", color: "#d97706" }}>:</span>
+                                </>
+                              )}
+                              {Math.floor((timeRemaining % 86400) / 3600) > 0 && (
+                                <>
+                                  <div style={{ textAlign: "center" }}>
+                                    <div style={{ fontSize: "22px", fontWeight: 800, color: "#d97706" }}>{Math.floor((timeRemaining % 86400) / 3600)}</div>
+                                    <div style={{ fontSize: "9px", color: "#92400e" }}>Jam</div>
+                                  </div>
+                                  <span style={{ fontSize: "16px", color: "#d97706" }}>:</span>
+                                </>
+                              )}
+                              <div style={{ textAlign: "center" }}>
+                                <div style={{ fontSize: "22px", fontWeight: 800, color: "#d97706" }}>{Math.floor((timeRemaining % 3600) / 60)}</div>
+                                <div style={{ fontSize: "9px", color: "#92400e" }}>Menit</div>
+                              </div>
+                              <span style={{ fontSize: "16px", color: "#d97706" }}>:</span>
+                              <div style={{ textAlign: "center" }}>
+                                <div style={{ fontSize: "22px", fontWeight: 800, color: "#d97706" }}>{String(timeRemaining % 60).padStart(2, "0")}</div>
+                                <div style={{ fontSize: "9px", color: "#92400e" }}>Detik</div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+
                   <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    {/* Tombol Mulai/Lihat Tes - Only for TEST type */}
+                    {selectedSchedule.type === "TEST" && (() => {
+                      const testCanStart = canStartTest(selectedSchedule);
+                      const testIsExpired = isTestExpired(selectedSchedule);
+
+                      if (testIsExpired) {
+                        return (
+                          <button disabled style={{ padding: "10px 14px", background: "#e5e5e5", border: "none", borderRadius: "8px", fontSize: "12px", fontWeight: 600, color: "#888", cursor: "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+                            <Clock className="w-4 h-4" /> Waktu Tes Habis
+                          </button>
+                        );
+                      }
+
+                      return (
+                        <a href={`/applicant/test/${selectedSchedule.applicationId}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+                          <button style={{
+                            padding: "10px 14px",
+                            background: testCanStart ? "linear-gradient(135deg, #16a34a, #22c55e)" : "linear-gradient(135deg, #f59e0b, #d97706)",
+                            border: "none",
+                            borderRadius: "8px",
+                            fontSize: "12px",
+                            fontWeight: 600,
+                            color: "#fff",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "6px",
+                            width: "100%",
+                            boxShadow: testCanStart ? "0 2px 8px rgba(22, 163, 74, 0.3)" : "0 2px 8px rgba(245, 158, 11, 0.3)",
+                          }}>
+                            <FileText className="w-4 h-4" />
+                            {testCanStart ? "👁 Lihat/Monitor Tes" : "⏳ Lihat Detail Tes"}
+                          </button>
+                        </a>
+                      );
+                    })()}
+
                     <button style={{ padding: "8px 12px", background: "#fff", border: "1px solid #e0e0e0", borderRadius: "6px", fontSize: "12px", fontWeight: 500, color: "#333", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
                       <Calendar className="w-4 h-4" /> Ubah Jadwal
                     </button>
