@@ -345,7 +345,13 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
                 </div>
                 <div>
                   <p style={{ fontSize: "12px", color: "#888" }}>Jumlah Soal</p>
-                  <p style={{ fontSize: "15px", fontWeight: 600, color: "#111" }}>{testData?.questions.length || 0} Soal</p>
+                  <p style={{ fontSize: "15px", fontWeight: 600, color: "#111" }}>
+                    {/* Show total from config if available, otherwise show actual loaded questions */}
+                    {testData?.config?.questionsPerCategory && testData?.categories?.length
+                      ? `${testData.config.questionsPerCategory * testData.categories.length} Soal`
+                      : `${testData?.questions?.length || 0} Soal`
+                    }
+                  </p>
                 </div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>

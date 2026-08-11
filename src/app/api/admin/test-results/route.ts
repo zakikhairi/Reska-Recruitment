@@ -40,23 +40,45 @@ export async function GET() {
       if (session.rawScores && config) {
         const categories = config.categories.split(",");
         const passingGrades = config.passingGrades ? JSON.parse(config.passingGrades) : {};
-        const weights = config.categoryWeights ? JSON.parse(config.categoryWeights) : {};
+        const questionsPerCategory = config.questionsPerCategory || 10;
+
+        // rawScores is stored as { category: { correct: number, total: number } }
+        const rawScoresObj = typeof session.rawScores === 'string'
+          ? JSON.parse(session.rawScores)
+          : session.rawScores;
 
         categoryScores = categories.map((cat: string) => {
-          const score = session.rawScores?.[cat as keyof typeof session.rawScores] || 0;
+          const catData = rawScoresObj?.[cat] || { correct: 0, total: 0 };
+          const correct = catData.correct || 0;
+          const total = catData.total || questionsPerCategory;
+          // Calculate percentage from correct/total
+          const percentage = total > 0 ? Math.round((correct / total) * 100) : 0;
           const passingGrade = passingGrades[cat] || 60;
-          // Calculate percentage based on questions per category
-          const questionsPerCategory = config.questionsPerCategory || 10;
-          const correctAnswers = Math.round((score / 100) * questionsPerCategory);
-          const percentage = score;
 
           return {
             category: cat,
-            score: correctAnswers,
-            total: questionsPerCategory,
+            score: correct,
+            total: total,
             percentage: percentage,
             passingGrade: passingGrade,
             passed: percentage >= passingGrade,
+          };
+        });
+      } else if (config) {
+        // No rawScores yet, but we have config - show planned questions
+        const categories = config.categories.split(",");
+        const questionsPerCategory = config.questionsPerCategory || 10;
+        const passingGrades = config.passingGrades ? JSON.parse(config.passingGrades) : {};
+
+        categoryScores = categories.map((cat: string) => {
+          const passingGrade = passingGrades[cat] || 60;
+          return {
+            category: cat,
+            score: 0,
+            total: questionsPerCategory,
+            percentage: 0,
+            passingGrade: passingGrade,
+            passed: false,
           };
         });
       }

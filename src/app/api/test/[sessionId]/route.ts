@@ -83,6 +83,8 @@ export async function GET(
           config: {
             totalDurationMinutes: config.totalDurationMinutes,
             categories: config.categories.split(","),
+            questionsPerCategory: config.questionsPerCategory,
+            passingGrade: config.overallPassingGrade,
           },
           questions: [],
           canStart,
@@ -184,6 +186,8 @@ export async function GET(
       config: {
         totalDurationMinutes: application.jobPosting.testConfig.totalDurationMinutes,
         categories: application.jobPosting.testConfig.categories.split(","),
+        questionsPerCategory: application.jobPosting.testConfig.questionsPerCategory,
+        passingGrade: application.jobPosting.testConfig.overallPassingGrade,
       },
       canStart,
       scheduledAt: scheduledAt?.toISOString() || null,
