@@ -20,6 +20,11 @@ interface TestData {
   questions: Question[];
   durationMinutes: number;
   categories: string[];
+  config?: {
+    questionsPerCategory?: number;
+    passingGrade?: number;
+    totalDurationMinutes?: number;
+  };
 }
 
 interface SessionData {
@@ -124,6 +129,11 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
             questions: result.questions || [],
             durationMinutes: result.config?.totalDurationMinutes || 90,
             categories: result.config?.categories || [],
+            config: {
+              questionsPerCategory: result.config?.questionsPerCategory,
+              passingGrade: result.config?.passingGrade,
+              totalDurationMinutes: result.config?.totalDurationMinutes,
+            },
           });
           setTimeRemaining((result.config?.totalDurationMinutes || 90) * 60);
         } else {
@@ -134,6 +144,11 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
             questions: [],
             durationMinutes: result.config?.totalDurationMinutes || 90,
             categories: result.config?.categories || [],
+            config: {
+              questionsPerCategory: result.config?.questionsPerCategory,
+              passingGrade: result.config?.passingGrade,
+              totalDurationMinutes: result.config?.totalDurationMinutes,
+            },
           });
           setTimeRemaining((result.config?.totalDurationMinutes || 90) * 60);
         }

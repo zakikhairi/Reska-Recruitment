@@ -13,10 +13,10 @@ export async function PATCH(
     const body = await request.json();
     const { type, data } = body;
 
-    // Get current application with user data
+    // Get current application with applicant data
     const currentApp = await prisma.application.findUnique({
       where: { id },
-      include: { user: true },
+      include: { applicant: true },
     });
 
     if (!currentApp) {
@@ -27,44 +27,49 @@ export async function PATCH(
     }
 
     if (type === "personal") {
-      // Update personal data (user fields)
-      const updatedUser = await prisma.user.update({
-        where: { id: currentApp.userId },
-        data: {
-          fullName: data.fullName,
-          nik: data.nik,
-          phone: data.phone,
-          placeOfBirth: data.placeOfBirth,
-          dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
-          gender: data.gender,
-          address: data.address,
-          city: data.city,
-        },
+      // Update personal data (applicant fields)
+      const updateData: any = {
+        fullName: data.fullName,
+        nik: data.nik,
+        phone: data.phone,
+        placeOfBirth: data.placeOfBirth,
+        gender: data.gender,
+        address: data.address,
+        city: data.city,
+      };
+
+      if (data.dateOfBirth) {
+        updateData.dateOfBirth = new Date(data.dateOfBirth);
+      }
+
+      const updatedApplicant = await prisma.applicant.update({
+        where: { id: currentApp.applicantId },
+        data: updateData,
       });
 
       return NextResponse.json({
         success: true,
         message: "Data pribadi berhasil diperbarui",
-        data: updatedUser,
+        data: updatedApplicant,
       });
     }
 
     if (type === "education") {
-      // Update education data (user fields)
-      const updatedUser = await prisma.user.update({
-        where: { id: currentApp.userId },
+      // Update education data (applicant fields)
+      const updatedApplicant = await prisma.applicant.update({
+        where: { id: currentApp.applicantId },
         data: {
           education: data.education,
           university: data.university,
-          height: data.height ? parseInt(data.height) : null,
-          weight: data.weight ? parseInt(data.weight) : null,
+          height: data.height ? parseFloat(data.height) : null,
+          weight: data.weight ? parseFloat(data.weight) : null,
         },
       });
 
       return NextResponse.json({
         success: true,
         message: "Data pendidikan berhasil diperbarui",
-        data: updatedUser,
+        data: updatedApplicant,
       });
     }
 

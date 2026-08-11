@@ -149,7 +149,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                   </div>
                   <div>
                     <p style={{ fontSize: "12px", color: "#888888", marginBottom: "2px" }}>Lokasi</p>
-                    <p style={{ fontSize: "14px", fontWeight: 600, color: "#111111" }}>{job.location}</p>
+                    <p style={{ fontSize: "14px", fontWeight: 600, color: "#111111" }}>{job.location || "-"}</p>
                   </div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>

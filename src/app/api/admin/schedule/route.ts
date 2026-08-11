@@ -111,6 +111,7 @@ export async function GET(request: NextRequest) {
         applicationId: s.applicationId,
         type: "TEST",
         scheduledAt: s.scheduledAt || s.startedAt,
+        endTime: s.endTime,
         location: "Online System",
         applicantName: s.application.applicant.fullName,
         position: s.application.jobPosting.title,
@@ -153,7 +154,11 @@ export async function GET(request: NextRequest) {
 
     // Combine and sort by scheduled date
     const allSchedules = [...testSchedules, ...interviewSchedules].sort(
-      (a, b) => new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime()
+      (a, b) => {
+        const dateA = a.scheduledAt ? new Date(a.scheduledAt).getTime() : 0;
+        const dateB = b.scheduledAt ? new Date(b.scheduledAt).getTime() : 0;
+        return dateB - dateA;
+      }
     );
 
     // Group schedules by job posting (for batch view)

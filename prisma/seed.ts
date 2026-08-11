@@ -1,13 +1,7 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
-import Database from "better-sqlite3";
 
-const url = process.env.DATABASE_URL || "file:./prisma/dev.db";
-const dbPath = url.replace("file:", "");
-const database = new Database(dbPath);
-const adapter = new PrismaBetterSqlite3(database);
-const prisma = new PrismaClient({ adapter });
+const prisma = new PrismaClient();
 
 // Simple hash function
 function simpleHash(str: string): string {

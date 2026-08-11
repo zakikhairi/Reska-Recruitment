@@ -3,14 +3,28 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 
-const jobs = [
-  { id: 1, title: "Pramugara / Pramugari Kereta", location: "Jakarta, Bandung, Surabaya", applicants: 245, isNew: true, deadline: "15 Agu 2026", type: "Layanan Kereta" },
-  { id: 2, title: "Steward Kereta Api", location: "Bandung", applicants: 128, isNew: true, deadline: "20 Agu 2026", type: "Layanan Kereta" },
-  { id: 3, title: "Staff IT Support", location: "Jakarta", applicants: 89, isNew: false, deadline: "10 Agu 2026", type: "IT Staff" },
-  { id: 4, title: "Teknisi Maintenance Kereta", location: "Madiun", applicants: 67, isNew: false, deadline: "25 Agu 2026", type: "Logistik" },
-  { id: 5, title: "Cleaning Service - ResClean", location: "Bandung, Jakarta", applicants: 312, isNew: false, deadline: "1 Sep 2026", type: "ResClean" },
-  { id: 6, title: "Staff Administrasi", location: "Jakarta", applicants: 156, isNew: false, deadline: "18 Agu 2026", type: "Admin" },
-];
+interface Job {
+  id: string;
+  title: string;
+  division: string;
+  location: string | null;
+  description: string;
+  requirements: string;
+  minEducation: string;
+  deadline: string;
+  status: string;
+  applicantCount: number;
+  createdAt: string;
+}
+
+const divisionLabels: Record<string, string> = {
+  "ON_TRAIN_SERVICE": "Layanan Kereta",
+  "IT_STAFF": "IT Staff",
+  "LOGISTICS": "Logistik",
+  "RES_CLEAN": "ResClean",
+  "RES_PARKING": "ResParking",
+  "ADMIN": "Admin",
+};
 
 const filters = ["Semua", "Layanan Kereta", "IT Staff", "Logistik", "ResClean", "Admin"];
 
@@ -78,10 +92,39 @@ function AnimatedCard({ children, delay = 0 }: { children: React.ReactNode; dela
 export default function HomePage() {
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("Semua");
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredJobs = jobs.filter(job => {
-    const matchFilter = activeFilter === "Semua" || job.type === activeFilter;
-    const matchSearch = job.title.toLowerCase().includes(search.toLowerCase()) || job.location.toLowerCase().includes(search.toLowerCase());
+  useEffect(() => {
+    fetch('/api/jobs')
+      .then(res => res.json())
+      .then(data => {
+        setJobs(data.jobs || []);
+        setLoading(false);
+      })
+      .catch(() => {
+        setJobs([]);
+        setLoading(false);
+      });
+  }, []);
+
+  // Map filter labels to division codes
+  const filterToDivision: Record<string, string> = {
+    "Layanan Kereta": "ON_TRAIN_SERVICE",
+    "IT Staff": "IT_STAFF",
+    "Logistik": "LOGISTICS",
+    "ResClean": "RES_CLEAN",
+    "Admin": "ADMIN",
+  };
+
+  // Filter only ACTIVE jobs
+  const activeJobs = jobs.filter(job => job.status === "ACTIVE");
+
+  const filteredJobs = activeJobs.filter(job => {
+    const divisionLabel = divisionLabels[job.division] || job.division;
+    const matchFilter = activeFilter === "Semua" || divisionLabel === activeFilter;
+    const matchSearch = (job.title || "").toLowerCase().includes(search.toLowerCase()) ||
+                       (job.location || "").toLowerCase().includes(search.toLowerCase());
     return matchFilter && matchSearch;
   });
 
@@ -311,32 +354,42 @@ export default function HomePage() {
           </AnimatedSection>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "28px" }}>
-            {filteredJobs.map((job, i) => (
-              <AnimatedCard key={job.id} delay={i * 100}>
-                <div style={{ background: "#ffffff", padding: "28px", borderRadius: "16px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", transition: "transform 0.3s, box-shadow 0.3s" }}
-                  onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-8px)"; e.currentTarget.style.boxShadow = "0 12px 24px rgba(0,0,0,0.12)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.06)"; }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
-                    <span style={{ padding: "6px 14px", borderRadius: "14px", fontSize: "12px", fontWeight: 700, background: job.isNew ? "#dcfce7" : "#f0f0f0", color: job.isNew ? "#16a34a" : "#666666" }}>{job.isNew ? "Baru" : "Aktif"}</span>
-                    <span style={{ fontSize: "13px", color: "#999999", fontWeight: 500 }}>{job.applicants} pelamar</span>
-                  </div>
-                  <h3 style={{ fontSize: "17px", fontWeight: 700, color: "#111111", marginBottom: "12px", lineHeight: 1.4 }}>{job.title}</h3>
-                  <div style={{ fontSize: "14px", color: "#666666", marginBottom: "20px", lineHeight: 1.6 }}>
-                    <div style={{ marginBottom: "6px" }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888888" strokeWidth="2" style={{ display: "inline", verticalAlign: "middle", marginRight: "4px" }}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                      {job.location}
+            {loading ? (
+              <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "60px", background: "#ffffff", borderRadius: "16px" }}>
+                <p style={{ color: "#666666" }}>Memuat lowongan...</p>
+              </div>
+            ) : filteredJobs.length === 0 ? (
+              <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "60px", background: "#ffffff", borderRadius: "16px" }}>
+                <p style={{ color: "#666666" }}>Tidak ada lowongan tersedia</p>
+              </div>
+            ) : (
+              filteredJobs.map((job, i) => (
+                <AnimatedCard key={job.id} delay={i * 100}>
+                  <div style={{ background: "#ffffff", padding: "28px", borderRadius: "16px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", transition: "transform 0.3s, box-shadow 0.3s" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-8px)"; e.currentTarget.style.boxShadow = "0 12px 24px rgba(0,0,0,0.12)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.06)"; }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
+                      <span style={{ padding: "6px 14px", borderRadius: "14px", fontSize: "12px", fontWeight: 700, background: "#dcfce7", color: "#16a34a" }}>Aktif</span>
+                      <span style={{ fontSize: "13px", color: "#999999", fontWeight: 500 }}>{job.applicantCount || 0} pelamar</span>
                     </div>
-                    <div>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888888" strokeWidth="2" style={{ display: "inline", verticalAlign: "middle", marginRight: "4px" }}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                      {job.deadline}
+                    <h3 style={{ fontSize: "17px", fontWeight: 700, color: "#111111", marginBottom: "12px", lineHeight: 1.4 }}>{job.title}</h3>
+                    <div style={{ fontSize: "14px", color: "#666666", marginBottom: "20px", lineHeight: 1.6 }}>
+                      <div style={{ marginBottom: "6px" }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888888" strokeWidth="2" style={{ display: "inline", verticalAlign: "middle", marginRight: "4px" }}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        {job.location || "-"}
+                      </div>
+                      <div>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888888" strokeWidth="2" style={{ display: "inline", verticalAlign: "middle", marginRight: "4px" }}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                        {new Date(job.deadline).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                      </div>
                     </div>
+                    <Link href={`/auth/register?job=${job.id}`}>
+                      <button style={{ width: "100%", padding: "14px", background: "#FF5E00", color: "#ffffff", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 700, cursor: "pointer" }}>Lamar Posisi Ini</button>
+                    </Link>
                   </div>
-                  <Link href={`/auth/register?job=${job.id}`}>
-                    <button style={{ width: "100%", padding: "14px", background: "#FF5E00", color: "#ffffff", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 700, cursor: "pointer" }}>Lamar Posisi Ini</button>
-                  </Link>
-                </div>
-              </AnimatedCard>
-            ))}
+                </AnimatedCard>
+              ))
+            )}
           </div>
         </div>
       </section>

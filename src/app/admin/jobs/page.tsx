@@ -83,7 +83,8 @@ export default function JobsPage() {
   }
 
   const filteredJobs = jobs.filter((job) => {
-    const matchSearch = job.title.toLowerCase().includes(searchQuery.toLowerCase()) || job.location.toLowerCase().includes(searchQuery.toLowerCase());
+    if (!job) return false;
+    const matchSearch = (job.title || "").toLowerCase().includes(searchQuery.toLowerCase()) || (job.location || "").toLowerCase().includes(searchQuery.toLowerCase());
     const matchStatus = statusFilter === "all" || job.status === statusFilter;
     const matchDivision = divisionFilter === "all" || job.division === divisionFilter;
     return matchSearch && matchStatus && matchDivision;
@@ -190,7 +191,7 @@ export default function JobsPage() {
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "20px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", color: "#666666" }}>
                     <MapPin className="w-4 h-4" style={{ color: "#888888" }} />
-                    {job.location}
+                    {job.location || "-"}
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", color: "#666666" }}>
                     <Users className="w-4 h-4" style={{ color: "#888888" }} />
