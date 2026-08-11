@@ -4,45 +4,29 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Download,
-  FileText,
-  TrendingUp,
   Users,
   Award,
+  TrendingUp,
   BarChart3,
   Eye,
   Clock,
   BookOpen,
   UserCheck,
   XCircle,
-  Plus,
-  FileSpreadsheet,
-  FileCode,
-  ChevronDown,
   RefreshCw,
   Trophy,
 } from "lucide-react";
 
-interface TestResult {
-  sessionId: string;
-  applicationId: string;
-  applicantName: string;
-  jobTitle: string;
-  division: string;
-  status: string;
-  testStatus: string;
-  scheduledAt: string | null;
-  startedAt: string | null;
-  submittedAt: string | null;
-  totalScore: number | null;
-  passed: boolean | null;
-  categoryScores: {
-    category: string;
-    score: number;
-    total: number;
-    percentage: number;
-    passingGrade: number;
-    passed: boolean;
-  }[];
+interface ChartData {
+  label: string;
+  applicants: number;
+  passed: number;
+}
+
+interface StatsData {
+  applicants: number;
+  passed: number;
+  avgScore: number;
 }
 
 const divisionLabels: Record<string, string> = {
@@ -55,14 +39,14 @@ const divisionLabels: Record<string, string> = {
 };
 
 export default function ReportsPage() {
-  const [dateRange, setDateRange] = useState("month");
-  const [showExportMenu, setShowExportMenu] = useState(false);
   const [loading, setLoading] = useState(false);
-  const exportMenuRef = useRef<HTMLDivElement>(null);
+  const [chartRange, setChartRange] = useState("month");
   const router = useRouter();
 
   // Real data state
-  const [testResults, setTestResults] = useState<TestResult[]>([]);
+  const [testResults, setTestResults] = useState<any[]>([]);
+  const [chartData, setChartData] = useState<ChartData[]>([]);
+  const [statsTotals, setStatsTotals] = useState<StatsData>({ applicants: 0, passed: 0, avgScore: 0 });
   const [stats, setStats] = useState({
     totalPelamar: 0,
     passingRate: 0,
@@ -80,13 +64,12 @@ export default function ReportsPage() {
       if (data.success) {
         setTestResults(data.results);
 
-        // Calculate stats
         const results = data.results;
         const totalTests = results.length;
-        const passedTests = results.filter((r: TestResult) => r.passed === true).length;
-        const scoredTests = results.filter((r: TestResult) => r.totalScore !== null).length;
+        const passedTests = results.filter((r: any) => r.passed === true).length;
+        const scoredTests = results.filter((r: any) => r.totalScore !== null).length;
         const avgScore = scoredTests > 0
-          ? Math.round(results.filter((r: TestResult) => r.totalScore !== null).reduce((sum: number, r: TestResult) => sum + (r.totalScore || 0), 0) / scoredTests)
+          ? Math.round(results.filter((r: any) => r.totalScore !== null).reduce((sum: number, r: any) => sum + (r.totalScore || 0), 0) / scoredTests)
           : 0;
 
         setStats({
@@ -103,19 +86,29 @@ export default function ReportsPage() {
     }
   };
 
+  // Fetch chart data with time range
+  const fetchChartData = async (range: string) => {
+    try {
+      const response = await fetch(`/api/admin/stats?range=${range}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setChartData(data.data.chart);
+        setStatsTotals(data.data.totals);
+      }
+    } catch (err) {
+      console.error("Failed to fetch chart data:", err);
+    }
+  };
+
   useEffect(() => {
     fetchTestResults();
+    fetchChartData(chartRange);
   }, []);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
-        setShowExportMenu(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    fetchChartData(chartRange);
+  }, [chartRange]);
 
   // Get top 5 candidates (sorted by score)
   const topCandidates = [...testResults]
@@ -141,11 +134,14 @@ export default function ReportsPage() {
 
   // Quick stats
   const quickStats = [
-    { label: "Tes Aktif", value: testResults.filter((r: TestResult) => r.testStatus === "IN_PROGRESS" || r.testStatus === "NOT_STARTED").length, icon: BookOpen, color: "#00205B" },
-    { label: "Menunggu Review", value: testResults.filter((r: TestResult) => r.testStatus === "SUBMITTED" && r.totalScore === null).length, icon: Clock, color: "#FF5E00" },
-    { label: "Lulus Tes", value: testResults.filter((r: TestResult) => r.passed === true).length, icon: UserCheck, color: "#10B981" },
-    { label: "Tidak Lulus", value: testResults.filter((r: TestResult) => r.passed === false).length, icon: XCircle, color: "#EF4444" },
+    { label: "Tes Aktif", value: testResults.filter((r: any) => r.testStatus === "IN_PROGRESS" || r.testStatus === "NOT_STARTED").length, icon: BookOpen, color: "#00205B" },
+    { label: "Menunggu Review", value: testResults.filter((r: any) => r.testStatus === "SUBMITTED" && r.totalScore === null).length, icon: Clock, color: "#FF5E00" },
+    { label: "Lulus Tes", value: testResults.filter((r: any) => r.passed === true).length, icon: UserCheck, color: "#10B981" },
+    { label: "Tidak Lulus", value: testResults.filter((r: any) => r.passed === false).length, icon: XCircle, color: "#EF4444" },
   ];
+
+  // Calculate max value for chart scaling
+  const maxChartValue = Math.max(...chartData.map(d => d.applicants), 1);
 
   return (
     <div style={{ fontFamily: "Inter, system-ui, sans-serif", minHeight: "100vh", background: "#f8f9fa" }}>
@@ -156,26 +152,14 @@ export default function ReportsPage() {
             <h1 style={{ fontSize: "28px", fontWeight: 800, color: "#00205B", marginBottom: "4px" }}>Laporan & Analisis</h1>
             <p style={{ fontSize: "15px", color: "#666666" }}>Data dan statistik rekrutmen KAI Services</p>
           </div>
-          <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-            <button
-              onClick={fetchTestResults}
-              disabled={loading}
-              style={{ padding: "10px 16px", background: "#f8f9fa", color: "#00205B", border: "1px solid #e5e5e5", borderRadius: "10px", fontSize: "14px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-              Refresh
-            </button>
-            <select
-              value={dateRange}
-              onChange={(e) => setDateRange(e.target.value)}
-              style={{ padding: "10px 40px 10px 16px", border: "2px solid #eeeeee", borderRadius: "9999px", fontSize: "14px", outline: "none", background: "#ffffff", cursor: "pointer", appearance: "none", color: "#374151", fontWeight: 500 }}
-            >
-              <option value="week">7 Hari Terakhir</option>
-              <option value="month">Bulan Ini</option>
-              <option value="quarter">3 Bulan Terakhir</option>
-              <option value="year">Tahun Ini</option>
-            </select>
-          </div>
+          <button
+            onClick={() => { fetchTestResults(); fetchChartData(chartRange); }}
+            disabled={loading}
+            style={{ padding: "10px 20px", background: "#2563eb", color: "#ffffff", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </button>
         </div>
       </header>
 
@@ -246,6 +230,125 @@ export default function ReportsPage() {
           </div>
         </div>
 
+        {/* Chart Section */}
+        <div style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", marginBottom: "24px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+            <div>
+              <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#111111", margin: 0 }}>Grafik Pelamar</h3>
+              <p style={{ fontSize: "13px", color: "#888888", margin: "4px 0 0" }}>Tren pelamar berdasarkan periode waktu</p>
+            </div>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button
+                onClick={() => setChartRange("day")}
+                style={{
+                  padding: "8px 16px",
+                  background: chartRange === "day" ? "#00205B" : "#f1f5f9",
+                  color: chartRange === "day" ? "#ffffff" : "#666666",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Harian
+              </button>
+              <button
+                onClick={() => setChartRange("week")}
+                style={{
+                  padding: "8px 16px",
+                  background: chartRange === "week" ? "#00205B" : "#f1f5f9",
+                  color: chartRange === "week" ? "#ffffff" : "#666666",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Mingguan
+              </button>
+              <button
+                onClick={() => setChartRange("month")}
+                style={{
+                  padding: "8px 16px",
+                  background: chartRange === "month" ? "#00205B" : "#f1f5f9",
+                  color: chartRange === "month" ? "#ffffff" : "#666666",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Bulanan
+              </button>
+              <button
+                onClick={() => setChartRange("year")}
+                style={{
+                  padding: "8px 16px",
+                  background: chartRange === "year" ? "#00205B" : "#f1f5f9",
+                  color: chartRange === "year" ? "#ffffff" : "#666666",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Tahunan
+              </button>
+            </div>
+          </div>
+
+          {/* Chart */}
+          <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-around", height: "200px", paddingBottom: "40px", position: "relative", borderBottom: "1px dashed #e5e5e5" }}>
+            {/* Y-axis labels */}
+            <div style={{ position: "absolute", left: 0, top: 0, bottom: "40px", display: "flex", flexDirection: "column", justifyContent: "space-between", fontSize: "11px", color: "#888888" }}>
+              <span>{maxChartValue}</span>
+              <span>{Math.round(maxChartValue * 0.75)}</span>
+              <span>{Math.round(maxChartValue * 0.5)}</span>
+              <span>{Math.round(maxChartValue * 0.25)}</span>
+              <span>0</span>
+            </div>
+
+            {/* Bars */}
+            <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-around", flex: 1, height: "100%", paddingLeft: "40px" }}>
+              {chartData.map((data, i) => (
+                <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+                  <div style={{ display: "flex", gap: "4px", alignItems: "flex-end", height: `${(data.applicants / maxChartValue) * 160}px` }}>
+                    <div style={{
+                      width: "24px",
+                      background: "linear-gradient(180deg, #00205B 0%, #003380 100%)",
+                      borderRadius: "4px 4px 0 0",
+                      minHeight: "4px",
+                    }} title={`Pelamar: ${data.applicants}`} />
+                    <div style={{
+                      width: "24px",
+                      background: "linear-gradient(180deg, #16a34a 0%, #059669 100%)",
+                      borderRadius: "4px 4px 0 0",
+                      minHeight: "4px",
+                    }} title={`Lulus: ${data.passed}`} />
+                  </div>
+                  <span style={{ fontSize: "11px", color: "#888888", marginTop: "8px" }}>{data.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Legend */}
+          <div style={{ display: "flex", justifyContent: "center", gap: "24px", marginTop: "16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <div style={{ width: "12px", height: "12px", background: "#00205B", borderRadius: "2px" }} />
+              <span style={{ fontSize: "13px", color: "#666666" }}>Total Pelamar</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <div style={{ width: "12px", height: "12px", background: "#16a34a", borderRadius: "2px" }} />
+              <span style={{ fontSize: "13px", color: "#666666" }}>Lulus Tes</span>
+            </div>
+          </div>
+        </div>
+
         {/* Statistik per Divisi */}
         <div style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", marginBottom: "24px" }}>
           <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#111111", marginBottom: "24px" }}>Statistik per Divisi</h3>
@@ -284,7 +387,7 @@ export default function ReportsPage() {
         {/* Kandidat Terbaik */}
         <div style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", marginBottom: "24px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-            <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#111111" }}>Kandidat Terbaik</h3>
+            <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#111111", margin: 0 }}>Kandidat Terbaik</h3>
             <button
               onClick={() => router.push("/admin/reports/scores")}
               style={{ padding: "8px 16px", background: "#00205B", color: "#ffffff", border: "none", borderRadius: "9999px", fontSize: "13px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}
@@ -303,7 +406,22 @@ export default function ReportsPage() {
               {topCandidates.map((candidate, i) => (
                 <div key={i} style={{ padding: "20px", background: "#f8f9fa", borderRadius: "12px", textAlign: "center", position: "relative" }}>
                   {i < 3 && (
-                    <div style={{ position: "absolute", top: "-8px", left: "50%", transform: "translateX(-50%)", background: i === 0 ? "#FFD700" : i === 1 ? "#C0C0C0" : "#CD7F32", color: "#fff", borderRadius: "50%", width: "24px", height: "24px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 700 }}>
+                    <div style={{
+                      position: "absolute",
+                      top: "-8px",
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      background: i === 0 ? "#FFD700" : i === 1 ? "#C0C0C0" : "#CD7F32",
+                      color: "#fff",
+                      borderRadius: "50%",
+                      width: "24px",
+                      height: "24px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "12px",
+                      fontWeight: 700
+                    }}>
                       {i + 1}
                     </div>
                   )}
