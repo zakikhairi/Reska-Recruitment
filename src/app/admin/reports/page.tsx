@@ -28,83 +28,95 @@ import {
   FileSpreadsheet,
   FileCode,
   ChevronDown,
+  RefreshCw,
+  Trophy,
 } from "lucide-react";
 import { exportToPDF, exportToExcel, exportToCSV } from "@/lib/export-utils";
 
-const stats = [
-  { label: "Total Pelamar", value: "1,247", change: "+12%", icon: Users, color: "#00205B", trend: "up" },
-  { label: "Passing Rate", value: "72%", change: "-3%", icon: Award, color: "#10B981", trend: "down" },
-  { label: "Avg. Score", value: "68", change: "+5%", icon: TrendingUp, color: "#FF5E00", trend: "up" },
-  { label: "Completion Rate", value: "85%", change: "+8%", icon: BarChart3, color: "#8B5CF6", trend: "up" },
-];
+interface TestResult {
+  sessionId: string;
+  applicationId: string;
+  applicantName: string;
+  jobTitle: string;
+  division: string;
+  status: string;
+  testStatus: string;
+  scheduledAt: string | null;
+  startedAt: string | null;
+  submittedAt: string | null;
+  totalScore: number | null;
+  passed: boolean | null;
+  categoryScores: {
+    category: string;
+    score: number;
+    total: number;
+    percentage: number;
+    passingGrade: number;
+    passed: boolean;
+  }[];
+}
 
-const quickStats = [
-  { label: "Tes Aktif", value: "8", icon: BookOpen, color: "#00205B" },
-  { label: "Menunggu Review", value: "24", icon: Clock, color: "#FF5E00" },
-  { label: "Diterima", value: "156", icon: UserCheck, color: "#10B981" },
-  { label: "Ditolak", value: "89", icon: XCircle, color: "#EF4444" },
-];
-
-const divisionStats = [
-  { division: "On-Train Service", total: 412, passed: 298, rate: 72 },
-  { division: "ResClean", total: 285, passed: 210, rate: 74 },
-  { division: "IT Staff", total: 156, passed: 98, rate: 63 },
-  { division: "Logistics", total: 198, passed: 145, rate: 73 },
-  { division: "Admin", total: 196, passed: 141, rate: 72 },
-];
-
-const monthlyData = [
-  { month: "Jan", applicants: 120, passed: 85, avgScore: 65 },
-  { month: "Feb", applicants: 145, passed: 102, avgScore: 68 },
-  { month: "Mar", applicants: 168, passed: 120, avgScore: 70 },
-  { month: "Apr", applicants: 195, passed: 142, avgScore: 72 },
-  { month: "Mei", applicants: 210, passed: 155, avgScore: 71 },
-  { month: "Jun", applicants: 225, passed: 168, avgScore: 74 },
-  { month: "Jul", applicants: 184, passed: 120, avgScore: 68 },
-];
-
-const categoryAnalysis = [
-  { category: "AKHLAK", avgScore: 72, passRate: 78 },
-  { category: "Hospitality", avgScore: 68, passRate: 71 },
-  { category: "Technical", avgScore: 62, passRate: 65 },
-  { category: "Aptitude", avgScore: 70, passRate: 74 },
-];
-
-const recentReports = [
-  { id: "1", title: "Laporan Bulanan Juli 2026", date: "2026-07-22", type: "MONTHLY", size: "2.4 MB" },
-  { id: "2", title: "Analisis Passing Rate per Divisi", date: "2026-07-20", type: "ANALYSIS", size: "1.8 MB" },
-  { id: "3", title: "Rekap Tes Kompetensi Q2 2026", date: "2026-07-15", type: "QUARTERLY", size: "4.2 MB" },
-  { id: "4", title: "Laporan Pelamar Baru", date: "2026-07-10", type: "WEEKLY", size: "890 KB" },
-];
-
-const testTypeStats = [
-  { name: "AKHLAK", participants: 1247, avgScore: 72, color: "#00205B" },
-  { name: "Hospitality", participants: 986, avgScore: 68, color: "#FF5E00" },
-  { name: "Technical", participants: 654, avgScore: 62, color: "#10B981" },
-  { name: "Aptitude", participants: 1102, avgScore: 70, color: "#8B5CF6" },
-];
-
-const candidateFunnel = [
-  { stage: "Pendaftaran", count: 1247, color: "#00205B" },
-  { stage: "Lulus Tes", count: 898, color: "#3B82F6" },
-  { stage: "Interview", count: 456, color: "#FF5E00" },
-  { stage: "Medical", count: 234, color: "#10B981" },
-  { stage: "Offering", count: 156, color: "#8B5CF6" },
-];
-
-const topCandidates = [
-  { name: "Ahmad Rizki Pratama", position: "Pramugara Kereta", score: 94, status: "Lulus" },
-  { name: "Siti Nurhaliza", position: "Steward Kereta", score: 92, status: "Lulus" },
-  { name: "Budi Santoso", position: "IT Support", score: 89, status: "Interview" },
-  { name: "Dewi Lestari", position: "Admin", score: 88, status: "Interview" },
-  { name: "Rizky Ramadhan", position: "Teknisi", score: 87, status: "Medical" },
-];
+const divisionLabels: Record<string, string> = {
+  ON_TRAIN_SERVICE: "On-Train Service",
+  RES_CLEAN: "ResClean",
+  RES_PARKING: "ResParking",
+  LOGISTICS: "Logistics",
+  IT_STAFF: "IT Staff",
+  ADMIN: "Admin",
+};
 
 export default function ReportsPage() {
   const [dateRange, setDateRange] = useState("month");
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [loading, setLoading] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  // Real data state
+  const [testResults, setTestResults] = useState<TestResult[]>([]);
+  const [stats, setStats] = useState({
+    totalPelamar: 0,
+    passingRate: 0,
+    avgScore: 0,
+    completionRate: 0,
+  });
+
+  // Fetch test results
+  const fetchTestResults = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch("/api/admin/test-results");
+      const data = await response.json();
+
+      if (data.success) {
+        setTestResults(data.results);
+
+        // Calculate stats
+        const results = data.results;
+        const totalTests = results.length;
+        const passedTests = results.filter((r: TestResult) => r.passed === true).length;
+        const scoredTests = results.filter((r: TestResult) => r.totalScore !== null).length;
+        const avgScore = scoredTests > 0
+          ? Math.round(results.filter((r: TestResult) => r.totalScore !== null).reduce((sum: number, r: TestResult) => sum + (r.totalScore || 0), 0) / scoredTests)
+          : 0;
+
+        setStats({
+          totalPelamar: totalTests,
+          passingRate: scoredTests > 0 ? Math.round((passedTests / scoredTests) * 100) : 0,
+          avgScore,
+          completionRate: totalTests > 0 ? Math.round((scoredTests / totalTests) * 100) : 0,
+        });
+      }
+    } catch (err) {
+      console.error("Failed to fetch test results:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTestResults();
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -115,6 +127,53 @@ export default function ReportsPage() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Get top 5 candidates (sorted by score)
+  const topCandidates = [...testResults]
+    .filter(r => r.totalScore !== null)
+    .sort((a, b) => (b.totalScore || 0) - (a.totalScore || 0))
+    .slice(0, 5);
+
+  // Get passing rate by division
+  const divisionStats = Object.entries(
+    testResults.reduce((acc: Record<string, { total: number; passed: number }>, r) => {
+      const div = divisionLabels[r.division] || r.division;
+      if (!acc[div]) acc[div] = { total: 0, passed: 0 };
+      acc[div].total++;
+      if (r.passed) acc[div].passed++;
+      return acc;
+    }, {})
+  ).map(([division, data]) => ({
+    division,
+    total: data.total,
+    passed: data.passed,
+    rate: data.total > 0 ? Math.round((data.passed / data.total) * 100) : 0,
+  }));
+
+  // Get category averages
+  const categoryAnalysis = (() => {
+    const cats: Record<string, { total: number; count: number }> = {};
+    testResults.forEach(r => {
+      r.categoryScores.forEach(cat => {
+        if (!cats[cat.category]) cats[cat.category] = { total: 0, count: 0 };
+        cats[cat.category].total += cat.percentage;
+        cats[cat.category].count++;
+      });
+    });
+    return Object.entries(cats).map(([category, data]) => ({
+      category,
+      avgScore: data.count > 0 ? Math.round(data.total / data.count) : 0,
+      passRate: data.count > 0 ? Math.round((r => r.categoryScores.filter(c => c.passed).length / c.categoryScores.length) as any) : 0,
+    }));
+  })();
+
+  // Quick stats
+  const quickStats = [
+    { label: "Tes Aktif", value: testResults.filter((r: TestResult) => r.testStatus === "IN_PROGRESS" || r.testStatus === "NOT_STARTED").length, icon: BookOpen, color: "#00205B" },
+    { label: "Menunggu Review", value: testResults.filter((r: TestResult) => r.testStatus === "SUBMITTED" && r.totalScore === null).length, icon: Clock, color: "#FF5E00" },
+    { label: "Lulus Tes", value: testResults.filter((r: TestResult) => r.passed === true).length, icon: UserCheck, color: "#10B981" },
+    { label: "Tidak Lulus", value: testResults.filter((r: TestResult) => r.passed === false).length, icon: XCircle, color: "#EF4444" },
+  ];
 
   const getDateRangeLabel = () => {
     switch (dateRange) {
@@ -130,14 +189,12 @@ export default function ReportsPage() {
     title: "Laporan Rekrutmen KAI Services",
     dateRange: getDateRangeLabel(),
     stats: {
-      totalApplicants: 1247,
-      passingRate: 72,
-      avgScore: 68,
-      completionRate: 85,
+      totalApplicants: stats.totalPelamar,
+      passingRate: stats.passingRate,
+      avgScore: stats.avgScore,
+      completionRate: stats.completionRate,
     },
     divisionStats: divisionStats,
-    testTypeStats: testTypeStats,
-    monthlyData: monthlyData,
   };
 
   const handleExportPDF = () => {
@@ -163,7 +220,15 @@ export default function ReportsPage() {
             <h1 style={{ fontSize: "28px", fontWeight: 800, color: "#00205B", marginBottom: "4px", letterSpacing: "-0.02em" }}>Laporan & Analisis</h1>
             <p style={{ fontSize: "15px", color: "#666666" }}>Data dan statistik rekrutmen KAI Services</p>
           </div>
-          <div style={{ display: "flex", gap: "12px", alignItems: "center" }} ref={exportMenuRef}>
+          <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+            <button
+              onClick={fetchTestResults}
+              disabled={loading}
+              style={{ padding: "10px 16px", background: "#f8f9fa", color: "#00205B", border: "1px solid #e5e5e5", borderRadius: "10px", fontSize: "14px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </button>
             <select
               value={dateRange}
               onChange={(e) => setDateRange(e.target.value)}
@@ -225,24 +290,53 @@ export default function ReportsPage() {
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "20px", marginBottom: "24px" }}>
-          {stats.map((stat, i) => (
-            <div key={i} style={{ background: "#ffffff", borderRadius: "16px", padding: "24px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                <div style={{ width: "48px", height: "48px", background: stat.color + "20", borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <stat.icon className="w-6 h-6" style={{ color: stat.color }} />
-                </div>
-                <div>
-                  <p style={{ fontSize: "28px", fontWeight: 800, color: "#111111" }}>{stat.value}</p>
-                  <p style={{ fontSize: "13px", color: "#888888" }}>{stat.label}</p>
-                </div>
+          <div style={{ background: "#ffffff", borderRadius: "16px", padding: "24px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+              <div style={{ width: "48px", height: "48px", background: "#00205B15", borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Users className="w-6 h-6" style={{ color: "#00205B" }} />
               </div>
-              <div style={{ marginTop: "16px", paddingTop: "16px", borderTop: "1px solid #eeeeee", display: "flex", alignItems: "center", gap: "6px" }}>
-                {stat.trend === "up" ? <ArrowUpRight className="w-4 h-4" style={{ color: "#10B981" }} /> : <ArrowDownRight className="w-4 h-4" style={{ color: "#EF4444" }} />}
-                <span style={{ fontSize: "13px", fontWeight: 600, color: stat.trend === "up" ? "#10B981" : "#EF4444" }}>{stat.change}</span>
-                <span style={{ fontSize: "13px", color: "#888888" }}>vs last period</span>
+              <div>
+                <p style={{ fontSize: "28px", fontWeight: 800, color: "#111111" }}>{stats.totalPelamar}</p>
+                <p style={{ fontSize: "13px", color: "#888888" }}>Total Pelamar</p>
               </div>
             </div>
-          ))}
+          </div>
+
+          <div style={{ background: "#ffffff", borderRadius: "16px", padding: "24px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+              <div style={{ width: "48px", height: "48px", background: "#10a3415", borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Award className="w-6 h-6" style={{ color: "#10B981" }} />
+              </div>
+              <div>
+                <p style={{ fontSize: "28px", fontWeight: 800, color: "#10B981" }}>{stats.passingRate}%</p>
+                <p style={{ fontSize: "13px", color: "#888888" }}>Passing Rate</p>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ background: "#ffffff", borderRadius: "16px", padding: "24px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+              <div style={{ width: "48px", height: "48px", background: "#FF5E0015", borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <TrendingUp className="w-6 h-6" style={{ color: "#FF5E00" }} />
+              </div>
+              <div>
+                <p style={{ fontSize: "28px", fontWeight: 800, color: "#111111" }}>{stats.avgScore}%</p>
+                <p style={{ fontSize: "13px", color: "#888888" }}>Rata-rata Nilai</p>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ background: "#ffffff", borderRadius: "16px", padding: "24px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+              <div style={{ width: "48px", height: "48px", background: "#8B5CF615", borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <BarChart3 className="w-6 h-6" style={{ color: "#8B5CF6" }} />
+              </div>
+              <div>
+                <p style={{ fontSize: "28px", fontWeight: 800, color: "#111111" }}>{stats.completionRate}%</p>
+                <p style={{ fontSize: "13px", color: "#888888" }}>Completion Rate</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: "24px", marginBottom: "24px" }}>
@@ -364,20 +458,40 @@ export default function ReportsPage() {
         <div style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", marginBottom: "24px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
             <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#111111" }}>Kandidat Terbaik</h3>
-            <button style={{ padding: "8px 16px", background: "#f8f9fa", color: "#00205B", border: "none", borderRadius: "9999px", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>Lihat Semua</button>
+            <button
+              onClick={() => router.push("/admin/reports/scores")}
+              style={{ padding: "8px 16px", background: "#00205B", color: "#ffffff", border: "none", borderRadius: "9999px", fontSize: "13px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}
+            >
+              <Eye className="w-4 h-4" />
+              Lihat Semua
+            </button>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "16px" }}>
-            {topCandidates.map((candidate, i) => (
-              <div key={i} style={{ padding: "20px", background: "#f8f9fa", borderRadius: "12px", textAlign: "center" }}>
-                <div style={{ width: "56px", height: "56px", background: "hsl(210, 70%, 60%)", borderRadius: "50%", margin: "0 auto 12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <span style={{ color: "#ffffff", fontSize: "20px", fontWeight: 700 }}>{candidate.name.charAt(0)}</span>
+          {topCandidates.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "40px", color: "#888" }}>
+              <Trophy className="w-12 h-12" style={{ margin: "0 auto 12px", opacity: 0.3 }} />
+              <p style={{ fontSize: "14px" }}>Belum ada data kandidat dengan nilai</p>
+            </div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "16px" }}>
+              {topCandidates.map((candidate, i) => (
+                <div key={i} style={{ padding: "20px", background: "#f8f9fa", borderRadius: "12px", textAlign: "center", position: "relative" }}>
+                  {i < 3 && (
+                    <div style={{ position: "absolute", top: "-8px", left: "50%", transform: "translateX(-50%)", background: i === 0 ? "#FFD700" : i === 1 ? "#C0C0C0" : "#CD7F32", color: "#fff", borderRadius: "50%", width: "24px", height: "24px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 700 }}>
+                      {i + 1}
+                    </div>
+                  )}
+                  <div style={{ width: "56px", height: "56px", background: "#00205B", borderRadius: "50%", margin: "0 auto 12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <span style={{ color: "#ffffff", fontSize: "20px", fontWeight: 700 }}>{candidate.applicantName.charAt(0).toUpperCase()}</span>
+                  </div>
+                  <p style={{ fontSize: "14px", fontWeight: 700, color: "#111111", marginBottom: "4px" }}>{candidate.applicantName}</p>
+                  <p style={{ fontSize: "12px", color: "#888888", marginBottom: "12px" }}>{candidate.jobTitle}</p>
+                  <span style={{ padding: "4px 10px", background: candidate.passed ? "#16a34a" : "#dc2626", color: "#ffffff", borderRadius: "9999px", fontSize: "14px", fontWeight: 700 }}>
+                    {candidate.totalScore}%
+                  </span>
                 </div>
-                <p style={{ fontSize: "14px", fontWeight: 700, color: "#111111", marginBottom: "4px" }}>{candidate.name}</p>
-                <p style={{ fontSize: "12px", color: "#888888", marginBottom: "12px" }}>{candidate.position}</p>
-                <span style={{ padding: "4px 10px", background: "#00205B", color: "#ffffff", borderRadius: "9999px", fontSize: "12px", fontWeight: 700 }}>{candidate.score}</span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
