@@ -161,47 +161,45 @@ export default function SchedulePage() {
     return `${secs} detik`;
   };
 
-  // Get past schedules (tests that have passed their scheduled time AND have expired)
+  // Get past schedules (tests that have passed AND cannot be started anymore)
   const pastSchedules = schedules.filter((s) => {
     // Check if there is a test or interview
     if (!s.test && !s.interview) return false;
 
-    const testDate = s.test?.scheduledAt;
-    const interviewDate = s.interview?.scheduledAt;
-
-    // If no scheduled time at all, don't count as past
-    if (!testDate && !interviewDate) return false;
-
-    // Check if the test has expired (only if endTime is set)
+    // Test is past only if endTime is set AND current time has passed endTime
     if (s.test?.endTime) {
       const endTime = new Date(s.test.endTime);
       if (currentTime > endTime) return true;
     }
 
-    // Otherwise check if scheduled time has passed
-    const nextDate = testDate || interviewDate;
-    return new Date(nextDate!) < currentTime;
+    // Interview is past if scheduledAt has passed
+    if (s.interview?.scheduledAt) {
+      const interviewDate = new Date(s.interview.scheduledAt);
+      if (currentTime > interviewDate) return true;
+    }
+
+    return false;
   });
 
-  // Get upcoming schedules - separate from past
+  // Get upcoming schedules - all schedules that can still be accessed
+  // Tests stay visible even after scheduledAt (just change the button state)
   const upcomingSchedules = schedules.filter((s) => {
     // Check if there is a test or interview
     if (!s.test && !s.interview) return false;
 
-    const testDate = s.test?.scheduledAt;
-    const interviewDate = s.interview?.scheduledAt;
-
-    // If no scheduled time, count as upcoming (waiting for schedule)
-    if (!testDate && !interviewDate) return true;
-
-    // Check if the test has expired (only if endTime is set)
+    // Test is NOT upcoming if endTime is set AND current time has passed endTime
     if (s.test?.endTime) {
       const endTime = new Date(s.test.endTime);
-      if (currentTime > endTime) return false; // Don't show expired tests in upcoming
+      if (currentTime > endTime) return false; // Hide expired tests
     }
 
-    const nextDate = testDate || interviewDate;
-    return new Date(nextDate!) >= currentTime;
+    // Interview is NOT upcoming if scheduledAt has passed
+    if (s.interview?.scheduledAt) {
+      const interviewDate = new Date(s.interview.scheduledAt);
+      if (currentTime > interviewDate) return false;
+    }
+
+    return true;
   });
 
   return (
