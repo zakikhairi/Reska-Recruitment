@@ -72,7 +72,8 @@ export function Sidebar({ userName = "User", userRole = "APPLICANT" }: SidebarPr
         .then((res) => res.json())
         .then((data) => {
           if (data.success && data.conversations) {
-            const unread = data.conversations.filter((c: any) => !c.isRead).length;
+            // Count conversations with unread messages
+            const unread = data.conversations.filter((c: any) => c.unreadCount > 0).length;
             setUnreadMessages(unread);
           }
         })
