@@ -27,6 +27,7 @@ export async function GET() {
         minHeight: job.minHeight,
         minAge: job.minAge,
         maxAge: job.maxAge,
+        startDate: job.startDate,
         deadline: job.deadline,
         status: job.status,
         applicantCount: job._count.applications,

@@ -111,6 +111,7 @@ export const jobPostings = pgTable('job_postings', {
   maxAge: integer('max_age'),
 
   status: jobStatusEnum('status').default('ACTIVE').notNull(),
+  startDate: timestamp('start_date').defaultNow().notNull(),
   deadline: timestamp('deadline').notNull(),
 
   createdAt: timestamp('created_at').defaultNow().notNull(),

@@ -3,11 +3,12 @@ import prisma from "@/lib/db";
 
 export async function GET() {
   try {
+    const now = new Date();
     const jobs = await prisma.jobPosting.findMany({
       where: {
         status: "ACTIVE",
         deadline: {
-          gte: new Date()
+          gte: now
         }
       },
       include: {
@@ -31,6 +32,7 @@ export async function GET() {
         minHeight: job.minHeight,
         minAge: job.minAge,
         maxAge: job.maxAge,
+        startDate: job.startDate,
         deadline: job.deadline,
         status: job.status,
         applicantCount: job._count.applications,
@@ -60,11 +62,12 @@ export async function POST(request: NextRequest) {
       minHeight,
       minAge,
       maxAge,
+      startDate,
       deadline,
       status = "ACTIVE"
     } = body;
 
-    if (!title || !division || !location || !deadline) {
+    if (!title || !division || !location || !startDate || !deadline) {
       return NextResponse.json(
         { success: false, error: "Field wajib tidak boleh kosong" },
         { status: 400 }
@@ -82,6 +85,7 @@ export async function POST(request: NextRequest) {
         minHeight: minHeight ? parseFloat(minHeight) : null,
         minAge: minAge ? parseInt(minAge) : null,
         maxAge: maxAge ? parseInt(maxAge) : null,
+        startDate: new Date(startDate),
         deadline: new Date(deadline),
         status,
       },
@@ -101,6 +105,7 @@ export async function POST(request: NextRequest) {
         minHeight: job.minHeight,
         minAge: job.minAge,
         maxAge: job.maxAge,
+        startDate: job.startDate,
         deadline: job.deadline,
         status: job.status,
       },

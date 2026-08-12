@@ -11,6 +11,7 @@ interface Job {
   description: string;
   requirements: string;
   minEducation: string;
+  startDate: string;
   deadline: string;
   status: string;
   applicantCount: number;
@@ -117,7 +118,8 @@ export default function HomePage() {
     "Admin": "ADMIN",
   };
 
-  // Filter only ACTIVE jobs
+  // Filter all ACTIVE jobs (show even if not started yet)
+  const now = new Date();
   const activeJobs = jobs.filter(job => job.status === "ACTIVE");
 
   const filteredJobs = activeJobs.filter(job => {
@@ -363,13 +365,29 @@ export default function HomePage() {
                 <p style={{ color: "#666666" }}>Tidak ada lowongan tersedia</p>
               </div>
             ) : (
-              filteredJobs.map((job, i) => (
+              filteredJobs.map((job, i) => {
+                const startDate = new Date(job.startDate);
+                const deadline = new Date(job.deadline);
+                const isOpen = now >= startDate && now <= deadline;
+                const isUpcoming = now < startDate;
+                const isClosed = now > deadline;
+
+                return (
                 <AnimatedCard key={job.id} delay={i * 100}>
                   <div style={{ background: "#ffffff", padding: "28px", borderRadius: "16px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", transition: "transform 0.3s, box-shadow 0.3s" }}
                     onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-8px)"; e.currentTarget.style.boxShadow = "0 12px 24px rgba(0,0,0,0.12)"; }}
                     onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.06)"; }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
-                      <span style={{ padding: "6px 14px", borderRadius: "14px", fontSize: "12px", fontWeight: 700, background: "#dcfce7", color: "#16a34a" }}>Aktif</span>
+                      <span style={{
+                        padding: "6px 14px",
+                        borderRadius: "14px",
+                        fontSize: "12px",
+                        fontWeight: 700,
+                        background: isOpen ? "#dcfce7" : isUpcoming ? "#fef3c7" : "#fee2e2",
+                        color: isOpen ? "#16a34a" : isUpcoming ? "#d97706" : "#dc2626"
+                      }}>
+                        {isOpen ? "Pendaftaran Terbuka" : isUpcoming ? "Segera Hadir" : "Pendaftaran Ditutup"}
+                      </span>
                       <span style={{ fontSize: "13px", color: "#999999", fontWeight: 500 }}>{job.applicantCount || 0} pelamar</span>
                     </div>
                     <h3 style={{ fontSize: "17px", fontWeight: 700, color: "#111111", marginBottom: "12px", lineHeight: 1.4 }}>{job.title}</h3>
@@ -380,15 +398,26 @@ export default function HomePage() {
                       </div>
                       <div>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888888" strokeWidth="2" style={{ display: "inline", verticalAlign: "middle", marginRight: "4px" }}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                        {new Date(job.deadline).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                        {new Date(job.startDate).toLocaleDateString("id-ID", { day: "numeric", month: "short" })} - {new Date(job.deadline).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
                       </div>
                     </div>
-                    <Link href={`/auth/register?job=${job.id}`}>
-                      <button style={{ width: "100%", padding: "14px", background: "#FF5E00", color: "#ffffff", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 700, cursor: "pointer" }}>Lamar Posisi Ini</button>
-                    </Link>
+                    {isOpen ? (
+                      <Link href={`/auth/register?job=${job.id}`}>
+                        <button style={{ width: "100%", padding: "14px", background: "#FF5E00", color: "#ffffff", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 700, cursor: "pointer" }}>Lamar Posisi Ini</button>
+                      </Link>
+                    ) : isUpcoming ? (
+                      <div style={{ width: "100%", padding: "14px", background: "#f1f5f9", color: "#666666", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 600, textAlign: "center" }}>
+                        Pendaftaran akan dibuka {new Date(job.startDate).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
+                      </div>
+                    ) : (
+                      <div style={{ width: "100%", padding: "14px", background: "#f1f5f9", color: "#999999", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 600, textAlign: "center" }}>
+                        Pendaftaran sudah ditutup
+                      </div>
+                    )}
                   </div>
                 </AnimatedCard>
-              ))
+              );
+              })
             )}
           </div>
         </div>

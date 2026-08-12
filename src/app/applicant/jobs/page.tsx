@@ -38,8 +38,14 @@ export default function JobsPage() {
     );
   }
 
-  // Filter only ACTIVE jobs for applicants
-  const activeJobs = jobs.filter(job => job.status === "ACTIVE");
+  // Filter only ACTIVE jobs and check registration period
+  const now = new Date();
+  const activeJobs = jobs.filter(job => {
+    if (job.status !== "ACTIVE") return false;
+    const startDate = new Date(job.startDate);
+    const deadline = new Date(job.deadline);
+    return now >= startDate && now <= deadline;
+  });
 
   const filteredJobs = activeJobs.filter(job => {
     if (!job) return false;
@@ -107,18 +113,26 @@ export default function JobsPage() {
                   <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "12px", flexWrap: "wrap", gap: "12px" }}>
                     <div>
                       <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px", flexWrap: "wrap" }}>
-                        {new Date(job.deadline).getTime() > Date.now() && (
-                          <span style={{ padding: "4px 12px", background: "#dcfce7", color: "#16a34a", borderRadius: "20px", fontSize: "12px", fontWeight: 700 }}>Aktif</span>
+                        {now >= new Date(job.startDate) && now <= new Date(job.deadline) && (
+                          <span style={{ padding: "4px 12px", background: "#dcfce7", color: "#16a34a", borderRadius: "20px", fontSize: "12px", fontWeight: 700 }}>Pendaftaran Terbuka</span>
+                        )}
+                        {now < new Date(job.startDate) && (
+                          <span style={{ padding: "4px 12px", background: "#fef3c7", color: "#d97706", borderRadius: "20px", fontSize: "12px", fontWeight: 700 }}>Segera Hadir</span>
+                        )}
+                        {now > new Date(job.deadline) && (
+                          <span style={{ padding: "4px 12px", background: "#fee2e2", color: "#dc2626", borderRadius: "20px", fontSize: "12px", fontWeight: 700 }}>Pendaftaran Ditutup</span>
                         )}
                         <span style={{ padding: "4px 12px", background: "#f0f4ff", color: "#00205B", borderRadius: "20px", fontSize: "12px", fontWeight: 600 }}>{divisionNames[job.division] || job.division}</span>
                       </div>
                       <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#111111", marginBottom: "0" }}>{job.title}</h3>
                     </div>
-                    <Link href={`/applicant/apply/${job.id}`}>
-                      <button style={{ padding: "14px 28px", background: "#FF5E00", color: "#ffffff", border: "none", borderRadius: "12px", fontSize: "14px", fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 16px rgba(255,94,0,0.3)", whiteSpace: "nowrap" }}>
-                        Lamar Sekarang
-                      </button>
-                    </Link>
+                    {now >= new Date(job.startDate) && now <= new Date(job.deadline) && (
+                      <Link href={`/applicant/apply/${job.id}`}>
+                        <button style={{ padding: "14px 28px", background: "#FF5E00", color: "#ffffff", border: "none", borderRadius: "12px", fontSize: "14px", fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 16px rgba(255,94,0,0.3)", whiteSpace: "nowrap" }}>
+                          Lamar Sekarang
+                        </button>
+                      </Link>
+                    )}
                   </div>
 
                   <p style={{ fontSize: "15px", color: "#666666", lineHeight: 1.6, marginBottom: "16px" }}>{job.description}</p>
@@ -130,7 +144,7 @@ export default function JobsPage() {
                     </span>
                     <span style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "14px", color: "#666666" }}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888888" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                      Batas: {new Date(job.deadline).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                      {new Date(job.startDate).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })} - {new Date(job.deadline).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
                     </span>
                     <span style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "14px", color: "#666666" }}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888888" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>

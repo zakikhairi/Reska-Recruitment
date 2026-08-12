@@ -115,6 +115,7 @@ model JobPosting {
   maxAge          Int?
 
   status          String    @default("ACTIVE") // DRAFT, ACTIVE, CLOSED, FILLED
+  startDate       DateTime  @default(now())
   deadline        DateTime
 
   applications    Application[]

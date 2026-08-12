@@ -49,6 +49,9 @@ export default function ApplicationsPage() {
   const [selectedApp, setSelectedApp] = useState<ApplicationData | null>(null);
   const [filter, setFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   const user = useAuthStore((state) => state.user);
 
   useEffect(() => {
@@ -75,6 +78,31 @@ export default function ApplicationsPage() {
       console.error("Failed to fetch applications:", err);
     }
     setIsLoading(false);
+  };
+
+  const handleDelete = async () => {
+    if (!selectedApp || !user?.id) return;
+
+    setIsDeleting(true);
+    setDeleteError("");
+
+    try {
+      const response = await fetch(`/api/apply?id=${selectedApp.id}&userId=${user.id}`, {
+        method: "DELETE",
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        setShowDeleteModal(false);
+        setSelectedApp(null);
+        fetchApplications();
+      } else {
+        setDeleteError(result.error || "Gagal membatalkan lamaran");
+      }
+    } catch (err) {
+      setDeleteError("Terjadi kesalahan saat membatalkan lamaran");
+    }
+    setIsDeleting(false);
   };
 
   const filteredApps = filter === "all"
@@ -192,6 +220,59 @@ export default function ApplicationsPage() {
                   {statusConfig[selectedApp.status]?.label}
                 </span>
 
+                {/* Action Buttons - Only show for PENDING status */}
+                {selectedApp.status === "PENDING" && (
+                  <div style={{ display: "flex", gap: "12px", marginBottom: "20px" }}>
+                    <Link href={`/applicant/apply/${selectedApp.job?.id}?edit=true`} style={{ flex: 1, textDecoration: "none" }}>
+                      <button style={{
+                        flex: 1,
+                        padding: "12px",
+                        background: "#00205B",
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: "10px",
+                        fontSize: "14px",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "8px"
+                      }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                          <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
+                        Edit
+                      </button>
+                    </Link>
+                    <button
+                      onClick={() => setShowDeleteModal(true)}
+                      style={{
+                        flex: 1,
+                        padding: "12px",
+                        background: "#fee2e2",
+                        color: "#dc2626",
+                        border: "none",
+                        borderRadius: "10px",
+                        fontSize: "14px",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "8px"
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                      </svg>
+                      Batalkan
+                    </button>
+                  </div>
+                )}
+
                 {/* Test Section - Removed per user request */}
 
                 {selectedApp.status === "IN_TEST" && (
@@ -263,6 +344,84 @@ export default function ApplicationsPage() {
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0,0,0,0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: "#fff",
+            borderRadius: "16px",
+            padding: "28px",
+            maxWidth: "400px",
+            width: "90%",
+            textAlign: "center"
+          }}>
+            <div style={{ width: "64px", height: "64px", background: "#fee2e2", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+            </div>
+            <h3 style={{ fontSize: "20px", fontWeight: 700, color: "#111", marginBottom: "12px" }}>Batalkan Lamaran?</h3>
+            <p style={{ fontSize: "14px", color: "#666", marginBottom: "24px", lineHeight: 1.6 }}>
+              Apakah Anda yakin ingin membatalkan lamaran untuk posisi <strong>{selectedApp?.job?.title}</strong>? Tindakan ini tidak dapat dibatalkan.
+            </p>
+            {deleteError && (
+              <div style={{ padding: "12px 16px", background: "#fee2e2", color: "#dc2626", borderRadius: "8px", marginBottom: "16px", fontSize: "14px" }}>
+                {deleteError}
+              </div>
+            )}
+            <div style={{ display: "flex", gap: "12px" }}>
+              <button
+                onClick={() => { setShowDeleteModal(false); setDeleteError(""); }}
+                style={{
+                  flex: 1,
+                  padding: "14px",
+                  background: "#f1f5f9",
+                  color: "#666",
+                  border: "none",
+                  borderRadius: "10px",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  cursor: "pointer"
+                }}
+              >
+                Tidak, Kembali
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={isDeleting}
+                style={{
+                  flex: 1,
+                  padding: "14px",
+                  background: "#dc2626",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "10px",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  cursor: isDeleting ? "not-allowed" : "pointer",
+                  opacity: isDeleting ? 0.7 : 1
+                }}
+              >
+                {isDeleting ? "Membatalkan..." : "Ya, Batalkan"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
