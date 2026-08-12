@@ -6,11 +6,11 @@ import prisma from "@/lib/db";
 
 export async function GET(request: NextRequest) {
   try {
-    // Get all scheduled test sessions grouped by job posting
+    // Get all test sessions grouped by job posting
     const sessions = await prisma.testSession.findMany({
       where: {
         status: {
-          in: ["SCHEDULED", "IN_PROGRESS", "SUBMITTED", "SCORED"],
+          in: ["NOT_STARTED", "IN_PROGRESS", "SUBMITTED", "SCORED", "EXPIRED"],
         },
       },
       include: {
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
         },
       },
       orderBy: {
-        scheduledAt: "desc",
+        createdAt: "desc",
       },
     });
 
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
       jobPostingId: string;
       position: string;
       division: string;
-      scheduledAt: string;
+      createdAt: string;
       location: string;
       applicants: {
         applicationId: string;
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
           jobPostingId: jobPosting.id,
           position: jobPosting.title,
           division: jobPosting.division,
-          scheduledAt: session.scheduledAt?.toISOString() || new Date().toISOString(),
+          createdAt: session.createdAt.toISOString(),
           location: "Online System",
           applicants: [],
         });

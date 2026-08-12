@@ -20,6 +20,11 @@ interface TestData {
   questions: Question[];
   durationMinutes: number;
   categories: string[];
+  config?: {
+    questionsPerCategory?: number;
+    passingGrade?: number;
+    totalDurationMinutes?: number;
+  };
 }
 
 interface SessionData {
@@ -99,15 +104,8 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
 
   const fetchTestSession = async () => {
     try {
-      // Try with sessionId first, then with applicationId as fallback
-      let response = await fetch(`/api/test/${sessionId}`);
-      let result = await response.json();
-
-      // If not found, try as applicationId
-      if (!result.success && result.error === "Sesi test tidak ditemukan") {
-        response = await fetch(`/api/test/${sessionId}`);
-        // If still not found, the session might not exist yet
-      }
+      const response = await fetch(`/api/test/${sessionId}`);
+      const result = await response.json();
 
       if (result.success) {
         // Check if test can be started
@@ -131,6 +129,11 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
             questions: result.questions || [],
             durationMinutes: result.config?.totalDurationMinutes || 90,
             categories: result.config?.categories || [],
+            config: {
+              questionsPerCategory: result.config?.questionsPerCategory,
+              passingGrade: result.config?.passingGrade,
+              totalDurationMinutes: result.config?.totalDurationMinutes,
+            },
           });
           setTimeRemaining((result.config?.totalDurationMinutes || 90) * 60);
         } else {
@@ -141,6 +144,11 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
             questions: [],
             durationMinutes: result.config?.totalDurationMinutes || 90,
             categories: result.config?.categories || [],
+            config: {
+              questionsPerCategory: result.config?.questionsPerCategory,
+              passingGrade: result.config?.passingGrade,
+              totalDurationMinutes: result.config?.totalDurationMinutes,
+            },
           });
           setTimeRemaining((result.config?.totalDurationMinutes || 90) * 60);
         }
@@ -230,21 +238,25 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
         const result = await response.json();
 
         if (result.success) {
-          // Fetch again to get questions
+          // Fetch again to get questions - MUST wait for this
           await fetchTestSession();
-        }
 
-        // Wait a bit for state to update
-        await new Promise(resolve => setTimeout(resolve, 100));
-        setTestState("testing");
+          // Check if questions are now loaded
+          if (!testData?.questions.length) {
+            setError("Gagal memuat soal. Silakan coba lagi.");
+            return;
+          }
+        } else {
+          setError(result.error || "Gagal memulai tes");
+          return;
+        }
       } catch (err) {
         console.error("Error starting test:", err);
         setError("Terjadi kesalahan saat memulai tes");
         return;
       }
-    } else {
-      setTestState("testing");
     }
+    setTestState("testing");
   };
 
   const handleSubmit = async () => {
@@ -348,7 +360,13 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
                 </div>
                 <div>
                   <p style={{ fontSize: "12px", color: "#888" }}>Jumlah Soal</p>
-                  <p style={{ fontSize: "15px", fontWeight: 600, color: "#111" }}>{testData?.questions.length || 0} Soal</p>
+                  <p style={{ fontSize: "15px", fontWeight: 600, color: "#111" }}>
+                    {/* Show total from config if available, otherwise show actual loaded questions */}
+                    {testData?.config?.questionsPerCategory && testData?.categories?.length
+                      ? `${testData.config.questionsPerCategory * testData.categories.length} Soal`
+                      : `${testData?.questions?.length || 0} Soal`
+                    }
+                  </p>
                 </div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>

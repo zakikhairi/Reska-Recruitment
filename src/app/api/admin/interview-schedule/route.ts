@@ -7,7 +7,7 @@ import prisma from "@/lib/db";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { jobPostingId, scheduledAt, endTime, location, message, interviewer, interviewType } = body;
+    const { jobPostingId, scheduledAt, location, message, interviewer, interviewType } = body;
 
     if (!jobPostingId || !scheduledAt) {
       return NextResponse.json(
@@ -36,7 +36,6 @@ export async function POST(request: NextRequest) {
     }
 
     const scheduledDateTime = new Date(scheduledAt);
-    const endDateTime = endTime ? new Date(endTime) : null;
 
     // Get all applications that are eligible for interview (not pending/rejected)
     // Include all statuses except PENDING and REJECTED
@@ -75,20 +74,18 @@ export async function POST(request: NextRequest) {
         },
         update: {
           scheduledAt: scheduledDateTime,
-          endTime: endDateTime,
           location: location || "Online System",
           interviewer: interviewer,
           type: interviewType || "ONLINE",
-          adminMessage: message || null,
+          notes: message || null,
         },
         create: {
           applicationId: app.id,
           scheduledAt: scheduledDateTime,
-          endTime: endDateTime,
           location: location || "Online System",
           interviewer: interviewer,
           type: interviewType || "ONLINE",
-          adminMessage: message || null,
+          notes: message || null,
         },
       });
 
@@ -111,7 +108,7 @@ export async function POST(request: NextRequest) {
       interviewer,
       interviewType,
       scheduledList,
-      adminMessage: message || null,
+      notes: message || null,
     });
   } catch (error: any) {
     console.error("Batch interview schedule error:", error);

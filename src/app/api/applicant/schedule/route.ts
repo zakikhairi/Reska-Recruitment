@@ -34,11 +34,7 @@ export async function GET(request: NextRequest) {
       include: {
         testSession: true,
         interview: true,
-        jobPosting: {
-          include: {
-            testConfig: true,
-          },
-        },
+        jobPosting: true,
         statusHistory: {
           orderBy: { createdAt: "desc" },
           take: 5,
@@ -56,15 +52,14 @@ export async function GET(request: NextRequest) {
         status: app.status,
       };
 
-      // Add test schedule if exists
+      // Add test schedule if exists (even if scheduledAt is null)
       if (app.testSession) {
         schedule.test = {
-          scheduledAt: app.testSession.scheduledAt,
+          scheduledAt: app.testSession.scheduledAt || app.testSession.startedAt || app.testSession.createdAt,
+          endTime: app.testSession.endTime,
           location: "Online System",
           status: app.testSession.status,
           sessionId: app.testSession.id,
-          message: app.testSession.adminMessage || null,
-          durationMinutes: app.jobPosting.testConfig?.totalDurationMinutes || 90,
         };
       }
 
@@ -72,18 +67,19 @@ export async function GET(request: NextRequest) {
       if (app.interview) {
         schedule.interview = {
           scheduledAt: app.interview.scheduledAt,
-          endTime: app.interview.endTime,
           location: app.interview.location,
           interviewer: app.interview.interviewer,
           type: app.interview.type,
-          message: app.interview.adminMessage || null,
+          result: app.interview.result,
+          notes: app.interview.notes,
         };
       }
 
       return schedule;
     });
 
-    // Filter all applications with test sessions (for debugging)
+    // Filter: Show applications that have test session OR interview
+    // Include those with null scheduledAt (waiting for schedule)
     const upcomingSchedules = schedules.filter(
       (s) => s.test || s.interview
     );

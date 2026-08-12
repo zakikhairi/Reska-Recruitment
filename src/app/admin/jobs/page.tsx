@@ -49,25 +49,38 @@ export default function JobsPage() {
   const [divisionFilter, setDivisionFilter] = useState("all");
   const [mounted, setMounted] = useState(false);
   const [deleteModal, setDeleteModal] = useState<{ show: boolean; job: Job | null }>({ show: false, job: null });
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   useEffect(() => {
     setMounted(true);
-    fetchJobs(); // Fetch jobs from API on mount
+    fetchJobs(true); // Fetch all jobs for admin (including draft/closed)
   }, []);
 
   const handleDeleteClick = (job: Job) => {
     setDeleteModal({ show: true, job });
+    setDeleteError("");
   };
 
-  const handleDeleteConfirm = () => {
-    if (deleteModal.job) {
-      deleteJob(deleteModal.job.id);
+  const handleDeleteConfirm = async () => {
+    if (!deleteModal.job) return;
+
+    setIsDeleting(true);
+    setDeleteError("");
+
+    const result = await deleteJob(deleteModal.job.id);
+
+    if (result.success) {
       setDeleteModal({ show: false, job: null });
+    } else {
+      setDeleteError(result.error || "Gagal menghapus lowongan");
     }
+    setIsDeleting(false);
   };
 
   const handleDeleteCancel = () => {
     setDeleteModal({ show: false, job: null });
+    setDeleteError("");
   };
 
   // Wait for hydration
@@ -83,7 +96,8 @@ export default function JobsPage() {
   }
 
   const filteredJobs = jobs.filter((job) => {
-    const matchSearch = job.title.toLowerCase().includes(searchQuery.toLowerCase()) || job.location.toLowerCase().includes(searchQuery.toLowerCase());
+    if (!job) return false;
+    const matchSearch = (job.title || "").toLowerCase().includes(searchQuery.toLowerCase()) || (job.location || "").toLowerCase().includes(searchQuery.toLowerCase());
     const matchStatus = statusFilter === "all" || job.status === statusFilter;
     const matchDivision = divisionFilter === "all" || job.division === divisionFilter;
     return matchSearch && matchStatus && matchDivision;
@@ -190,7 +204,7 @@ export default function JobsPage() {
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "20px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", color: "#666666" }}>
                     <MapPin className="w-4 h-4" style={{ color: "#888888" }} />
-                    {job.location}
+                    {job.location || "-"}
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", color: "#666666" }}>
                     <Users className="w-4 h-4" style={{ color: "#888888" }} />
@@ -270,13 +284,27 @@ export default function JobsPage() {
               <p style={{ fontSize: "16px", fontWeight: 600, color: "#111111", marginBottom: "24px" }}>
                 "{deleteModal.job?.title}"
               </p>
-              <p style={{ fontSize: "13px", color: "#EF4444", marginBottom: "24px", padding: "12px", background: "#fef2f2", borderRadius: "8px" }}>
-                ⚠️ Tindakan ini tidak dapat dibatalkan. Semua data terkait lowongan ini akan dihapus permanen.
-              </p>
+
+              {deleteError && (
+                <div style={{ padding: "12px 16px", background: "#fee2e2", color: "#dc2626", borderRadius: "8px", marginBottom: "16px", fontSize: "14px" }}>
+                  {deleteError}
+                </div>
+              )}
+
+              {deleteModal.job?.applicantCount && deleteModal.job.applicantCount > 0 ? (
+                <p style={{ fontSize: "13px", color: "#d97706", marginBottom: "24px", padding: "12px", background: "#fef3c7", borderRadius: "8px" }}>
+                  ⚠️ Lowongan ini memiliki {deleteModal.job.applicantCount} pelamar. Tidak dapat dihapus.
+                </p>
+              ) : (
+                <p style={{ fontSize: "13px", color: "#EF4444", marginBottom: "24px", padding: "12px", background: "#fef2f2", borderRadius: "8px" }}>
+                  ⚠️ Tindakan ini tidak dapat dibatalkan. Semua data terkait lowongan ini akan dihapus permanen.
+                </p>
+              )}
 
               <div style={{ display: "flex", gap: "12px" }}>
                 <button
                   onClick={handleDeleteCancel}
+                  disabled={isDeleting}
                   style={{
                     flex: 1,
                     padding: "14px",
@@ -286,13 +314,15 @@ export default function JobsPage() {
                     borderRadius: "12px",
                     fontSize: "14px",
                     fontWeight: 600,
-                    cursor: "pointer",
+                    cursor: isDeleting ? "not-allowed" : "pointer",
+                    opacity: isDeleting ? 0.7 : 1,
                   }}
                 >
                   Batal
                 </button>
                 <button
                   onClick={handleDeleteConfirm}
+                  disabled={isDeleting || (deleteModal.job?.applicantCount && deleteModal.job.applicantCount > 0)}
                   style={{
                     flex: 1,
                     padding: "14px",
@@ -302,7 +332,8 @@ export default function JobsPage() {
                     borderRadius: "12px",
                     fontSize: "14px",
                     fontWeight: 600,
-                    cursor: "pointer",
+                    cursor: (isDeleting || (deleteModal.job?.applicantCount && deleteModal.job.applicantCount > 0)) ? "not-allowed" : "pointer",
+                    opacity: (isDeleting || (deleteModal.job?.applicantCount && deleteModal.job.applicantCount > 0)) ? 0.7 : 1,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -310,7 +341,7 @@ export default function JobsPage() {
                   }}
                 >
                   <Trash2 className="w-4 h-4" />
-                  Ya, Hapus
+                  {isDeleting ? "Menghapus..." : "Ya, Hapus"}
                 </button>
               </div>
             </div>

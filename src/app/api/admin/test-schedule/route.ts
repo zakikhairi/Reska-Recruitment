@@ -7,14 +7,18 @@ import prisma from "@/lib/db";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { jobPostingId, scheduledAt, location, message, durationMinutes } = body;
+    const { jobPostingId, scheduledAt, endTime, location, message } = body;
 
-    if (!jobPostingId || !scheduledAt) {
+    if (!jobPostingId) {
       return NextResponse.json(
-        { success: false, error: "Lowongan dan jadwal tes diperlukan" },
+        { success: false, error: "Lowongan diperlukan" },
         { status: 400 }
       );
     }
+
+    // Parse scheduledAt and endTime
+    const scheduledAtDate = scheduledAt ? new Date(scheduledAt) : null;
+    const endTimeDate = endTime ? new Date(endTime) : null;
 
     // Get job posting
     const jobPosting = await prisma.jobPosting.findUnique({
@@ -38,18 +42,11 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const scheduledDateTime = new Date(scheduledAt);
-
-    // Use provided durationMinutes or get from testConfig
-    const testDuration = durationMinutes || jobPosting.testConfig.totalDurationMinutes;
-
-    // Get all applications with TEST_SCHEDULED or ADMIN_CHECK status for this job
+    // Get all applications with TEST_SCHEDULED status for this job
     const applications = await prisma.application.findMany({
       where: {
         jobPostingId,
-        status: {
-          in: ["TEST_SCHEDULED", "ADMIN_CHECK"],
-        },
+        status: "TEST_SCHEDULED",
       },
       include: {
         applicant: true,
@@ -59,7 +56,7 @@ export async function POST(request: NextRequest) {
 
     if (applications.length === 0) {
       return NextResponse.json(
-        { success: false, error: "Tidak ada pelamar yang bisa dijadwalkan tes. Pastikan pelamar sudah di-review oleh HR." },
+        { success: false, error: "Tidak ada pelamar dengan status TEST_SCHEDULED. Pastikan pelamar sudah di-approve oleh HR." },
         { status: 400 }
       );
     }
@@ -67,42 +64,29 @@ export async function POST(request: NextRequest) {
     let scheduledCount = 0;
     const scheduledList: string[] = [];
 
-    // Create/Update test sessions for each application
+    // Create test sessions for each application
     for (const app of applications) {
-      if (app.testSession) {
+      if (!app.testSession) {
+        await prisma.testSession.create({
+          data: {
+            applicationId: app.id,
+            scheduledAt: scheduledAtDate,
+            endTime: endTimeDate,
+            status: "NOT_STARTED",
+          },
+        });
+        scheduledList.push(app.applicant.fullName);
+      } else if (app.testSession.status === "NOT_STARTED" || app.testSession.status === "EXPIRED") {
         // Update existing session with new schedule
         await prisma.testSession.update({
           where: { id: app.testSession.id },
           data: {
-            scheduledAt: scheduledDateTime,
-            status: "SCHEDULED",
-            startedAt: null,
-            submittedAt: null,
-            adminMessage: message || null,
-          },
-        });
-        scheduledList.push(app.applicant.fullName);
-      } else {
-        // Create new session
-        await prisma.testSession.create({
-          data: {
-            applicationId: app.id,
-            status: "SCHEDULED",
-            scheduledAt: scheduledDateTime,
-            adminMessage: message || null,
+            scheduledAt: scheduledAtDate,
+            endTime: endTimeDate,
           },
         });
         scheduledList.push(app.applicant.fullName);
       }
-
-      // Update application status to TEST_SCHEDULED if it's ADMIN_CHECK
-      if (app.status === "ADMIN_CHECK") {
-        await prisma.application.update({
-          where: { id: app.id },
-          data: { status: "TEST_SCHEDULED" },
-        });
-      }
-
       scheduledCount++;
     }
 
@@ -110,9 +94,10 @@ export async function POST(request: NextRequest) {
       success: true,
       message: `Berhasil menjadwalkan tes untuk ${scheduledCount} pelamar`,
       scheduledCount,
-      scheduledAt: scheduledDateTime.toISOString(),
       location: location || "Online System",
       scheduledList,
+      scheduledAt: scheduledAtDate,
+      endTime: endTimeDate,
       adminMessage: message || null,
     });
   } catch (error: any) {
@@ -171,8 +156,8 @@ export async function GET(request: NextRequest) {
     });
 
     // Separate into pending and already scheduled
-    const pending = applications.filter(app => !app.testSession?.scheduledAt);
-    const scheduled = applications.filter(app => app.testSession?.scheduledAt);
+    const pending = applications.filter(app => !app.testSession);
+    const scheduled = applications.filter(app => app.testSession);
 
     return NextResponse.json({
       success: true,
@@ -194,7 +179,7 @@ export async function GET(request: NextRequest) {
         applicationId: app.id,
         applicantName: app.applicant.fullName,
         nik: app.applicant.nik,
-        scheduledAt: app.testSession?.scheduledAt,
+        status: app.testSession?.status,
       })),
     });
   } catch (error: any) {

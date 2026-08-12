@@ -38,6 +38,7 @@ export default function CreateJobPage() {
     minEducation: "",
     description: "",
     requirements: "",
+    startDate: "",
     deadline: "",
   });
   const [status, setStatus] = useState("DRAFT");
@@ -49,7 +50,7 @@ export default function CreateJobPage() {
   };
 
   const handleSubmit = async (publish: boolean) => {
-    if (!formData.title || !formData.division || !formData.location || !formData.deadline) {
+    if (!formData.title || !formData.division || !formData.location || !formData.startDate || !formData.deadline) {
       setError("Mohon lengkapi semua field wajib");
       return;
     }
@@ -64,6 +65,7 @@ export default function CreateJobPage() {
       description: formData.description,
       requirements: formData.requirements,
       minEducation: formData.minEducation,
+      startDate: formData.startDate,
       deadline: formData.deadline,
       status: publish ? "ACTIVE" : "DRAFT",
     };
@@ -176,7 +178,21 @@ export default function CreateJobPage() {
 
             <div>
               <label style={{ fontSize: "14px", fontWeight: 600, color: "#111111", marginBottom: "8px", display: "block" }}>
-                Batas Waktu <span style={{ color: "#EF4444" }}>*</span>
+                Tanggal Mulai Pendaftaran <span style={{ color: "#EF4444" }}>*</span>
+              </label>
+              <input
+                type="date"
+                value={formData.startDate}
+                onChange={(e) => handleInputChange("startDate", e.target.value)}
+                style={{ width: "100%", padding: "12px 16px", border: "2px solid #e5e7eb", borderRadius: "12px", fontSize: "14px", outline: "none" }}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "20px" }}>
+            <div>
+              <label style={{ fontSize: "14px", fontWeight: 600, color: "#111111", marginBottom: "8px", display: "block" }}>
+                Batas Waktu Pendaftaran <span style={{ color: "#EF4444" }}>*</span>
               </label>
               <input
                 type="date"

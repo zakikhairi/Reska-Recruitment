@@ -10,6 +10,7 @@ export async function GET(
 ) {
   try {
     const { sessionId } = await params;
+    const now = new Date();
 
     // First try to find by session ID (testSession.id)
     let session = await prisma.testSession.findUnique({
@@ -65,11 +66,15 @@ export async function GET(
           },
         });
       } else if (application.jobPosting.testConfig) {
-        // No session yet, but check if scheduled time exists
+        // No session yet, check if test is configured
         const config = application.jobPosting.testConfig;
+
+        // Check scheduled time
         const scheduledAt = application.testSession?.scheduledAt;
-        const now = new Date();
-        const canStart = !scheduledAt || now >= new Date(scheduledAt);
+        const canStart = !scheduledAt || new Date(scheduledAt) <= now;
+        const minutesUntilStart = scheduledAt
+          ? Math.max(0, Math.ceil((new Date(scheduledAt).getTime() - now.getTime()) / (1000 * 60)))
+          : 0;
 
         return NextResponse.json({
           success: true,
@@ -78,10 +83,13 @@ export async function GET(
           config: {
             totalDurationMinutes: config.totalDurationMinutes,
             categories: config.categories.split(","),
+            questionsPerCategory: config.questionsPerCategory,
+            passingGrade: config.overallPassingGrade,
           },
           questions: [],
           canStart,
-          scheduledAt,
+          scheduledAt: scheduledAt?.toISOString() || null,
+          minutesUntilStart,
         });
       } else {
         return NextResponse.json(
@@ -106,7 +114,12 @@ export async function GET(
       );
     }
 
-    const config = application.jobPosting.testConfig;
+    // Check scheduled time
+    const scheduledAt = session.scheduledAt;
+    const canStart = !scheduledAt || new Date(scheduledAt) <= now;
+    const minutesUntilStart = scheduledAt
+      ? Math.max(0, Math.ceil((new Date(scheduledAt).getTime() - now.getTime()) / (1000 * 60)))
+      : 0;
 
     // Get questions
     let questions: any[] = [];
@@ -135,9 +148,6 @@ export async function GET(
       optionD: q.optionD,
     }));
 
-    // Check if test is scheduled and if time has arrived
-    const now = new Date();
-
     // Check if already submitted or scored
     if (session.status === "SUBMITTED" || session.status === "SCORED") {
       return NextResponse.json({
@@ -145,7 +155,6 @@ export async function GET(
         session: {
           id: session.id,
           status: session.status,
-          scheduledAt: session.scheduledAt,
           submittedAt: session.submittedAt,
           totalScore: session.totalScore,
           passed: session.passed,
@@ -155,83 +164,34 @@ export async function GET(
         jobTitle: application.jobPosting.title,
         questions: safeQuestions,
         config: {
-          totalDurationMinutes: config.totalDurationMinutes,
-          categories: config.categories.split(","),
+          totalDurationMinutes: application.jobPosting.testConfig.totalDurationMinutes,
+          categories: application.jobPosting.testConfig.categories.split(","),
         },
         canStart: false, // Already done
-        scheduledAt: session.scheduledAt,
+        scheduledAt: scheduledAt?.toISOString() || null,
       });
     }
 
-    // Check if scheduled time hasn't arrived yet
-    if (session.scheduledAt && now < session.scheduledAt) {
-      const timeUntilStart = session.scheduledAt.getTime() - now.getTime();
-      const minutesUntilStart = Math.ceil(timeUntilStart / (1000 * 60));
-
-      return NextResponse.json({
-        success: true,
-        session: {
-          id: session.id,
-          status: session.status,
-          scheduledAt: session.scheduledAt,
-          startedAt: session.startedAt,
-          tabSwitchCount: session.tabSwitchCount,
-        },
-        jobTitle: application.jobPosting.title,
-        questions: safeQuestions,
-        config: {
-          totalDurationMinutes: config.totalDurationMinutes,
-          categories: config.categories.split(","),
-        },
-        canStart: false, // Time hasn't arrived
-        minutesUntilStart,
-        scheduledAt: session.scheduledAt,
-      });
-    }
-
-    // Check if already submitted or scored
-    if (session.status === "SUBMITTED" || session.status === "SCORED") {
-      return NextResponse.json({
-        success: true,
-        session: {
-          id: session.id,
-          status: session.status,
-          scheduledAt: session.scheduledAt,
-          submittedAt: session.submittedAt,
-          totalScore: session.totalScore,
-          passed: session.passed,
-          startedAt: session.startedAt,
-          tabSwitchCount: session.tabSwitchCount,
-        },
-        jobTitle: application.jobPosting.title,
-        questions: safeQuestions,
-        config: {
-          totalDurationMinutes: config.totalDurationMinutes,
-          categories: config.categories.split(","),
-        },
-        canStart: false, // Already done
-        scheduledAt: session.scheduledAt,
-      });
-    }
-
-    // Allow access - either not scheduled, time has arrived, or already in progress
+    // Allow access - test is ready (time has arrived or no scheduled time)
     return NextResponse.json({
       success: true,
       session: {
         id: session.id,
         status: session.status,
-        scheduledAt: session.scheduledAt,
         startedAt: session.startedAt,
         tabSwitchCount: session.tabSwitchCount,
       },
       jobTitle: application.jobPosting.title,
       questions: safeQuestions,
       config: {
-        totalDurationMinutes: config.totalDurationMinutes,
-        categories: config.categories.split(","),
+        totalDurationMinutes: application.jobPosting.testConfig.totalDurationMinutes,
+        categories: application.jobPosting.testConfig.categories.split(","),
+        questionsPerCategory: application.jobPosting.testConfig.questionsPerCategory,
+        passingGrade: application.jobPosting.testConfig.overallPassingGrade,
       },
-      canStart: true, // Can start now
-      scheduledAt: session.scheduledAt,
+      canStart,
+      scheduledAt: scheduledAt?.toISOString() || null,
+      minutesUntilStart,
     });
   } catch (error) {
     console.error("Error fetching test:", error);
@@ -280,71 +240,97 @@ export async function POST(
         );
       }
 
-      // Check if scheduled time hasn't arrived (only if no startedAt yet)
-      if (!existingSession.startedAt && existingSession.scheduledAt && new Date() < existingSession.scheduledAt) {
-        return NextResponse.json(
-          { success: false, error: "Belum waktunya memulai tes" },
-          { status: 400 }
-        );
-      }
-
-      // Resume or start existing session
-      const updateData: any = {
-        status: "IN_PROGRESS",
-      };
-      if (!existingSession.startedAt) {
-        updateData.startedAt = new Date();
-      }
-
-      const updatedSession = await prisma.testSession.update({
-        where: { id: existingSession.id },
-        data: updateData,
-      });
-
-      // If no questions yet, generate them now
+      // Check if session has questions - if not, select them now
       let questionIds: string[] = [];
-      if (existingSession.questions) {
-        questionIds = JSON.parse(existingSession.questions);
-      } else {
-        // Generate questions
+      let sessionToUpdate = existingSession;
+
+      if (!existingSession.questions && existingSession.application?.jobPosting?.testConfig) {
+        // Need to select questions for this session
         const config = existingSession.application.jobPosting.testConfig;
-        if (config) {
-          const categories = config.categories.split(",");
-          let questions = await prisma.question.findMany({
-            where: { category: { in: categories }, isActive: true },
-          });
+        const categories = config.categories.split(",");
 
-          // Simple shuffle and select
-          const shuffled = questions.sort(() => Math.random() - 0.5);
-          const selected = shuffled.slice(0, config.questionsPerCategory * categories.length);
-          questionIds = selected.map(q => q.id);
+        // Get questions from question bank
+        const allQuestions = await prisma.question.findMany({
+          where: {
+            category: { in: categories },
+            isActive: true,
+          },
+        });
 
-          // Update session with questions
-          await prisma.testSession.update({
-            where: { id: existingSession.id },
-            data: { questions: JSON.stringify(questionIds) },
-          });
+        // Select and shuffle questions
+        const selectedQuestions = selectQuestionsForTest(
+          allQuestions.map((q) => ({
+            id: q.id,
+            category: q.category as TestCategory,
+            stem: q.stem,
+            optionA: q.optionA,
+            optionB: q.optionB,
+            optionC: q.optionC,
+            optionD: q.optionD,
+            correctAnswer: q.correctAnswer as "A" | "B" | "C" | "D",
+            difficulty: q.difficulty as "EASY" | "MEDIUM" | "HARD",
+            points: q.points,
+            isActive: q.isActive,
+          })),
+          {
+            categories: categories as TestCategory[],
+            categoryWeights: JSON.parse(config.categoryWeights),
+            passingGrades: JSON.parse(config.passingGrades),
+            overallPassingGrade: config.overallPassingGrade,
+            totalDurationMinutes: config.totalDurationMinutes,
+            questionsPerCategory: config.questionsPerCategory,
+            shuffleQuestions: config.shuffleQuestions,
+            shuffleAnswers: config.shuffleAnswers,
+            id: "",
+            jobPostingId: existingSession.application.jobPostingId,
+            allowTabSwitch: config.allowTabSwitch,
+            maxTabSwitches: config.maxTabSwitches,
+            isActive: config.isActive,
+          }
+        );
 
-          // Create answer records
-          await prisma.applicantAnswer.deleteMany({
-            where: { testSessionId: existingSession.id },
-          });
-          await prisma.applicantAnswer.createMany({
-            data: selected.map((q) => ({
-              testSessionId: existingSession.id,
-              questionId: q.id,
-              pointsEarned: 0,
-            })),
-          });
-        }
+        questionIds = selectedQuestions.map((q) => q.id);
+
+        // Update session with questions
+        sessionToUpdate = await prisma.testSession.update({
+          where: { id: existingSession.id },
+          data: {
+            status: "IN_PROGRESS",
+            startedAt: existingSession.startedAt || new Date(),
+            questions: JSON.stringify(questionIds),
+          },
+        });
+
+        // Create answer records for selected questions
+        await prisma.applicantAnswer.createMany({
+          data: selectedQuestions.map((q) => ({
+            testSessionId: existingSession.id,
+            questionId: q.id,
+            pointsEarned: 0,
+          })),
+          skipDuplicates: true,
+        });
+      } else {
+        // Session already has questions - just resume
+        questionIds = existingSession.questions
+          ? JSON.parse(existingSession.questions)
+          : [];
+
+        sessionToUpdate = await prisma.testSession.update({
+          where: { id: existingSession.id },
+          data: {
+            status: "IN_PROGRESS",
+            startedAt: existingSession.startedAt || new Date(),
+          },
+        });
       }
 
       return NextResponse.json({
         success: true,
-        sessionId: updatedSession.id,
-        status: updatedSession.status,
+        sessionId: sessionToUpdate.id,
+        status: sessionToUpdate.status,
         questions: questionIds,
-        startedAt: updatedSession.startedAt,
+        startedAt: sessionToUpdate.startedAt,
       });
     }
 
@@ -355,7 +341,6 @@ export async function POST(
         jobPosting: {
           include: {
             testConfig: true,
-            testSessions: true,
           },
         },
       },
@@ -373,17 +358,6 @@ export async function POST(
         { success: false, error: "Test belum dikonfigurasi" },
         { status: 400 }
       );
-    }
-
-    // Check if there's a scheduled time and if it hasn't arrived yet
-    if (application.testSessions.length > 0) {
-      const existingSession = application.testSessions[0];
-      if (existingSession.scheduledAt && new Date() < existingSession.scheduledAt) {
-        return NextResponse.json(
-          { success: false, error: "Belum waktunya memulai tes" },
-          { status: 400 }
-        );
-      }
     }
 
     const config = application.jobPosting.testConfig;
@@ -485,17 +459,12 @@ export async function PATCH(
       data: { status },
     });
 
-    // Also update application status if transitioning to IN_TEST
+    // Also update application status if transitioning to IN_PROGRESS
     if (status === "IN_PROGRESS") {
-      const application = await prisma.application.findFirst({
+      await prisma.application.update({
         where: { id: session.applicationId },
+        data: { status: "IN_TEST" },
       });
-      if (application) {
-        await prisma.application.update({
-          where: { id: application.id },
-          data: { status: "IN_TEST" },
-        });
-      }
     }
 
     return NextResponse.json({ success: true, status: session.status });

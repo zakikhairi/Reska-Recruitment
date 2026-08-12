@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Calendar,
   Clock,
@@ -21,11 +21,6 @@ import {
   X,
   List,
   Grid3X3,
-  Edit,
-  Eye,
-  Search,
-  Mail,
-  Phone,
 } from "lucide-react";
 import { useJobsStore, Job } from "@/stores/jobs";
 
@@ -33,8 +28,8 @@ interface Schedule {
   id: string;
   applicationId: string;
   type: "TEST" | "INTERVIEW";
-  scheduledAt: string;
-  location: string;
+  scheduledAt?: string;
+  location?: string;
   applicantName: string;
   position: string;
   division: string;
@@ -49,8 +44,8 @@ interface GroupedByJob {
   division: string;
   type: "TEST" | "INTERVIEW";
   schedules: Schedule[];
-  scheduledAt: string;
-  location: string;
+  scheduledAt?: string;
+  location?: string;
   totalApplicants: number;
 }
 
@@ -58,15 +53,15 @@ interface GroupedSchedule {
   position: string;
   division: string;
   type: "TEST" | "INTERVIEW";
-  scheduledAt: string;
-  location: string;
+  scheduledAt?: string;
+  location?: string;
   applicants: {
     id: string;
     applicationId: string;
     applicantName: string;
     status: string;
-    scheduledAt: string;
-    location: string;
+    scheduledAt?: string;
+    location?: string;
   }[];
   totalApplicants: number;
 }
@@ -97,9 +92,7 @@ export default function SchedulePage() {
   const [expandedJobs, setExpandedJobs] = useState<Set<string>>(new Set());
   const [selectedJob, setSelectedJob] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
-  const [deleteModal, setDeleteModal] = useState<{ show: boolean; schedule: Schedule | null }>({ show: false, schedule: null });
-  const [viewApplicantsModal, setViewApplicantsModal] = useState<{ show: boolean; job: GroupedByJob | null }>({ show: false, job: null });
-  const [editModal, setEditModal] = useState<{ show: boolean; schedule: Schedule | null }>({ show: false, schedule: null });
+  const [deleteModal, setDeleteModal] = useState<{ show: boolean; job: GroupedSchedule | null }>({ show: false, job: null });
   const [deleteAllModal, setDeleteAllModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deletingAll, setDeletingAll] = useState(false);
@@ -116,7 +109,6 @@ export default function SchedulePage() {
     message: "",
     interviewer: "",
     interviewType: "ONLINE",
-    durationMinutes: 90,
   });
   const [saving, setSaving] = useState(false);
 
@@ -124,6 +116,53 @@ export default function SchedulePage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<"month" | "week">("month");
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
+
+  // Real-time clock for countdown timer
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Update current time every second for countdown display
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Calculate time remaining until scheduled time (in seconds)
+  const getTimeRemainingSeconds = (scheduledAt?: string): number | null => {
+    if (!scheduledAt) return null;
+    const diff = new Date(scheduledAt).getTime() - currentTime.getTime();
+    return Math.max(0, Math.floor(diff / 1000));
+  };
+
+  // Format time remaining for display
+  const formatTimeRemaining = (seconds: number | null) => {
+    if (seconds === null || seconds <= 0) return null;
+
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+
+    if (days > 0) return `${days} hari ${hours} jam`;
+    if (hours > 0) return `${hours} jam ${minutes} menit`;
+    if (minutes > 0) return `${minutes} menit ${secs} detik`;
+    return `${secs} detik`;
+  };
+
+  // Check if test can be started (time has arrived)
+  const canStartTest = useCallback((schedule: Schedule) => {
+    const scheduledAt = schedule.scheduledAt;
+    if (!scheduledAt) return true;
+    return currentTime >= new Date(scheduledAt);
+  }, [currentTime]);
+
+  // Check if test window has expired (past endTime)
+  const isTestExpired = useCallback((schedule: Schedule) => {
+    const endTime = (schedule as any).endTime;
+    if (!endTime) return false;
+    return currentTime > new Date(endTime);
+  }, [currentTime]);
 
   // Calendar helpers
   const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
@@ -170,6 +209,7 @@ export default function SchedulePage() {
 
   const getEventsForDay = (date: Date) => {
     return schedules.filter((s) => {
+      if (!s.scheduledAt) return false;
       const eventDate = new Date(s.scheduledAt);
       return eventDate.getDate() === date.getDate() &&
              eventDate.getMonth() === date.getMonth() &&
@@ -183,7 +223,7 @@ export default function SchedulePage() {
   };
 
   const isSelected = (date: Date) => {
-    return selectedSchedule && date.toDateString() === new Date(selectedSchedule.scheduledAt).toDateString();
+    return selectedSchedule?.scheduledAt && date.toDateString() === new Date(selectedSchedule.scheduledAt).toDateString();
   };
 
   const prevMonth = () => {
@@ -232,10 +272,6 @@ export default function SchedulePage() {
         message: scheduleForm.message,
       };
 
-      if (scheduleType === "TEST") {
-        requestBody.durationMinutes = scheduleForm.durationMinutes;
-      }
-
       if (scheduleType === "INTERVIEW") {
         requestBody.interviewer = scheduleForm.interviewer;
         requestBody.interviewType = scheduleForm.interviewType;
@@ -254,7 +290,7 @@ export default function SchedulePage() {
         setShowAddModal(false);
         setSelectedJobId("");
         setScheduleType("TEST");
-        setScheduleForm({ scheduledDate: "", scheduledTime: "", endTime: "", location: "Online System", message: "", interviewer: "", interviewType: "ONLINE", durationMinutes: 90 });
+        setScheduleForm({ scheduledDate: "", scheduledTime: "", endTime: "", location: "Online System", message: "", interviewer: "", interviewType: "ONLINE" });
         fetchSchedules();
         setTimeout(() => setToast(null), 3000);
       } else {
@@ -269,11 +305,13 @@ export default function SchedulePage() {
     }
   };
 
-  const formatTime = (dateStr: string) => {
+  const formatTime = (dateStr?: string) => {
+    if (!dateStr) return "-";
     return new Date(dateStr).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
   };
 
-  const formatDate = (dateStr: string) => {
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return "-";
     return new Date(dateStr).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
   };
 
@@ -338,7 +376,11 @@ export default function SchedulePage() {
       });
       groups[key].totalApplicants++;
     });
-    return Object.values(groups).sort((a, b) => new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime());
+    return Object.values(groups).sort((a, b) => {
+      const dateA = a.scheduledAt ? new Date(a.scheduledAt).getTime() : 0;
+      const dateB = b.scheduledAt ? new Date(b.scheduledAt).getTime() : 0;
+      return dateB - dateA;
+    });
   };
 
   const groupSchedulesByJobPosting = (schedules: Schedule[]): GroupedByJob[] => {
@@ -360,7 +402,11 @@ export default function SchedulePage() {
       groups[key].schedules.push(schedule);
       groups[key].totalApplicants++;
     });
-    return Object.values(groups).sort((a, b) => new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime());
+    return Object.values(groups).sort((a, b) => {
+      const dateA = a.scheduledAt ? new Date(a.scheduledAt).getTime() : 0;
+      const dateB = b.scheduledAt ? new Date(b.scheduledAt).getTime() : 0;
+      return dateB - dateA;
+    });
   };
 
   const toggleJobExpand = (jobKey: string) => {
@@ -371,91 +417,6 @@ export default function SchedulePage() {
       newExpanded.add(jobKey);
     }
     setExpandedJobs(newExpanded);
-  };
-
-  // Delete individual schedule
-  const handleDeleteSchedule = async () => {
-    if (!deleteModal.schedule) return;
-    setDeleting(true);
-
-    try {
-      const response = await fetch(`/api/admin/test-schedule/${deleteModal.schedule.id}`, {
-        method: "DELETE",
-      });
-      const result = await response.json();
-
-      if (result.success) {
-        setToast({ message: "Jadwal berhasil dihapus", type: "success" });
-        setDeleteModal({ show: false, schedule: null });
-        fetchSchedules();
-      } else {
-        setToast({ message: result.error || "Gagal menghapus jadwal", type: "error" });
-      }
-    } catch (err) {
-      setToast({ message: "Terjadi kesalahan", type: "error" });
-    } finally {
-      setDeleting(false);
-      setTimeout(() => setToast(null), 3000);
-    }
-  };
-
-  // Update schedule (edit)
-  const handleUpdateSchedule = async () => {
-    if (!editModal.schedule) return;
-    setSaving(true);
-
-    try {
-      const response = await fetch(`/api/admin/test-schedule/${editModal.schedule.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          scheduledAt: editModal.schedule.scheduledAt,
-          location: editModal.schedule.location,
-        }),
-      });
-      const result = await response.json();
-
-      if (result.success) {
-        setToast({ message: "Jadwal berhasil diupdate", type: "success" });
-        setEditModal({ show: false, schedule: null });
-        fetchSchedules();
-      } else {
-        setToast({ message: result.error || "Gagal update jadwal", type: "error" });
-      }
-    } catch (err) {
-      setToast({ message: "Terjadi kesalahan", type: "error" });
-    } finally {
-      setSaving(false);
-      setTimeout(() => setToast(null), 3000);
-    }
-  };
-
-  // Delete all schedules for a job
-  const handleDeleteAllSchedules = async () => {
-    if (!deleteModal.job) return;
-    setDeletingAll(true);
-
-    try {
-      const response = await fetch("/api/admin/test-schedule/delete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobPostingId: deleteModal.job.schedules[0]?.applicationId }),
-      });
-      const result = await response.json();
-
-      if (result.success) {
-        setToast({ message: "Semua jadwal berhasil dihapus", type: "success" });
-        setDeleteModal({ show: false, job: null });
-        fetchSchedules();
-      } else {
-        setToast({ message: result.error || "Gagal menghapus jadwal", type: "error" });
-      }
-    } catch (err) {
-      setToast({ message: "Terjadi kesalahan", type: "error" });
-    } finally {
-      setDeletingAll(false);
-      setTimeout(() => setToast(null), 3000);
-    }
   };
 
   const totalSchedules = groupedSchedules.length;
@@ -770,14 +731,16 @@ export default function SchedulePage() {
                       <Clock className="w-4 h-4" style={{ color: "#666" }} />
                       <div>
                         <p style={{ fontSize: "10px", color: "#888", margin: 0 }}>Tanggal & Waktu</p>
-                        <p style={{ fontSize: "12px", fontWeight: 500, color: "#333", margin: 0 }}>{formatDate(selectedSchedule.scheduledAt)}, {formatTime(selectedSchedule.scheduledAt)}</p>
+                        <p style={{ fontSize: "12px", fontWeight: 500, color: "#333", margin: 0 }}>
+                          {selectedSchedule.scheduledAt ? `${formatDate(selectedSchedule.scheduledAt)}, ${formatTime(selectedSchedule.scheduledAt)}` : "Menunggu jadwal"}
+                        </p>
                       </div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                       <MapPin className="w-4 h-4" style={{ color: "#666" }} />
                       <div>
                         <p style={{ fontSize: "10px", color: "#888", margin: 0 }}>Lokasi</p>
-                        <p style={{ fontSize: "12px", fontWeight: 500, color: "#333", margin: 0 }}>{selectedSchedule.location}</p>
+                        <p style={{ fontSize: "12px", fontWeight: 500, color: "#333", margin: 0 }}>{selectedSchedule.location || "Online System"}</p>
                       </div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -798,26 +761,117 @@ export default function SchedulePage() {
                     )}
                   </div>
 
+                  {/* Test Status & Countdown - Only for TEST type */}
+                  {selectedSchedule.type === "TEST" && (() => {
+                    const timeRemaining = getTimeRemainingSeconds(selectedSchedule.scheduledAt);
+                    const testCanStart = canStartTest(selectedSchedule);
+                    const testIsExpired = isTestExpired(selectedSchedule);
+
+                    return (
+                      <>
+                        {/* Status Badge */}
+                        <div style={{ marginBottom: "14px" }}>
+                          {testIsExpired ? (
+                            <div style={{ padding: "10px 14px", background: "#fee2e2", borderRadius: "8px", textAlign: "center" }}>
+                              <p style={{ fontSize: "12px", fontWeight: 700, color: "#dc2626", margin: 0 }}>⏰ Waktu Tes Sudah Habis</p>
+                            </div>
+                          ) : testCanStart ? (
+                            <div style={{ padding: "10px 14px", background: "#dcfce7", borderRadius: "8px", textAlign: "center" }}>
+                              <p style={{ fontSize: "12px", fontWeight: 700, color: "#16a34a", margin: 0 }}>✓ Tes Bisa Dimulai</p>
+                            </div>
+                          ) : timeRemaining !== null && timeRemaining > 0 ? (
+                            <div style={{ padding: "10px 14px", background: "#fef3c7", borderRadius: "8px", textAlign: "center" }}>
+                              <p style={{ fontSize: "11px", fontWeight: 600, color: "#92400e", margin: 0, marginBottom: "6px" }}>Menunggu waktu tes:</p>
+                              <p style={{ fontSize: "14px", fontWeight: 800, color: "#d97706", margin: 0 }}>{formatTimeRemaining(timeRemaining)}</p>
+                            </div>
+                          ) : null}
+                        </div>
+
+                        {/* Live Countdown Timer - Shows when not started yet */}
+                        {!testCanStart && !testIsExpired && timeRemaining !== null && timeRemaining > 0 && (
+                          <div style={{ background: "#fffbeb", borderRadius: "12px", padding: "16px", marginBottom: "14px", border: "2px solid #fcd34d" }}>
+                            <p style={{ fontSize: "11px", fontWeight: 600, color: "#92400e", margin: 0, marginBottom: "12px", textAlign: "center" }}>Waktumundur Menuju Tes</p>
+                            <div style={{ display: "flex", justifyContent: "center", gap: "6px", alignItems: "center" }}>
+                              {Math.floor(timeRemaining / 86400) > 0 && (
+                                <>
+                                  <div style={{ textAlign: "center" }}>
+                                    <div style={{ fontSize: "22px", fontWeight: 800, color: "#d97706" }}>{Math.floor(timeRemaining / 86400)}</div>
+                                    <div style={{ fontSize: "9px", color: "#92400e" }}>Hari</div>
+                                  </div>
+                                  <span style={{ fontSize: "16px", color: "#d97706" }}>:</span>
+                                </>
+                              )}
+                              {Math.floor((timeRemaining % 86400) / 3600) > 0 && (
+                                <>
+                                  <div style={{ textAlign: "center" }}>
+                                    <div style={{ fontSize: "22px", fontWeight: 800, color: "#d97706" }}>{Math.floor((timeRemaining % 86400) / 3600)}</div>
+                                    <div style={{ fontSize: "9px", color: "#92400e" }}>Jam</div>
+                                  </div>
+                                  <span style={{ fontSize: "16px", color: "#d97706" }}>:</span>
+                                </>
+                              )}
+                              <div style={{ textAlign: "center" }}>
+                                <div style={{ fontSize: "22px", fontWeight: 800, color: "#d97706" }}>{Math.floor((timeRemaining % 3600) / 60)}</div>
+                                <div style={{ fontSize: "9px", color: "#92400e" }}>Menit</div>
+                              </div>
+                              <span style={{ fontSize: "16px", color: "#d97706" }}>:</span>
+                              <div style={{ textAlign: "center" }}>
+                                <div style={{ fontSize: "22px", fontWeight: 800, color: "#d97706" }}>{String(timeRemaining % 60).padStart(2, "0")}</div>
+                                <div style={{ fontSize: "9px", color: "#92400e" }}>Detik</div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+
                   <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <button
-                      onClick={() => setEditModal({ show: true, schedule: selectedSchedule })}
-                      style={{ padding: "8px 12px", background: "#fff", border: "1px solid #e0e0e0", borderRadius: "6px", fontSize: "12px", fontWeight: 500, color: "#333", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
-                    >
-                      <Edit className="w-4 h-4" /> Ubah Jadwal
+                    {/* Tombol Mulai/Lihat Tes - Only for TEST type */}
+                    {selectedSchedule.type === "TEST" && (() => {
+                      const testCanStart = canStartTest(selectedSchedule);
+                      const testIsExpired = isTestExpired(selectedSchedule);
+
+                      if (testIsExpired) {
+                        return (
+                          <button disabled style={{ padding: "10px 14px", background: "#e5e5e5", border: "none", borderRadius: "8px", fontSize: "12px", fontWeight: 600, color: "#888", cursor: "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+                            <Clock className="w-4 h-4" /> Waktu Tes Habis
+                          </button>
+                        );
+                      }
+
+                      return (
+                        <a href={`/applicant/test/${selectedSchedule.applicationId}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+                          <button style={{
+                            padding: "10px 14px",
+                            background: testCanStart ? "linear-gradient(135deg, #16a34a, #22c55e)" : "linear-gradient(135deg, #f59e0b, #d97706)",
+                            border: "none",
+                            borderRadius: "8px",
+                            fontSize: "12px",
+                            fontWeight: 600,
+                            color: "#fff",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "6px",
+                            width: "100%",
+                            boxShadow: testCanStart ? "0 2px 8px rgba(22, 163, 74, 0.3)" : "0 2px 8px rgba(245, 158, 11, 0.3)",
+                          }}>
+                            <FileText className="w-4 h-4" />
+                            {testCanStart ? "👁 Lihat/Monitor Tes" : "⏳ Lihat Detail Tes"}
+                          </button>
+                        </a>
+                      );
+                    })()}
+
+                    <button style={{ padding: "8px 12px", background: "#fff", border: "1px solid #e0e0e0", borderRadius: "6px", fontSize: "12px", fontWeight: 500, color: "#333", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+                      <Calendar className="w-4 h-4" /> Ubah Jadwal
                     </button>
-                    <button
-                      onClick={() => {
-                        const jobGroup = groupedByJob.find(j => j.schedules.some(s => s.id === selectedSchedule?.id));
-                        if (jobGroup) setViewApplicantsModal({ show: true, job: jobGroup });
-                      }}
-                      style={{ padding: "8px 12px", background: "#fff", border: "1px solid #e0e0e0", borderRadius: "6px", fontSize: "12px", fontWeight: 500, color: "#333", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
-                    >
-                      <Users className="w-4 h-4" /> Lihat Pelamar
+                    <button style={{ padding: "8px 12px", background: "#fff", border: "1px solid #e0e0e0", borderRadius: "6px", fontSize: "12px", fontWeight: 500, color: "#333", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+                      <FileText className="w-4 h-4" /> Lihat Pelamar
                     </button>
-                    <button
-                      onClick={() => setDeleteModal({ show: true, schedule: selectedSchedule })}
-                      style={{ padding: "8px 12px", background: "#fee2e2", border: "1px solid #fecaca", borderRadius: "6px", fontSize: "12px", fontWeight: 500, color: "#dc2626", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
-                    >
+                    <button style={{ padding: "8px 12px", background: "#fee2e2", border: "1px solid #fecaca", borderRadius: "6px", fontSize: "12px", fontWeight: 500, color: "#dc2626", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
                       <Trash2 className="w-4 h-4" /> Hapus Jadwal
                     </button>
                   </div>
@@ -827,237 +881,6 @@ export default function SchedulePage() {
           </div>
         </div>
       </div>
-
-      {/* Delete Confirmation Modal */}
-      {deleteModal.show && deleteModal.schedule && (
-        <div style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: "rgba(0,0,0,0.6)",
-          backdropFilter: "blur(4px)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 1000,
-          padding: "20px",
-        }}>
-          <div style={{
-            background: "#ffffff",
-            borderRadius: "16px",
-            padding: "24px",
-            width: "100%",
-            maxWidth: "400px",
-            boxShadow: "0 25px 80px rgba(0,0,0,0.25)",
-          }}>
-            <div style={{ textAlign: "center", marginBottom: "20px" }}>
-              <div style={{ width: "60px", height: "60px", background: "#fee2e2", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
-                <Trash2 className="w-8 h-8" style={{ color: "#dc2626" }} />
-              </div>
-              <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#111", marginBottom: "8px" }}>Hapus Jadwal?</h3>
-              <p style={{ fontSize: "14px", color: "#666" }}>
-                Yakin ingin menghapus jadwal untuk <strong>{deleteModal.schedule.applicantName}</strong>?
-              </p>
-            </div>
-            <div style={{ display: "flex", gap: "12px" }}>
-              <button
-                onClick={() => setDeleteModal({ show: false, schedule: null })}
-                style={{ flex: 1, padding: "12px 20px", background: "#fff", color: "#666", border: "2px solid #e5e5e5", borderRadius: "8px", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}
-              >
-                Batal
-              </button>
-              <button
-                onClick={handleDeleteSchedule}
-                disabled={deleting}
-                style={{ flex: 1, padding: "12px 20px", background: "#dc2626", color: "#fff", border: "none", borderRadius: "8px", fontSize: "14px", fontWeight: 600, cursor: deleting ? "not-allowed" : "pointer", opacity: deleting ? 0.6 : 1 }}
-              >
-                {deleting ? "Menghapus..." : "Ya, Hapus"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* View Applicants Modal */}
-      {viewApplicantsModal.show && viewApplicantsModal.job && (
-        <div style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: "rgba(0,0,0,0.6)",
-          backdropFilter: "blur(4px)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 1000,
-          padding: "20px",
-        }}>
-          <div style={{
-            background: "#ffffff",
-            borderRadius: "16px",
-            padding: "24px",
-            width: "100%",
-            maxWidth: "600px",
-            maxHeight: "80vh",
-            overflow: "hidden",
-            display: "flex",
-            flexDirection: "column",
-            boxShadow: "0 25px 80px rgba(0,0,0,0.25)",
-          }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-              <div>
-                <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#111", marginBottom: "4px" }}>
-                  Daftar Pelamar - {viewApplicantsModal.job.position}
-                </h3>
-                <p style={{ fontSize: "13px", color: "#666" }}>
-                  {divisionLabels[viewApplicantsModal.job.division] || viewApplicantsModal.job.division} • {viewApplicantsModal.job.totalApplicants} pelamar
-                </p>
-              </div>
-              <button
-                onClick={() => setViewApplicantsModal({ show: false, job: null })}
-                style={{ padding: "8px", background: "#f1f5f9", border: "none", borderRadius: "8px", cursor: "pointer" }}
-              >
-                <X className="w-5 h-5" style={{ color: "#666" }} />
-              </button>
-            </div>
-
-            <div style={{ flex: 1, overflow: "auto" }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                {viewApplicantsModal.job.schedules.map((schedule) => {
-                  const status = statusConfig[schedule.status] || { bg: "#f1f5f9", text: "#64748b", label: schedule.status };
-                  return (
-                    <div key={schedule.id} style={{ padding: "16px", background: "#f8f9fa", borderRadius: "12px", border: "1px solid #e5e5e5" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-                        <div>
-                          <h4 style={{ fontSize: "14px", fontWeight: 600, color: "#111", marginBottom: "4px" }}>{schedule.applicantName}</h4>
-                          <span style={{ padding: "4px 8px", background: status.bg, color: status.text, borderRadius: "6px", fontSize: "11px", fontWeight: 600 }}>
-                            {status.label}
-                          </span>
-                        </div>
-                        <div style={{ display: "flex", gap: "8px" }}>
-                          <button
-                            onClick={() => {
-                              setViewApplicantsModal({ show: false, job: null });
-                              // Navigate to applicant detail
-                            }}
-                            style={{ padding: "6px 12px", background: "#00205B", color: "#fff", border: "none", borderRadius: "6px", fontSize: "12px", fontWeight: 500, cursor: "pointer" }}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "16px", fontSize: "12px", color: "#666" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                          <Calendar className="w-3 h-3" />
-                          {formatDate(schedule.scheduledAt)}
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                          <Clock className="w-3 h-3" />
-                          {formatTime(schedule.scheduledAt)}
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                          <MapPin className="w-3 h-3" />
-                          {schedule.location}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Schedule Modal */}
-      {editModal.show && editModal.schedule && (
-        <div style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: "rgba(0,0,0,0.6)",
-          backdropFilter: "blur(4px)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 1000,
-          padding: "20px",
-        }}>
-          <div style={{
-            background: "#ffffff",
-            borderRadius: "16px",
-            padding: "24px",
-            width: "100%",
-            maxWidth: "480px",
-            boxShadow: "0 25px 80px rgba(0,0,0,0.25)",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
-              <div style={{ width: "40px", height: "40px", background: "#2563eb", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Edit className="w-5 h-5" style={{ color: "#fff" }} />
-              </div>
-              <h2 style={{ fontSize: "18px", fontWeight: 700, color: "#111" }}>Ubah Jadwal</h2>
-            </div>
-
-            <div style={{ marginBottom: "16px" }}>
-              <p style={{ fontSize: "14px", color: "#666", marginBottom: "16px" }}>
-                Ubah jadwal untuk <strong>{editModal.schedule.applicantName}</strong>
-              </p>
-            </div>
-
-            <div style={{ marginBottom: "16px" }}>
-              <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>Tanggal</label>
-              <input
-                type="date"
-                value={editModal.schedule.scheduledAt.split("T")[0]}
-                onChange={(e) => setEditModal({ ...editModal, schedule: { ...editModal.schedule!, scheduledAt: `${e.target.value}T${editModal.schedule!.scheduledAt.split("T")[1]}` } })}
-                style={{ width: "100%", padding: "10px 12px", border: "2px solid #e5e5e5", borderRadius: "8px", fontSize: "14px", outline: "none" }}
-              />
-            </div>
-
-            <div style={{ marginBottom: "16px" }}>
-              <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>Waktu</label>
-              <input
-                type="time"
-                value={editModal.schedule.scheduledAt.split("T")[1]?.substring(0, 5) || ""}
-                onChange={(e) => setEditModal({ ...editModal, schedule: { ...editModal.schedule!, scheduledAt: `${editModal.schedule!.scheduledAt.split("T")[0]}T${e.target.value}:00` } })}
-                style={{ width: "100%", padding: "10px 12px", border: "2px solid #e5e5e5", borderRadius: "8px", fontSize: "14px", outline: "none" }}
-              />
-            </div>
-
-            <div style={{ marginBottom: "20px" }}>
-              <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>Lokasi</label>
-              <input
-                type="text"
-                value={editModal.schedule.location}
-                onChange={(e) => setEditModal({ ...editModal, schedule: { ...editModal.schedule!, location: e.target.value } })}
-                style={{ width: "100%", padding: "10px 12px", border: "2px solid #e5e5e5", borderRadius: "8px", fontSize: "14px", outline: "none" }}
-              />
-            </div>
-
-            <div style={{ display: "flex", gap: "12px" }}>
-              <button
-                onClick={() => setEditModal({ show: false, schedule: null })}
-                style={{ flex: 1, padding: "12px 20px", background: "#fff", color: "#666", border: "2px solid #e5e5e5", borderRadius: "8px", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}
-              >
-                Batal
-              </button>
-              <button
-                onClick={handleUpdateSchedule}
-                disabled={saving}
-                style={{ flex: 1, padding: "12px 20px", background: "#2563eb", color: "#fff", border: "none", borderRadius: "8px", fontSize: "14px", fontWeight: 600, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.6 : 1 }}
-              >
-                {saving ? "Menyimpan..." : "Simpan"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Add Schedule Modal */}
       {showAddModal && (
@@ -1132,27 +955,6 @@ export default function SchedulePage() {
               />
             </div>
 
-            {scheduleType === "TEST" && (
-              <div style={{ marginBottom: "16px" }}>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
-                  Durasi Tes (menit)
-                </label>
-                <select
-                  value={scheduleForm.durationMinutes}
-                  onChange={(e) => setScheduleForm({ ...scheduleForm, durationMinutes: parseInt(e.target.value) })}
-                  style={{ width: "100%", padding: "10px 12px", border: "2px solid #e5e5e5", borderRadius: "8px", fontSize: "14px", outline: "none", background: "#fff" }}
-                >
-                  <option value="30">30 menit</option>
-                  <option value="45">45 menit</option>
-                  <option value="60">60 menit</option>
-                  <option value="75">75 menit</option>
-                  <option value="90">90 menit</option>
-                  <option value="120">120 menit</option>
-                </select>
-                <p style={{ fontSize: "11px", color: "#888", marginTop: "4px" }}>Durasi ini akan digunakan untuk tes kompetensi</p>
-              </div>
-            )}
-
             {scheduleType === "INTERVIEW" && (
               <>
                 <div style={{ marginBottom: "16px" }}>
@@ -1212,7 +1014,7 @@ export default function SchedulePage() {
 
             <div style={{ display: "flex", gap: "12px" }}>
               <button
-                onClick={() => { setShowAddModal(false); setSelectedJobId(""); setScheduleForm({ scheduledDate: "", scheduledTime: "", endTime: "", location: "Online System", message: "", interviewer: "", interviewType: "ONLINE", durationMinutes: 90 }); }}
+                onClick={() => { setShowAddModal(false); setSelectedJobId(""); setScheduleForm({ scheduledDate: "", scheduledTime: "", endTime: "", location: "Online System", message: "", interviewer: "", interviewType: "ONLINE" }); }}
                 style={{ flex: 1, padding: "12px 20px", background: "#fff", color: "#666", border: "2px solid #e5e5e5", borderRadius: "8px", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}
               >
                 Batal

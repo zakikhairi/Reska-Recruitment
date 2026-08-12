@@ -349,10 +349,10 @@ export default function ApplyJobPage({ params }: { params: Promise<{ id: string 
       <div style={styles.content}>
         <div style={styles.card}>
           <div style={styles.jobHeader}>
-            <div style={styles.badge}>{job.division.replace(/_/g, " ")}</div>
+            <div style={styles.badge}>{(job.division || "").replace(/_/g, " ")}</div>
             <h1 style={styles.jobTitle}>{job.title}</h1>
             <div style={styles.jobMeta}>
-              <span style={styles.metaItem}>📍 {job.location}</span>
+              <span style={styles.metaItem}>📍 {job.location || "-"}</span>
               <span style={styles.metaItem}>📅 Batas: {new Date(job.deadline).toLocaleDateString("id-ID")}</span>
             </div>
           </div>

@@ -150,3 +150,74 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+// DELETE: Cancel/Withdraw application
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const applicationId = searchParams.get("id");
+    const userId = searchParams.get("userId");
+
+    if (!applicationId || !userId) {
+      return NextResponse.json(
+        { success: false, error: "Application ID dan User ID diperlukan" },
+        { status: 400 }
+      );
+    }
+
+    // Get applicant by userId
+    const applicant = await prisma.applicant.findFirst({
+      where: { userId },
+    });
+
+    if (!applicant) {
+      return NextResponse.json(
+        { success: false, error: "Profil pelamar tidak ditemukan" },
+        { status: 404 }
+      );
+    }
+
+    // Get application and verify ownership
+    const application = await prisma.application.findUnique({
+      where: { id: applicationId },
+    });
+
+    if (!application) {
+      return NextResponse.json(
+        { success: false, error: "Lamaran tidak ditemukan" },
+        { status: 404 }
+      );
+    }
+
+    if (application.applicantId !== applicant.id) {
+      return NextResponse.json(
+        { success: false, error: "Anda tidak memiliki akses ke lamaran ini" },
+        { status: 403 }
+      );
+    }
+
+    // Only allow deletion of PENDING applications
+    if (application.status !== "PENDING") {
+      return NextResponse.json(
+        { success: false, error: "Hanya lamaran dengan status 'Menunggu' yang dapat dibatalkan" },
+        { status: 400 }
+      );
+    }
+
+    // Delete application
+    await prisma.application.delete({
+      where: { id: applicationId },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "Lamaran berhasil dibatalkan",
+    });
+  } catch (error) {
+    console.error("Delete application error:", error);
+    return NextResponse.json(
+      { success: false, error: "Terjadi kesalahan server" },
+      { status: 500 }
+    );
+  }
+}

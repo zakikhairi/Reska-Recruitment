@@ -42,10 +42,12 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
     minEducation: "",
     description: "",
     requirements: "",
+    startDate: "",
     deadline: "",
   });
   const [status, setStatus] = useState("DRAFT");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (job) {
@@ -56,6 +58,7 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
         minEducation: job.minEducation || "",
         description: job.description || "",
         requirements: job.requirements || "",
+        startDate: job.startDate ? new Date(job.startDate).toISOString().split('T')[0] : "",
         deadline: job.deadline ? new Date(job.deadline).toISOString().split('T')[0] : "",
       });
       setStatus(job.status || "DRAFT");
@@ -66,15 +69,26 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
     setFormData({ ...formData, [field]: value });
   };
 
-  const handleSubmit = (publish: boolean) => {
+  const handleSubmit = async (publish: boolean) => {
+    setError("");
+
+    // Validation
+    if (!formData.title || !formData.division || !formData.location || !formData.startDate || !formData.deadline) {
+      setError("Mohon lengkapi semua field wajib");
+      return;
+    }
+
     setIsSubmitting(true);
     const newStatus = publish ? "ACTIVE" : "DRAFT";
-    updateJob(id, { ...formData, status: newStatus });
 
-    setTimeout(() => {
-      setIsSubmitting(false);
+    const result = await updateJob(id, { ...formData, status: newStatus });
+
+    if (result.success) {
       router.push(`/admin/jobs/${id}`);
-    }, 500);
+    } else {
+      setError(result.error || "Gagal menyimpan perubahan");
+    }
+    setIsSubmitting(false);
   };
 
   if (!_hasHydrated) {
@@ -186,14 +200,24 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
                 </div>
 
                 <div>
-                  <label style={{ fontSize: "14px", fontWeight: 600, color: "#111111", marginBottom: "8px", display: "block" }}>Batas Waktu</label>
+                  <label style={{ fontSize: "14px", fontWeight: 600, color: "#111111", marginBottom: "8px", display: "block" }}>Tanggal Mulai Pendaftaran</label>
                   <input
                     type="date"
-                    value={formData.deadline}
-                    onChange={(e) => handleInputChange("deadline", e.target.value)}
+                    value={formData.startDate}
+                    onChange={(e) => handleInputChange("startDate", e.target.value)}
                     style={{ width: "100%", padding: "12px 16px", border: "2px solid #e5e7eb", borderRadius: "12px", fontSize: "14px", outline: "none", color: "#374151" }}
                   />
                 </div>
+              </div>
+
+              <div style={{ marginTop: "20px" }}>
+                <label style={{ fontSize: "14px", fontWeight: 600, color: "#111111", marginBottom: "8px", display: "block" }}>Batas Waktu Pendaftaran</label>
+                <input
+                  type="date"
+                  value={formData.deadline}
+                  onChange={(e) => handleInputChange("deadline", e.target.value)}
+                  style={{ width: "100%", padding: "12px 16px", border: "2px solid #e5e7eb", borderRadius: "12px", fontSize: "14px", outline: "none", color: "#374151" }}
+                />
               </div>
             </div>
 
@@ -251,6 +275,12 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
                 ))}
               </div>
 
+              {error && (
+                <div style={{ padding: "12px 16px", background: "#fee2e2", color: "#dc2626", borderRadius: "8px", marginBottom: "16px", fontSize: "14px" }}>
+                  {error}
+                </div>
+              )}
+
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                 <button
                   onClick={() => handleSubmit(true)}
@@ -264,7 +294,8 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
                     borderRadius: "12px",
                     fontSize: "15px",
                     fontWeight: 700,
-                    cursor: "pointer",
+                    cursor: isSubmitting ? "not-allowed" : "pointer",
+                    opacity: isSubmitting ? 0.7 : 1,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -292,7 +323,8 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
                     borderRadius: "12px",
                     fontSize: "15px",
                     fontWeight: 600,
-                    cursor: "pointer",
+                    cursor: isSubmitting ? "not-allowed" : "pointer",
+                    opacity: isSubmitting ? 0.7 : 1,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
