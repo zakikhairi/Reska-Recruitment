@@ -275,6 +275,7 @@ model TestSession {
   startedAt     DateTime?
   submittedAt   DateTime?
   adminMessage  String?   // Pesan dari admin untuk pelamar
+  location      String?   @default("Online System") // Lokasi tes
 
   questions      String? // JSON array of selected question IDs (shuffled)
   tabSwitchCount Int     @default(0)
