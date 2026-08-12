@@ -274,6 +274,8 @@ model TestSession {
   endTime       DateTime?
   startedAt     DateTime?
   submittedAt   DateTime?
+  adminMessage  String?
+  location      String?   @default("Online System")
 
   questions     String?   // JSON array of selected question IDs (shuffled)
   tabSwitchCount Int      @default(0)
