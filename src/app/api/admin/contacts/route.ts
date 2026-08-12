@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Get all conversations
+    // Get all conversations grouped by applicant (merge same applicant into one)
     const where = status && status !== "all" ? { status } : {};
 
     const conversations = await prisma.contactConversation.findMany({
@@ -42,34 +42,76 @@ export async function GET(request: NextRequest) {
       include: {
         messages: {
           orderBy: { createdAt: "desc" },
-          take: 1,
         },
       },
       orderBy: { lastMessageAt: "desc" },
     });
 
-    // Get stats
-    const total = await prisma.contactConversation.count();
-    const active = await prisma.contactConversation.count({ where: { status: "ACTIVE" } });
-    const closed = await prisma.contactConversation.count({ where: { status: "CLOSED" } });
+    // Get stats - count unique applicants
+    const allConversations = await prisma.contactConversation.findMany({ where });
+    const uniqueEmails = [...new Set(allConversations.map(c => c.applicantEmail))];
+    const total = uniqueEmails.length;
+    const active = [...new Set(
+      allConversations.filter(c => c.status === "ACTIVE").map(c => c.applicantEmail)
+    )].length;
+    const closed = [...new Set(
+      allConversations.filter(c => c.status === "CLOSED").map(c => c.applicantEmail)
+    )].length;
 
-    // Count unread per conversation
-    const conversationsWithUnread = await Promise.all(
-      conversations.map(async (conv) => {
+    // Group conversations by applicant email and merge
+    const groupedByEmail: Record<string, typeof conversations> = {};
+    for (const conv of conversations) {
+      if (!groupedByEmail[conv.applicantEmail]) {
+        groupedByEmail[conv.applicantEmail] = [];
+      }
+      groupedByEmail[conv.applicantEmail].push(conv);
+    }
+
+    // Create merged conversations (one per applicant)
+    const mergedConversations = await Promise.all(
+      Object.entries(groupedByEmail).map(async ([email, convs]) => {
+        // Sort by lastMessageAt
+        convs.sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime());
+
+        const primaryConv = convs[0];
+        const allMessages = convs.flatMap(c => c.messages);
+
+        // Get last message
+        const lastMessage = allMessages.sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        )[0];
+
+        // Count total unread from all conversations for this applicant
         const unreadCount = await prisma.contactMessage.count({
           where: {
-            conversationId: conv.id,
+            conversationId: { in: convs.map(c => c.id) },
             senderType: "APPLICANT",
             isRead: false,
           },
         });
-        return { ...conv, unreadCount };
+
+        return {
+          id: primaryConv.id,
+          applicantEmail: email,
+          applicantName: primaryConv.applicantName,
+          status: primaryConv.status,
+          lastMessageAt: primaryConv.lastMessageAt,
+          messages: [lastMessage].filter(Boolean),
+          unreadCount,
+          // Include all conversation IDs for reference
+          allConversationIds: convs.map(c => c.id),
+        };
       })
+    );
+
+    // Sort by lastMessageAt
+    mergedConversations.sort(
+      (a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime()
     );
 
     return NextResponse.json({
       success: true,
-      conversations: conversationsWithUnread,
+      conversations: mergedConversations,
       stats: { total, active, closed },
     });
   } catch (error) {

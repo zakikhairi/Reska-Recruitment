@@ -22,6 +22,7 @@ interface Conversation {
   lastMessageAt: string;
   messages: ChatMessage[];
   unreadCount?: number;
+  allConversationIds?: string[]; // For merged conversations
 }
 
 export default function AdminContactsPage() {
@@ -34,18 +35,53 @@ export default function AdminContactsPage() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [hasNewMessage, setHasNewMessage] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const prevConversationsRef = useRef<Conversation[]>([]);
+  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Auto-refresh conversations every 3 seconds
   useEffect(() => {
     fetchConversations();
+
+    const interval = setInterval(() => {
+      fetchConversations(true); // silent refresh
+    }, 3000);
+
+    return () => clearInterval(interval);
   }, [statusFilter]);
+
+  // Show toast notification
+  const showNotificationToast = (message: string) => {
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+    setToastMessage(message);
+    setShowToast(true);
+    setHasNewMessage(true);
+
+    toastTimeoutRef.current = setTimeout(() => {
+      setShowToast(false);
+      setHasNewMessage(false);
+    }, 5000);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (activeConversation) {
-      fetchMessages(activeConversation.id);
+      fetchMessages(activeConversation);
       // Poll for new messages every 3 seconds
       const interval = setInterval(() => {
-        fetchMessages(activeConversation.id);
+        fetchMessages(activeConversation);
       }, 3000);
       return () => clearInterval(interval);
     }
@@ -55,30 +91,59 @@ export default function AdminContactsPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const fetchConversations = async () => {
-    setLoading(true);
+  const fetchConversations = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const url = statusFilter === "all" ? "/api/admin/contacts" : `/api/admin/contacts?status=${statusFilter}`;
       const response = await fetch(url);
       const result = await response.json();
 
       if (result.success) {
-        setConversations(result.conversations || []);
+        const newConversations = result.conversations || [];
+
+        // Check for new messages (conversations that weren't there before or have new unread)
+        if (silent && prevConversationsRef.current.length > 0) {
+          for (const newConv of newConversations) {
+            const prevConv = prevConversationsRef.current.find(c => c.applicantEmail === newConv.applicantEmail);
+            if (!prevConv && newConv.unreadCount && newConv.unreadCount > 0) {
+              // New conversation with unread
+              showNotificationToast(`💬 Pesan baru dari ${newConv.applicantName}`);
+            } else if (prevConv && newConv.unreadCount > prevConv.unreadCount) {
+              // Existing conversation with new unread
+              showNotificationToast(`💬 Pesan baru dari ${newConv.applicantName}`);
+            }
+          }
+        }
+
+        prevConversationsRef.current = newConversations;
+        setConversations(newConversations);
         setStats(result.stats || { total: 0, active: 0, closed: 0 });
       }
     } catch (err) {
       console.error("Error fetching conversations:", err);
     }
-    setLoading(false);
+    if (!silent) setLoading(false);
   };
 
-  const fetchMessages = async (conversationId: string) => {
+  const fetchMessages = async (conversation: Conversation) => {
     try {
-      const response = await fetch(`/api/admin/contacts?conversationId=${conversationId}`);
-      const result = await response.json();
-      if (result.success) {
-        setMessages(result.messages);
+      // Get all conversation IDs to fetch messages from
+      const conversationIds = conversation.allConversationIds || [conversation.id];
+
+      // Fetch messages from all conversations
+      const allMessages: ChatMessage[] = [];
+      for (const convId of conversationIds) {
+        const response = await fetch(`/api/admin/contacts?conversationId=${convId}`);
+        const result = await response.json();
+        if (result.success && result.messages) {
+          allMessages.push(...result.messages);
+        }
       }
+
+      // Sort all messages by createdAt
+      allMessages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+      setMessages(allMessages);
     } catch (err) {
       console.error("Error fetching messages:", err);
     }
@@ -106,7 +171,7 @@ export default function AdminContactsPage() {
 
       if (result.success) {
         setNewMessage("");
-        fetchMessages(activeConversation.id);
+        fetchMessages(activeConversation);
       }
     } catch (err) {
       console.error("Error sending reply:", err);
@@ -117,7 +182,7 @@ export default function AdminContactsPage() {
 
   const openConversation = (conv: Conversation) => {
     setActiveConversation(conv);
-    fetchMessages(conv.id);
+    fetchMessages(conv);
   };
 
   const closeConversation = () => {
@@ -145,12 +210,50 @@ export default function AdminContactsPage() {
 
   return (
     <div style={{ fontFamily: "Inter, sans-serif", minHeight: "100vh", background: "#f8f9fa" }}>
+      {/* Toast Notification */}
+      {showToast && (
+        <div style={{
+          position: "fixed",
+          top: "20px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          background: "linear-gradient(135deg, #16a34a, #22c55e)",
+          color: "#fff",
+          padding: "14px 24px",
+          borderRadius: "12px",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
+          zIndex: 9999,
+          animation: "slideDown 0.3s ease-out",
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+          cursor: "pointer",
+        }}
+        onClick={() => setShowToast(false)}
+        >
+          <MessageCircle className="w-5 h-5" />
+          <span style={{ fontWeight: 600 }}>{toastMessage}</span>
+        </div>
+      )}
+
       {/* Header */}
       <header style={{ background: "#fff", borderBottom: "1px solid #eee", padding: "20px 32px" }}>
         <div style={{ maxWidth: "1400px", margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#00205B", marginBottom: "4px" }}>Live Chat Pelamar</h1>
-            <p style={{ fontSize: "14px", color: "#666" }}>Balas pesan dari pelamar secara langsung</p>
+            {hasNewMessage && (
+              <span style={{
+                background: "#ef4444",
+                color: "#fff",
+                fontSize: "11px",
+                fontWeight: 700,
+                padding: "4px 8px",
+                borderRadius: "8px",
+                animation: "pulse 1s infinite",
+              }}>
+                BARU
+              </span>
+            )}
           </div>
           <button
             onClick={fetchConversations}
@@ -466,6 +569,14 @@ export default function AdminContactsPage() {
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes slideDown {
+          from { transform: translateX(-50%) translateY(-20px); opacity: 0; }
+          to { transform: translateX(-50%) translateY(0); opacity: 1; }
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
         input:focus { border-color: #FF5E00 !important; }
       `}</style>
     </div>

@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Otherwise get all conversations for this email
+    // Otherwise get the ACTIVE conversation for this email (only one)
     if (!email) {
       return NextResponse.json(
         { success: false, error: "Email atau conversationId diperlukan" },
@@ -39,20 +39,44 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const conversations = await prisma.contactConversation.findMany({
-      where: { applicantEmail: email },
+    // Get any conversation for this email (regardless of status)
+    const conversation = await prisma.contactConversation.findFirst({
+      where: {
+        applicantEmail: email,
+      },
       include: {
         messages: {
-          orderBy: { createdAt: "desc" },
-          take: 1,
+          orderBy: { createdAt: "asc" },
+          take: 100, // Get all recent messages
         },
       },
       orderBy: { lastMessageAt: "desc" },
     });
 
+    if (!conversation) {
+      console.log(`[CHAT] No conversation found for email: ${email}`);
+      return NextResponse.json({
+        success: true,
+        conversations: [],
+      });
+    }
+
+    console.log(`[CHAT] Found conversation ${conversation.id} for ${email}, messages: ${conversation.messages.length}`);
+
+    // Calculate unread count (HR_ADMIN messages that are not read)
+    const unreadCount = await prisma.contactMessage.count({
+      where: {
+        conversationId: conversation.id,
+        senderType: "HR_ADMIN",
+        isRead: false,
+      },
+    });
+
+    console.log(`[CHAT] Unread count: ${unreadCount}`);
+
     return NextResponse.json({
       success: true,
-      conversations,
+      conversations: [{ ...conversation, unreadCount }],
     });
   } catch (error) {
     console.error("Get messages error:", error);
@@ -79,19 +103,36 @@ export async function POST(request: NextRequest) {
     }
 
     if (!conversationId) {
-      // Create new conversation
-      const conversation = await prisma.contactConversation.create({
-        data: {
+      // Check if active conversation already exists for this email
+      const existingConversation = await prisma.contactConversation.findFirst({
+        where: {
           applicantEmail: senderEmail,
-          applicantName: senderName,
           status: "ACTIVE",
         },
+        orderBy: { lastMessageAt: "desc" },
       });
 
-      // Create first message
+      let conversationIdToUse = existingConversation?.id;
+
+      if (!existingConversation) {
+        // Create new conversation only if none exists
+        const newConversation = await prisma.contactConversation.create({
+          data: {
+            applicantEmail: senderEmail,
+            applicantName: senderName,
+            status: "ACTIVE",
+          },
+        });
+        conversationIdToUse = newConversation.id;
+        console.log(`[CHAT] New conversation created for ${senderName} (${senderEmail})`);
+      } else {
+        console.log(`[CHAT] Using existing conversation ${conversationIdToUse} for ${senderName}`);
+      }
+
+      // Create message
       const newMessage = await prisma.contactMessage.create({
         data: {
-          conversationId: conversation.id,
+          conversationId: conversationIdToUse,
           senderType,
           senderName,
           senderEmail,
@@ -99,13 +140,17 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      console.log(`[CHAT] New conversation from ${senderName} (${senderEmail})`);
+      // Update conversation lastMessageAt
+      await prisma.contactConversation.update({
+        where: { id: conversationIdToUse },
+        data: { lastMessageAt: new Date() },
+      });
 
       return NextResponse.json({
         success: true,
         message: "Pesan terkirim",
         data: {
-          conversationId: conversation.id,
+          conversationId: conversationIdToUse,
           messageId: newMessage.id,
         },
       });

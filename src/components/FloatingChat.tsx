@@ -37,8 +37,24 @@ export default function FloatingChat() {
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const hasNewNotificationRef = useRef(false);
 
   const { user, isAuthenticated } = useAuthStore();
+
+  // Poll for conversations every 3 seconds (even when chat is closed) to show unread notification
+  useEffect(() => {
+    if (!user?.email) return;
+
+    // Fetch immediately on mount
+    fetchConversations();
+
+    const interval = setInterval(() => {
+      console.log("[CHAT] Polling for new messages...");
+      fetchConversations();
+    }, 3000); // Poll every 3 seconds
+
+    return () => clearInterval(interval);
+  }, [user?.email]);
 
   // Fetch conversations when chat opens
   useEffect(() => {
@@ -72,7 +88,15 @@ export default function FloatingChat() {
       const response = await fetch(`/api/contact?email=${encodeURIComponent(user.email)}`);
       const result = await response.json();
       if (result.success) {
-        setConversations(result.conversations || []);
+        const newConversations = result.conversations || [];
+        console.log("[CHAT] Fetched conversations:", newConversations.map(c => ({ id: c.id, unread: c.unreadCount })));
+        setConversations(newConversations);
+
+        // Auto-open conversation if there's only one
+        if (newConversations.length === 1 && !activeConversation) {
+          console.log("[CHAT] Auto-opening single conversation");
+          openConversation(newConversations[0]);
+        }
       }
     } catch (err) {
       console.error("Error fetching conversations:", err);
@@ -85,6 +109,7 @@ export default function FloatingChat() {
       const response = await fetch(`/api/contact?conversationId=${conversationId}`);
       const result = await response.json();
       if (result.success) {
+        console.log("[CHAT] Fetched messages:", result.messages.length);
         setMessages(result.messages);
       }
     } catch (err) {
@@ -142,7 +167,7 @@ export default function FloatingChat() {
           body: JSON.stringify({ ...payload, conversationId: activeConversation.id }),
         });
       } else {
-        // Create new conversation
+        // Create new conversation (API will merge if exists)
         console.log("[CHAT] Creating new conversation");
         response = await fetch("/api/contact", {
           method: "POST",
@@ -188,7 +213,10 @@ export default function FloatingChat() {
   };
 
   const openConversation = (conv: Conversation) => {
+    console.log("[CHAT] Opening conversation:", conv.id);
     setActiveConversation(conv);
+    setHasNewNotification(false);
+    hasNewNotificationRef.current = false;
     fetchMessages(conv.id);
   };
 
@@ -210,43 +238,98 @@ export default function FloatingChat() {
     return date.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
   };
 
-  // Calculate total unread
+  // Calculate total unread - DEDUPLICATED to show only ONE notification
   const totalUnread = conversations.reduce((acc, conv) => acc + (conv.unreadCount || 0), 0);
+
+  // Single notification state (not per-conversation)
+  const [hasNewNotification, setHasNewNotification] = useState(false);
+  const prevUnreadRef = useRef(0);
+  const originalTitle = useRef("");
+
+  useEffect(() => {
+    // Store original title on first render
+    if (!originalTitle.current && typeof document !== "undefined") {
+      originalTitle.current = document.title;
+    }
+
+    console.log("[CHAT] Unread check - current:", totalUnread, "prev:", prevUnreadRef.current);
+
+    // Trigger notification when there are unread messages
+    if (totalUnread > 0) {
+      // Only trigger animation on new unread (when prev was 0)
+      if (prevUnreadRef.current === 0) {
+        console.log("[CHAT] NEW MESSAGE! Showing notification");
+        hasNewNotificationRef.current = true;
+        setHasNewNotification(true);
+
+        // Change browser tab title to show notification
+        if (typeof document !== "undefined") {
+          document.title = `💬 Pesan baru - KAI Recruitment`;
+        }
+      }
+    }
+
+    prevUnreadRef.current = totalUnread;
+  }, [totalUnread]);
+
+  // Reset notification when user opens chat
+  useEffect(() => {
+    if (isOpen && totalUnread > 0) {
+      console.log("[CHAT] Chat opened, resetting notification");
+      setHasNewNotification(false);
+      hasNewNotificationRef.current = false;
+      if (typeof document !== "undefined") {
+        document.title = originalTitle.current;
+      }
+    }
+  }, [isOpen, totalUnread]);
 
   return (
     <>
       {/* Floating Chat Button */}
       {!isOpen && (
         <button
-          onClick={() => setIsOpen(true)}
+          onClick={() => {
+            console.log("[CHAT] Opening chat...");
+            setIsOpen(true);
+          }}
           style={{
             position: "fixed",
             bottom: "24px",
             right: "24px",
             width: "60px",
             height: "60px",
-            background: "linear-gradient(135deg, #FF5E00, #ff7a2f)",
+            background: hasNewNotification
+              ? "linear-gradient(135deg, #16a34a, #22c55e)"
+              : "linear-gradient(135deg, #FF5E00, #ff7a2f)",
             border: "none",
             borderRadius: "50%",
             cursor: "pointer",
-            boxShadow: "0 4px 20px rgba(255, 94, 0, 0.4)",
+            boxShadow: hasNewNotification
+              ? "0 4px 20px rgba(22, 163, 74, 0.6), 0 0 0 0 rgba(22, 163, 74, 0.7)"
+              : "0 4px 20px rgba(255, 94, 0, 0.4)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             zIndex: 1000,
-            transition: "transform 0.2s, box-shadow 0.2s",
+            transition: "transform 0.2s, box-shadow 0.2s, background 0.3s",
+            animation: hasNewNotification ? "pulse-ring 1.5s ease-out infinite" : "none",
           }}
           onMouseOver={(e) => {
             e.currentTarget.style.transform = "scale(1.1)";
-            e.currentTarget.style.boxShadow = "0 6px 25px rgba(255, 94, 0, 0.5)";
+            e.currentTarget.style.boxShadow = hasNewNotification
+              ? "0 6px 25px rgba(22, 163, 74, 0.7)"
+              : "0 6px 25px rgba(255, 94, 0, 0.5)";
           }}
           onMouseOut={(e) => {
             e.currentTarget.style.transform = "scale(1)";
-            e.currentTarget.style.boxShadow = "0 4px 20px rgba(255, 94, 0, 0.4)";
+            e.currentTarget.style.boxShadow = hasNewNotification
+              ? "0 4px 20px rgba(22, 163, 74, 0.6)"
+              : "0 4px 20px rgba(255, 94, 0, 0.4)";
           }}
         >
           <MessageCircle className="w-7 h-7" style={{ color: "#fff" }} />
-          {totalUnread > 0 && (
+          {(hasNewNotification || totalUnread > 0) && (
             <span style={{
               position: "absolute",
               top: "-4px",
@@ -259,8 +342,9 @@ export default function FloatingChat() {
               borderRadius: "10px",
               minWidth: "18px",
               textAlign: "center",
+              animation: "bounce 0.5s ease",
             }}>
-              {totalUnread > 9 ? "9+" : totalUnread}
+              {totalUnread > 0 ? (totalUnread > 9 ? "9+" : totalUnread) : "1"}
             </span>
           )}
         </button>
@@ -349,236 +433,133 @@ export default function FloatingChat() {
           {/* Content */}
           {!isMinimized && (
             <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-              {/* Conversation List */}
-              {!activeConversation && (
-                <div style={{ flex: 1, overflowY: "auto" }}>
-                  {loading ? (
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
-                      <div style={{ width: "24px", height: "24px", border: "3px solid #eee", borderTopColor: "#FF5E00", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
-                    </div>
-                  ) : conversations.length === 0 ? (
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", padding: "20px", textAlign: "center" }}>
-                      <MessageSquare className="w-12 h-12" style={{ color: "#ddd", marginBottom: "12px" }} />
-                      <p style={{ fontSize: "13px", color: "#999", margin: 0 }}>Belum ada percakapan</p>
-                      <p style={{ fontSize: "12px", color: "#bbb", margin: "4px 0 0" }}>Mulai chat dengan HRD</p>
-                    </div>
-                  ) : (
-                    conversations.map((conv) => (
-                      <button
-                        key={conv.id}
-                        onClick={() => openConversation(conv)}
+              {/* Chat Messages */}
+              <div style={{ flex: 1, overflowY: "auto", padding: "16px", background: "#f8f9fa" }}>
+                {loading ? (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+                    <div style={{ width: "24px", height: "24px", border: "3px solid #eee", borderTopColor: "#FF5E00", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+                  </div>
+                ) : messages.length === 0 ? (
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", padding: "20px", textAlign: "center" }}>
+                    <MessageSquare className="w-12 h-12" style={{ color: "#ddd", marginBottom: "12px" }} />
+                    <p style={{ fontSize: "13px", color: "#999", margin: 0 }}>Belum ada pesan</p>
+                    <p style={{ fontSize: "12px", color: "#bbb", margin: "4px 0 0" }}>Ketik pesan untuk memulai chat dengan HRD</p>
+                  </div>
+                ) : (
+                  messages.map((msg) => {
+                    const isMe = msg.senderType === "APPLICANT";
+                    return (
+                      <div
+                        key={msg.id}
                         style={{
-                          width: "100%",
-                          padding: "14px 16px",
-                          border: "none",
-                          borderBottom: "1px solid #f1f5f9",
-                          background: "#fff",
-                          cursor: "pointer",
-                          textAlign: "left",
                           display: "flex",
-                          alignItems: "center",
-                          gap: "12px",
+                          justifyContent: isMe ? "flex-end" : "flex-start",
+                          marginBottom: "12px",
                         }}
                       >
-                        <div style={{ width: "44px", height: "44px", background: "#FF5E00", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                          <span style={{ color: "#fff", fontWeight: 700, fontSize: "16px" }}>
-                            {conv.applicantName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
-                          </span>
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                            <span style={{ fontSize: "14px", fontWeight: 600, color: "#111" }}>{conv.applicantName}</span>
-                            <span style={{ fontSize: "11px", color: "#888" }}>{formatTime(conv.lastMessageAt)}</span>
+                        <div style={{
+                          maxWidth: "75%",
+                          display: "flex",
+                          flexDirection: isMe ? "row-reverse" : "row",
+                          alignItems: "flex-end",
+                          gap: "8px",
+                        }}>
+                          {!isMe && (
+                            <div style={{ width: "28px", height: "28px", background: "#00205B", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                              <span style={{ fontSize: "10px", color: "#fff", fontWeight: 700 }}>HR</span>
+                            </div>
+                          )}
+                          <div>
+                            <div style={{
+                              background: isMe ? "linear-gradient(135deg, #FF5E00, #ff7a2f)" : "#fff",
+                              color: isMe ? "#fff" : "#333",
+                              padding: "10px 14px",
+                              borderRadius: isMe ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
+                              boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
+                            }}>
+                              <p style={{ fontSize: "13px", margin: 0, lineHeight: 1.5 }}>{msg.message}</p>
+                            </div>
+                            <div style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "4px",
+                              marginTop: "4px",
+                              justifyContent: isMe ? "flex-end" : "flex-start",
+                            }}>
+                              <span style={{ fontSize: "10px", color: "#999" }}>{formatTime(msg.createdAt)}</span>
+                              {isMe && (
+                                <span style={{ fontSize: "10px", color: "#888" }}>
+                                  {msg.isRead ? <CheckCircle className="w-3 h-3" style={{ color: "#16a34a" }} /> : <Clock className="w-3 h-3" />}
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                            <p style={{ fontSize: "13px", color: "#666", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
-                              {conv.messages[0]?.message || "Mulai percakapan baru"}
-                            </p>
-                            {conv.unreadCount && conv.unreadCount > 0 && (
-                              <span style={{
-                                background: "#ef4444",
-                                color: "#fff",
-                                fontSize: "10px",
-                                fontWeight: 700,
-                                padding: "2px 6px",
-                                borderRadius: "10px",
-                              }}>
-                                {conv.unreadCount}
-                              </span>
-                            )}
-                          </div>
+                          {isMe && (
+                            <div style={{ width: "28px", height: "28px", background: "#FF5E00", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                              <User className="w-3 h-3" style={{ color: "#fff" }} />
+                            </div>
+                          )}
                         </div>
-                      </button>
-                    ))
-                  )}
+                      </div>
+                    );
+                  })
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Message Input */}
+              {error && (
+                <div style={{ padding: "8px 12px", background: "#fee2e2", borderBottom: "1px solid #fecaca" }}>
+                  <p style={{ fontSize: "12px", color: "#dc2626", margin: 0 }}>❌ {error}</p>
                 </div>
               )}
-
-              {/* Chat Messages */}
-              {activeConversation && (
-                <>
-                  <div style={{ flex: 1, overflowY: "auto", padding: "16px", background: "#f8f9fa" }}>
-                    {messages.map((msg) => {
-                      const isMe = msg.senderType === "APPLICANT";
-                      return (
-                        <div
-                          key={msg.id}
-                          style={{
-                            display: "flex",
-                            justifyContent: isMe ? "flex-end" : "flex-start",
-                            marginBottom: "12px",
-                          }}
-                        >
-                          <div style={{
-                            maxWidth: "75%",
-                            display: "flex",
-                            flexDirection: isMe ? "row-reverse" : "row",
-                            alignItems: "flex-end",
-                            gap: "8px",
-                          }}>
-                            {!isMe && (
-                              <div style={{ width: "28px", height: "28px", background: "#00205B", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                                <span style={{ fontSize: "10px", color: "#fff", fontWeight: 700 }}>HR</span>
-                              </div>
-                            )}
-                            <div>
-                              <div style={{
-                                background: isMe ? "linear-gradient(135deg, #FF5E00, #ff7a2f)" : "#fff",
-                                color: isMe ? "#fff" : "#333",
-                                padding: "10px 14px",
-                                borderRadius: isMe ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
-                                boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
-                              }}>
-                                <p style={{ fontSize: "13px", margin: 0, lineHeight: 1.5 }}>{msg.message}</p>
-                              </div>
-                              <div style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "4px",
-                                marginTop: "4px",
-                                justifyContent: isMe ? "flex-end" : "flex-start",
-                              }}>
-                                <span style={{ fontSize: "10px", color: "#999" }}>{formatTime(msg.createdAt)}</span>
-                                {isMe && (
-                                  <span style={{ fontSize: "10px", color: "#888" }}>
-                                    {msg.isRead ? <CheckCircle className="w-3 h-3" style={{ color: "#16a34a" }} /> : <Clock className="w-3 h-3" />}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            {isMe && (
-                              <div style={{ width: "28px", height: "28px", background: "#FF5E00", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                                <User className="w-3 h-3" style={{ color: "#fff" }} />
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                    <div ref={messagesEndRef} />
+              {!isAuthenticated || !user?.email ? (
+                <div style={{ padding: "12px", borderTop: "1px solid #eee", background: "#fff", textAlign: "center" }}>
+                  <p style={{ fontSize: "13px", color: "#dc2626", margin: "0 0 8px" }}>⚠️ Silakan login terlebih dahulu</p>
+                  <a href="/auth/login" style={{ fontSize: "12px", color: "#FF5E00", textDecoration: "underline" }}>Login di sini</a>
+                </div>
+              ) : (
+                <form onSubmit={handleSendMessage} style={{ padding: "12px", borderTop: "1px solid #eee", background: "#fff" }}>
+                  <div style={{ display: "flex", gap: "8px", alignItems: "flex-end" }}>
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      placeholder="Ketik pesan..."
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      style={{
+                        flex: 1,
+                        padding: "12px 16px",
+                        border: "2px solid #eee",
+                        borderRadius: "24px",
+                        fontSize: "14px",
+                        outline: "none",
+                      }}
+                    />
+                    <button
+                      type="submit"
+                      disabled={isSubmitting || !newMessage.trim()}
+                      style={{
+                        width: "44px",
+                        height: "44px",
+                        background: newMessage.trim() ? "linear-gradient(135deg, #FF5E00, #ff7a2f)" : "#ddd",
+                        border: "none",
+                        borderRadius: "50%",
+                        cursor: newMessage.trim() ? "pointer" : "not-allowed",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        transition: "all 0.2s",
+                      }}
+                    >
+                      {isSubmitting ? (
+                        <div style={{ width: "18px", height: "18px", border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+                      ) : (
+                        <Send className="w-5 h-5" style={{ color: "#fff" }} />
+                      )}
+                    </button>
                   </div>
-
-                  {/* Message Input */}
-                  {error && (
-                    <div style={{ padding: "8px 12px", background: "#fee2e2", borderBottom: "1px solid #fecaca" }}>
-                      <p style={{ fontSize: "12px", color: "#dc2626", margin: 0 }}>❌ {error}</p>
-                    </div>
-                  )}
-                  <form onSubmit={handleSendMessage} style={{ padding: "12px", borderTop: "1px solid #eee", background: "#fff" }}>
-                    <div style={{ display: "flex", gap: "8px", alignItems: "flex-end" }}>
-                      <input
-                        ref={inputRef}
-                        type="text"
-                        placeholder="Ketik pesan..."
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        style={{
-                          flex: 1,
-                          padding: "12px 16px",
-                          border: "2px solid #eee",
-                          borderRadius: "24px",
-                          fontSize: "14px",
-                          outline: "none",
-                        }}
-                      />
-                      <button
-                        type="submit"
-                        disabled={isSubmitting || !newMessage.trim()}
-                        style={{
-                          width: "44px",
-                          height: "44px",
-                          background: newMessage.trim() ? "linear-gradient(135deg, #FF5E00, #ff7a2f)" : "#ddd",
-                          border: "none",
-                          borderRadius: "50%",
-                          cursor: newMessage.trim() ? "pointer" : "not-allowed",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          transition: "all 0.2s",
-                        }}
-                      >
-                        {isSubmitting ? (
-                          <div style={{ width: "18px", height: "18px", border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
-                        ) : (
-                          <Send className="w-5 h-5" style={{ color: "#fff" }} />
-                        )}
-                      </button>
-                    </div>
-                  </form>
-                </>
-              )}
-
-              {/* New Chat Button (when no active conversation) */}
-              {!activeConversation && (
-                <>
-                  {!isAuthenticated || !user?.email ? (
-                    <div style={{ padding: "16px", textAlign: "center" }}>
-                      <p style={{ fontSize: "13px", color: "#dc2626", margin: "0 0 8px" }}>⚠️ Silakan login terlebih dahulu</p>
-                      <a href="/auth/login" style={{ fontSize: "12px", color: "#FF5E00", textDecoration: "underline" }}>Login di sini</a>
-                    </div>
-                  ) : (
-                  <form onSubmit={handleSendMessage} style={{ padding: "12px", borderTop: "1px solid #eee", background: "#fff" }}>
-                    <div style={{ background: "#f8f9fa", borderRadius: "12px", padding: "12px", marginBottom: "10px" }}>
-                      <p style={{ fontSize: "12px", color: "#666", margin: 0, lineHeight: 1.5 }}>
-                        👋 Mulai percakapan baru dengan tim HRD
-                      </p>
-                    </div>
-                    <div style={{ display: "flex", gap: "8px" }}>
-                      <input
-                        type="text"
-                        placeholder="Ketik pesan..."
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        style={{
-                          flex: 1,
-                          padding: "10px 14px",
-                          border: "2px solid #eee",
-                          borderRadius: "20px",
-                          fontSize: "13px",
-                          outline: "none",
-                        }}
-                      />
-                      <button
-                        type="submit"
-                        disabled={isSubmitting || !newMessage.trim()}
-                        style={{
-                          width: "40px",
-                          height: "40px",
-                          background: newMessage.trim() ? "linear-gradient(135deg, #FF5E00, #ff7a2f)" : "#ddd",
-                          border: "none",
-                          borderRadius: "50%",
-                          cursor: newMessage.trim() ? "pointer" : "not-allowed",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <Send className="w-4 h-4" style={{ color: "#fff" }} />
-                      </button>
-                    </div>
-                  </form>
-                  )}
-                </>
+                </form>
               )}
             </div>
           )}
@@ -587,6 +568,15 @@ export default function FloatingChat() {
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes bounce {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.2); }
+        }
+        @keyframes pulse-ring {
+          0% { box-shadow: 0 4px 20px rgba(22, 163, 74, 0.6), 0 0 0 0 rgba(22, 163, 74, 0.7); }
+          70% { box-shadow: 0 4px 20px rgba(22, 163, 74, 0.6), 0 0 0 15px rgba(22, 163, 74, 0); }
+          100% { box-shadow: 0 4px 20px rgba(22, 163, 74, 0.6), 0 0 0 0 rgba(22, 163, 74, 0); }
+        }
         input:focus { border-color: #FF5E00 !important; }
       `}</style>
     </>
