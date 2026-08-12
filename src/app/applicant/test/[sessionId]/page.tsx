@@ -232,11 +232,11 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
         if (result.success) {
           // Fetch again to get questions
           await fetchTestSession();
-          setTestState("testing");
-        } else {
-          setError(result.error || "Gagal memulai tes");
-          return;
         }
+
+        // Wait a bit for state to update
+        await new Promise(resolve => setTimeout(resolve, 100));
+        setTestState("testing");
       } catch (err) {
         console.error("Error starting test:", err);
         setError("Terjadi kesalahan saat memulai tes");

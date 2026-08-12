@@ -230,17 +230,21 @@ export default function SchedulePage() {
                             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
                               <FileText className="w-5 h-5" style={{ color: "#2563eb" }} />
                               <span style={{ fontSize: "14px", fontWeight: 600, color: "#2563eb" }}>Tes Kompetensi</span>
-                              <span style={{
-                                marginLeft: "auto",
-                                padding: "4px 10px",
-                                background: canStartTest(schedule.test.scheduledAt) ? "#16a34a" : "#fef3c7",
-                                color: canStartTest(schedule.test.scheduledAt) ? "#fff" : "#d97706",
-                                borderRadius: "20px",
-                                fontSize: "11px",
-                                fontWeight: 700
-                              }}>
-                                {canStartTest(schedule.test.scheduledAt) ? "✓ Bisa Dimulai" : "Menunggu"}
-                              </span>
+                              {schedule.test.scheduledAt ? (
+                                canStartTest(schedule.test.scheduledAt) ? (
+                                  <span style={{ marginLeft: "auto", padding: "4px 10px", background: "#16a34a", color: "#fff", borderRadius: "20px", fontSize: "11px", fontWeight: 700 }}>
+                                    ✓ Bisa Dimulai
+                                  </span>
+                                ) : (
+                                  <span style={{ marginLeft: "auto", padding: "4px 10px", background: "#fef3c7", color: "#d97706", borderRadius: "20px", fontSize: "11px", fontWeight: 700 }}>
+                                    Menunggu
+                                  </span>
+                                )
+                              ) : (
+                                <span style={{ marginLeft: "auto", padding: "4px 10px", background: "#10a34a", color: "#fff", borderRadius: "20px", fontSize: "11px", fontWeight: 700 }}>
+                                  ✓ Siap
+                                </span>
+                              )}
                             </div>
 
                             {/* Real-time Countdown Timer */}
@@ -293,7 +297,7 @@ export default function SchedulePage() {
                                   marginTop: "16px",
                                   width: "100%",
                                   padding: "12px 20px",
-                                  background: canStartTest(schedule.test.scheduledAt) ? "#16a34a" : "#d97706",
+                                  background: schedule.test.scheduledAt ? (canStartTest(schedule.test.scheduledAt) ? "#16a34a" : "#d97706") : "#16a34a",
                                   color: "#fff",
                                   border: "none",
                                   borderRadius: "10px",
@@ -305,15 +309,22 @@ export default function SchedulePage() {
                                   justifyContent: "center",
                                   gap: "8px",
                                 }}>
-                                  {canStartTest(schedule.test.scheduledAt) ? (
+                                  {schedule.test.scheduledAt ? (
+                                    canStartTest(schedule.test.scheduledAt) ? (
+                                      <>
+                                        <Play className="w-4 h-4" />
+                                        Mulai Tes Sekarang
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Clock className="w-4 h-4" />
+                                        Lihat Detail Tes
+                                      </>
+                                    )
+                                  ) : (
                                     <>
                                       <Play className="w-4 h-4" />
                                       Mulai Tes Sekarang
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Clock className="w-4 h-4" />
-                                      Lihat Detail Tes
                                     </>
                                   )}
                                 </button>

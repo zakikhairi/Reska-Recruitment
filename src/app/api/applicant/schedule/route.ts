@@ -83,9 +83,9 @@ export async function GET(request: NextRequest) {
       return schedule;
     });
 
-    // Filter only applications with test sessions or interviews
+    // Filter all applications with test sessions (for debugging)
     const upcomingSchedules = schedules.filter(
-      (s) => s.test?.scheduledAt || s.interview?.scheduledAt
+      (s) => s.test || s.interview
     );
 
     return NextResponse.json({
