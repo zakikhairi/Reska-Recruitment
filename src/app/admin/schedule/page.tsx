@@ -21,6 +21,11 @@ import {
   X,
   List,
   Grid3X3,
+  Edit,
+  Eye,
+  Search,
+  Mail,
+  Phone,
 } from "lucide-react";
 import { useJobsStore, Job } from "@/stores/jobs";
 
@@ -92,7 +97,9 @@ export default function SchedulePage() {
   const [expandedJobs, setExpandedJobs] = useState<Set<string>>(new Set());
   const [selectedJob, setSelectedJob] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
-  const [deleteModal, setDeleteModal] = useState<{ show: boolean; job: GroupedSchedule | null }>({ show: false, job: null });
+  const [deleteModal, setDeleteModal] = useState<{ show: boolean; schedule: Schedule | null }>({ show: false, schedule: null });
+  const [viewApplicantsModal, setViewApplicantsModal] = useState<{ show: boolean; job: GroupedByJob | null }>({ show: false, job: null });
+  const [editModal, setEditModal] = useState<{ show: boolean; schedule: Schedule | null }>({ show: false, schedule: null });
   const [deleteAllModal, setDeleteAllModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deletingAll, setDeletingAll] = useState(false);
@@ -364,6 +371,91 @@ export default function SchedulePage() {
       newExpanded.add(jobKey);
     }
     setExpandedJobs(newExpanded);
+  };
+
+  // Delete individual schedule
+  const handleDeleteSchedule = async () => {
+    if (!deleteModal.schedule) return;
+    setDeleting(true);
+
+    try {
+      const response = await fetch(`/api/admin/test-schedule/${deleteModal.schedule.id}`, {
+        method: "DELETE",
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        setToast({ message: "Jadwal berhasil dihapus", type: "success" });
+        setDeleteModal({ show: false, schedule: null });
+        fetchSchedules();
+      } else {
+        setToast({ message: result.error || "Gagal menghapus jadwal", type: "error" });
+      }
+    } catch (err) {
+      setToast({ message: "Terjadi kesalahan", type: "error" });
+    } finally {
+      setDeleting(false);
+      setTimeout(() => setToast(null), 3000);
+    }
+  };
+
+  // Update schedule (edit)
+  const handleUpdateSchedule = async () => {
+    if (!editModal.schedule) return;
+    setSaving(true);
+
+    try {
+      const response = await fetch(`/api/admin/test-schedule/${editModal.schedule.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scheduledAt: editModal.schedule.scheduledAt,
+          location: editModal.schedule.location,
+        }),
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        setToast({ message: "Jadwal berhasil diupdate", type: "success" });
+        setEditModal({ show: false, schedule: null });
+        fetchSchedules();
+      } else {
+        setToast({ message: result.error || "Gagal update jadwal", type: "error" });
+      }
+    } catch (err) {
+      setToast({ message: "Terjadi kesalahan", type: "error" });
+    } finally {
+      setSaving(false);
+      setTimeout(() => setToast(null), 3000);
+    }
+  };
+
+  // Delete all schedules for a job
+  const handleDeleteAllSchedules = async () => {
+    if (!deleteModal.job) return;
+    setDeletingAll(true);
+
+    try {
+      const response = await fetch("/api/admin/test-schedule/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobPostingId: deleteModal.job.schedules[0]?.applicationId }),
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        setToast({ message: "Semua jadwal berhasil dihapus", type: "success" });
+        setDeleteModal({ show: false, job: null });
+        fetchSchedules();
+      } else {
+        setToast({ message: result.error || "Gagal menghapus jadwal", type: "error" });
+      }
+    } catch (err) {
+      setToast({ message: "Terjadi kesalahan", type: "error" });
+    } finally {
+      setDeletingAll(false);
+      setTimeout(() => setToast(null), 3000);
+    }
   };
 
   const totalSchedules = groupedSchedules.length;
@@ -707,13 +799,25 @@ export default function SchedulePage() {
                   </div>
 
                   <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <button style={{ padding: "8px 12px", background: "#fff", border: "1px solid #e0e0e0", borderRadius: "6px", fontSize: "12px", fontWeight: 500, color: "#333", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
-                      <Calendar className="w-4 h-4" /> Ubah Jadwal
+                    <button
+                      onClick={() => setEditModal({ show: true, schedule: selectedSchedule })}
+                      style={{ padding: "8px 12px", background: "#fff", border: "1px solid #e0e0e0", borderRadius: "6px", fontSize: "12px", fontWeight: 500, color: "#333", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
+                    >
+                      <Edit className="w-4 h-4" /> Ubah Jadwal
                     </button>
-                    <button style={{ padding: "8px 12px", background: "#fff", border: "1px solid #e0e0e0", borderRadius: "6px", fontSize: "12px", fontWeight: 500, color: "#333", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
-                      <FileText className="w-4 h-4" /> Lihat Pelamar
+                    <button
+                      onClick={() => {
+                        const jobGroup = groupedByJob.find(j => j.schedules.some(s => s.id === selectedSchedule?.id));
+                        if (jobGroup) setViewApplicantsModal({ show: true, job: jobGroup });
+                      }}
+                      style={{ padding: "8px 12px", background: "#fff", border: "1px solid #e0e0e0", borderRadius: "6px", fontSize: "12px", fontWeight: 500, color: "#333", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
+                    >
+                      <Users className="w-4 h-4" /> Lihat Pelamar
                     </button>
-                    <button style={{ padding: "8px 12px", background: "#fee2e2", border: "1px solid #fecaca", borderRadius: "6px", fontSize: "12px", fontWeight: 500, color: "#dc2626", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+                    <button
+                      onClick={() => setDeleteModal({ show: true, schedule: selectedSchedule })}
+                      style={{ padding: "8px 12px", background: "#fee2e2", border: "1px solid #fecaca", borderRadius: "6px", fontSize: "12px", fontWeight: 500, color: "#dc2626", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
+                    >
                       <Trash2 className="w-4 h-4" /> Hapus Jadwal
                     </button>
                   </div>
@@ -723,6 +827,237 @@ export default function SchedulePage() {
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteModal.show && deleteModal.schedule && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0,0,0,0.6)",
+          backdropFilter: "blur(4px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
+          padding: "20px",
+        }}>
+          <div style={{
+            background: "#ffffff",
+            borderRadius: "16px",
+            padding: "24px",
+            width: "100%",
+            maxWidth: "400px",
+            boxShadow: "0 25px 80px rgba(0,0,0,0.25)",
+          }}>
+            <div style={{ textAlign: "center", marginBottom: "20px" }}>
+              <div style={{ width: "60px", height: "60px", background: "#fee2e2", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                <Trash2 className="w-8 h-8" style={{ color: "#dc2626" }} />
+              </div>
+              <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#111", marginBottom: "8px" }}>Hapus Jadwal?</h3>
+              <p style={{ fontSize: "14px", color: "#666" }}>
+                Yakin ingin menghapus jadwal untuk <strong>{deleteModal.schedule.applicantName}</strong>?
+              </p>
+            </div>
+            <div style={{ display: "flex", gap: "12px" }}>
+              <button
+                onClick={() => setDeleteModal({ show: false, schedule: null })}
+                style={{ flex: 1, padding: "12px 20px", background: "#fff", color: "#666", border: "2px solid #e5e5e5", borderRadius: "8px", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleDeleteSchedule}
+                disabled={deleting}
+                style={{ flex: 1, padding: "12px 20px", background: "#dc2626", color: "#fff", border: "none", borderRadius: "8px", fontSize: "14px", fontWeight: 600, cursor: deleting ? "not-allowed" : "pointer", opacity: deleting ? 0.6 : 1 }}
+              >
+                {deleting ? "Menghapus..." : "Ya, Hapus"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Applicants Modal */}
+      {viewApplicantsModal.show && viewApplicantsModal.job && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0,0,0,0.6)",
+          backdropFilter: "blur(4px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
+          padding: "20px",
+        }}>
+          <div style={{
+            background: "#ffffff",
+            borderRadius: "16px",
+            padding: "24px",
+            width: "100%",
+            maxWidth: "600px",
+            maxHeight: "80vh",
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+            boxShadow: "0 25px 80px rgba(0,0,0,0.25)",
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+              <div>
+                <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#111", marginBottom: "4px" }}>
+                  Daftar Pelamar - {viewApplicantsModal.job.position}
+                </h3>
+                <p style={{ fontSize: "13px", color: "#666" }}>
+                  {divisionLabels[viewApplicantsModal.job.division] || viewApplicantsModal.job.division} • {viewApplicantsModal.job.totalApplicants} pelamar
+                </p>
+              </div>
+              <button
+                onClick={() => setViewApplicantsModal({ show: false, job: null })}
+                style={{ padding: "8px", background: "#f1f5f9", border: "none", borderRadius: "8px", cursor: "pointer" }}
+              >
+                <X className="w-5 h-5" style={{ color: "#666" }} />
+              </button>
+            </div>
+
+            <div style={{ flex: 1, overflow: "auto" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {viewApplicantsModal.job.schedules.map((schedule) => {
+                  const status = statusConfig[schedule.status] || { bg: "#f1f5f9", text: "#64748b", label: schedule.status };
+                  return (
+                    <div key={schedule.id} style={{ padding: "16px", background: "#f8f9fa", borderRadius: "12px", border: "1px solid #e5e5e5" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                        <div>
+                          <h4 style={{ fontSize: "14px", fontWeight: 600, color: "#111", marginBottom: "4px" }}>{schedule.applicantName}</h4>
+                          <span style={{ padding: "4px 8px", background: status.bg, color: status.text, borderRadius: "6px", fontSize: "11px", fontWeight: 600 }}>
+                            {status.label}
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", gap: "8px" }}>
+                          <button
+                            onClick={() => {
+                              setViewApplicantsModal({ show: false, job: null });
+                              // Navigate to applicant detail
+                            }}
+                            style={{ padding: "6px 12px", background: "#00205B", color: "#fff", border: "none", borderRadius: "6px", fontSize: "12px", fontWeight: 500, cursor: "pointer" }}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "16px", fontSize: "12px", color: "#666" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                          <Calendar className="w-3 h-3" />
+                          {formatDate(schedule.scheduledAt)}
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                          <Clock className="w-3 h-3" />
+                          {formatTime(schedule.scheduledAt)}
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                          <MapPin className="w-3 h-3" />
+                          {schedule.location}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Schedule Modal */}
+      {editModal.show && editModal.schedule && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0,0,0,0.6)",
+          backdropFilter: "blur(4px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
+          padding: "20px",
+        }}>
+          <div style={{
+            background: "#ffffff",
+            borderRadius: "16px",
+            padding: "24px",
+            width: "100%",
+            maxWidth: "480px",
+            boxShadow: "0 25px 80px rgba(0,0,0,0.25)",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
+              <div style={{ width: "40px", height: "40px", background: "#2563eb", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Edit className="w-5 h-5" style={{ color: "#fff" }} />
+              </div>
+              <h2 style={{ fontSize: "18px", fontWeight: 700, color: "#111" }}>Ubah Jadwal</h2>
+            </div>
+
+            <div style={{ marginBottom: "16px" }}>
+              <p style={{ fontSize: "14px", color: "#666", marginBottom: "16px" }}>
+                Ubah jadwal untuk <strong>{editModal.schedule.applicantName}</strong>
+              </p>
+            </div>
+
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>Tanggal</label>
+              <input
+                type="date"
+                value={editModal.schedule.scheduledAt.split("T")[0]}
+                onChange={(e) => setEditModal({ ...editModal, schedule: { ...editModal.schedule!, scheduledAt: `${e.target.value}T${editModal.schedule!.scheduledAt.split("T")[1]}` } })}
+                style={{ width: "100%", padding: "10px 12px", border: "2px solid #e5e5e5", borderRadius: "8px", fontSize: "14px", outline: "none" }}
+              />
+            </div>
+
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>Waktu</label>
+              <input
+                type="time"
+                value={editModal.schedule.scheduledAt.split("T")[1]?.substring(0, 5) || ""}
+                onChange={(e) => setEditModal({ ...editModal, schedule: { ...editModal.schedule!, scheduledAt: `${editModal.schedule!.scheduledAt.split("T")[0]}T${e.target.value}:00` } })}
+                style={{ width: "100%", padding: "10px 12px", border: "2px solid #e5e5e5", borderRadius: "8px", fontSize: "14px", outline: "none" }}
+              />
+            </div>
+
+            <div style={{ marginBottom: "20px" }}>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>Lokasi</label>
+              <input
+                type="text"
+                value={editModal.schedule.location}
+                onChange={(e) => setEditModal({ ...editModal, schedule: { ...editModal.schedule!, location: e.target.value } })}
+                style={{ width: "100%", padding: "10px 12px", border: "2px solid #e5e5e5", borderRadius: "8px", fontSize: "14px", outline: "none" }}
+              />
+            </div>
+
+            <div style={{ display: "flex", gap: "12px" }}>
+              <button
+                onClick={() => setEditModal({ show: false, schedule: null })}
+                style={{ flex: 1, padding: "12px 20px", background: "#fff", color: "#666", border: "2px solid #e5e5e5", borderRadius: "8px", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleUpdateSchedule}
+                disabled={saving}
+                style={{ flex: 1, padding: "12px 20px", background: "#2563eb", color: "#fff", border: "none", borderRadius: "8px", fontSize: "14px", fontWeight: 600, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.6 : 1 }}
+              >
+                {saving ? "Menyimpan..." : "Simpan"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add Schedule Modal */}
       {showAddModal && (
