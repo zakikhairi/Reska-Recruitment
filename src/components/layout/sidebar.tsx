@@ -66,27 +66,20 @@ export function Sidebar({ userName = "User", userRole = "APPLICANT" }: SidebarPr
   // Fetch unread message count for admin
   const [unreadMessages, setUnreadMessages] = useState(0);
 
+  // Fetch unread count - re-fetch when pathname changes (triggers when visiting contacts)
   useEffect(() => {
     if (userRole === "HR_ADMIN") {
-      const fetchUnread = () => {
-        fetch("/api/admin/contacts")
-          .then((res) => res.json())
-          .then((data) => {
-            if (data.success && data.conversations) {
-              const unread = data.conversations.filter((c: any) => c.unreadCount > 0).length;
-              setUnreadMessages(unread);
-            }
-          })
-          .catch(() => {});
-      };
-
-      fetchUnread();
-
-      // Refresh every 5 seconds
-      const interval = setInterval(fetchUnread, 5000);
-      return () => clearInterval(interval);
+      fetch("/api/admin/contacts")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.conversations) {
+            const unread = data.conversations.filter((c: any) => c.unreadCount > 0).length;
+            setUnreadMessages(unread);
+          }
+        })
+        .catch(() => {});
     }
-  }, [userRole]);
+  }, [userRole, pathname]);
 
   const width = isCollapsed ? "80px" : "260px";
   const sidebarWidth = isCollapsed ? 80 : 260;
