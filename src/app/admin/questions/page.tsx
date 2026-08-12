@@ -4,14 +4,11 @@ import { useState } from "react";
 import {
   Search,
   Plus,
-  Eye,
   Edit,
   Trash2,
-  Filter,
   BookOpen,
   CheckCircle,
   XCircle,
-  Clock,
   Award,
   Lightbulb,
   Zap,
@@ -33,18 +30,29 @@ const questions = [
 ];
 
 const categories = [
-  { id: "AKHLAK", name: "AKHLAK", count: 25, color: "#00205B", icon: <Award className="w-5 h-5" /> },
-  { id: "HOSPITALITY", name: "Hospitality", count: 30, color: "#FF5E00", icon: <Lightbulb className="w-5 h-5" /> },
-  { id: "TECHNICAL", name: "Teknis", count: 20, color: "#10B981", icon: <Zap className="w-5 h-5" /> },
-  { id: "APTITUDE", name: "Aptitude", count: 15, color: "#8B5CF6", icon: <BarChart3 className="w-5 h-5" /> },
-  { id: "FACILITY", name: "Facility", count: 10, color: "#EC4899", icon: <BookOpen className="w-5 h-5" /> },
+  { id: "AKHLAK", name: "AKHLAK", color: "#00205B", icon: <Award className="w-5 h-5" /> },
+  { id: "HOSPITALITY", name: "Hospitality", color: "#FF5E00", icon: <Lightbulb className="w-5 h-5" /> },
+  { id: "TECHNICAL", name: "Teknis", color: "#10B981", icon: <Zap className="w-5 h-5" /> },
+  { id: "APTITUDE", name: "Aptitude", color: "#8B5CF6", icon: <BarChart3 className="w-5 h-5" /> },
+  { id: "FACILITY", name: "Facility", color: "#EC4899", icon: <BookOpen className="w-5 h-5" /> },
 ];
+
+const divisions = Array.from(
+  new Set(questions.filter((q) => q.division).map((q) => q.division!))
+).sort();
+
+const getCategoryStats = () => {
+  return categories.map((cat) => ({
+    ...cat,
+    count: questions.filter((q) => q.category === cat.id).length,
+  }));
+};
 
 const getDifficultyConfig = (difficulty: string) => {
   switch (difficulty) {
-    case "MUDAH": return { bg: "#dcfce7", text: "#16a34a", label: "Mudah" };
-    case "MENENGAH": return { bg: "#fef3c7", text: "#d97706", label: "Sedang" };
-    case "SULIT": return { bg: "#fee2e2", text: "#dc2626", label: "Sulit" };
+    case "EASY": return { bg: "#dcfce7", text: "#16a34a", label: "Mudah" };
+    case "MEDIUM": return { bg: "#fef3c7", text: "#d97706", label: "Sedang" };
+    case "HARD": return { bg: "#fee2e2", text: "#dc2626", label: "Sulit" };
     default: return { bg: "#f1f5f9", text: "#64748b", label: difficulty };
   }
 };
@@ -58,14 +66,16 @@ export default function QuestionsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [difficultyFilter, setDifficultyFilter] = useState("all");
+  const [divisionFilter, setDivisionFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
   const filteredQuestions = questions.filter((q) => {
     const matchSearch = q.stem.toLowerCase().includes(searchQuery.toLowerCase());
     const matchCategory = categoryFilter === "all" || q.category === categoryFilter;
     const matchDifficulty = difficultyFilter === "all" || q.difficulty === difficultyFilter;
+    const matchDivision = divisionFilter === "all" || q.division === divisionFilter;
     const matchStatus = statusFilter === "all" || (statusFilter === "active" && q.active) || (statusFilter === "inactive" && !q.active);
-    return matchSearch && matchCategory && matchDifficulty && matchStatus;
+    return matchSearch && matchCategory && matchDifficulty && matchDivision && matchStatus;
   });
 
   return (
@@ -87,7 +97,7 @@ export default function QuestionsPage() {
       <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "0 32px 60px" }}>
         {/* Stats Cards */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "24px" }}>
-          {categories.map((cat) => (
+          {getCategoryStats().map((cat) => (
             <div key={cat.id} style={{ background: "#ffffff", borderRadius: "16px", padding: "20px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: "16px" }}>
               <div style={{ width: "48px", height: "48px", background: `${cat.color}15`, borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", color: cat.color }}>
                 {cat.icon}
@@ -141,6 +151,20 @@ export default function QuestionsPage() {
               <option value="HARD">Sulit</option>
             </select>
 
+            {/* Division Filter */}
+            {divisions.length > 0 && (
+              <select
+                value={divisionFilter}
+                onChange={(e) => setDivisionFilter(e.target.value)}
+                style={{ padding: "10px 44px 10px 16px", border: "1px solid #e5e7e9", borderRadius: "9999px", fontSize: "13px", outline: "none", background: "#ffffff", cursor: "pointer", appearance: "none", color: "#374151", fontWeight: 500, backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 14px center", backgroundSize: "14px", transition: "all 0.2s" }}
+              >
+                <option value="all">Semua Divisi</option>
+                {divisions.map((div) => (
+                  <option key={div} value={div}>{div.replace(/_/g, " ")}</option>
+                ))}
+              </select>
+            )}
+
             {/* Status Filter */}
             <select
               value={statusFilter}
@@ -152,6 +176,21 @@ export default function QuestionsPage() {
               <option value="inactive">Nonaktif</option>
             </select>
           </div>
+        </div>
+
+        {/* Results Count */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+          <p style={{ fontSize: "14px", color: "#888888" }}>
+            Menampilkan <strong style={{ color: "#111111" }}>{filteredQuestions.length}</strong> dari <strong style={{ color: "#111111" }}>{questions.length}</strong> soal
+          </p>
+          {(categoryFilter !== "all" || difficultyFilter !== "all" || divisionFilter !== "all" || statusFilter !== "all" || searchQuery) && (
+            <button
+              onClick={() => { setSearchQuery(""); setCategoryFilter("all"); setDifficultyFilter("all"); setDivisionFilter("all"); setStatusFilter("all"); }}
+              style={{ fontSize: "13px", color: "#FF5E00", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}
+            >
+              Reset Filter
+            </button>
+          )}
         </div>
 
         {/* Questions List */}

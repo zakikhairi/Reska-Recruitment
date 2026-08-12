@@ -3,7 +3,7 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-// Simple hash function
+// Simple hash function - must match the login route
 function simpleHash(str: string): string {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -13,7 +13,8 @@ function simpleHash(str: string): string {
   return "demo_" + Math.abs(hash).toString(16);
 }
 
-const DEMO_HASH = simpleHash("demo123");
+// Hash for "demo123"
+const DEMO_HASH = "demo_5c7bd16f";
 
 async function main() {
   console.log("🌱 Starting database seed...\n");
