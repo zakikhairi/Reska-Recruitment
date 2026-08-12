@@ -1,9 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
 import { useAuthStore } from "@/stores/auth";
 import { useSidebarStore } from "@/stores/sidebar";
 import { useRouter } from "next/navigation";
@@ -63,6 +62,23 @@ export function Sidebar({ userName = "User", userRole = "APPLICANT" }: SidebarPr
     logout();
     router.push("/auth/login");
   };
+
+  // Fetch unread message count for admin
+  const [unreadMessages, setUnreadMessages] = useState(0);
+
+  useEffect(() => {
+    if (userRole === "HR_ADMIN") {
+      fetch("/api/admin/contacts")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.conversations) {
+            const unread = data.conversations.filter((c: any) => !c.isRead).length;
+            setUnreadMessages(unread);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [userRole]);
 
   const width = isCollapsed ? "80px" : "260px";
   const sidebarWidth = isCollapsed ? 80 : 260;
@@ -126,6 +142,7 @@ export function Sidebar({ userName = "User", userRole = "APPLICANT" }: SidebarPr
         <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "4px" }}>
           {navItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+            const showBadge = item.icon === "message" && unreadMessages > 0;
             return (
               <li key={item.href}>
                 <Link href={item.href} title={isCollapsed ? item.label : undefined} style={{
@@ -144,8 +161,44 @@ export function Sidebar({ userName = "User", userRole = "APPLICANT" }: SidebarPr
                   borderLeft: isActive ? "4px solid #FF5E00" : "4px solid transparent",
                   paddingLeft: isActive ? (isCollapsed ? "0" : "12px") : (isCollapsed ? "0" : "16px"),
                 }}>
-                  <span style={{ color: isActive ? "#00205B" : "#888888", display: "flex", alignItems: "center", justifyContent: "center", minWidth: "20px" }}>{icons[item.icon]}</span>
+                  <span style={{ color: isActive ? "#00205B" : "#888888", display: "flex", alignItems: "center", justifyContent: "center", minWidth: "20px", position: "relative" }}>
+                    {icons[item.icon]}
+                    {showBadge && (
+                      <span style={{
+                        position: "absolute",
+                        top: "-6px",
+                        right: "-6px",
+                        background: "#ef4444",
+                        color: "#fff",
+                        fontSize: "10px",
+                        fontWeight: 700,
+                        minWidth: "16px",
+                        height: "16px",
+                        borderRadius: "9999px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "0 4px",
+                        border: "2px solid #fff"
+                      }}>
+                        {unreadMessages > 9 ? "9+" : "!"}
+                      </span>
+                    )}
+                  </span>
                   {!isCollapsed && <span style={{ whiteSpace: "nowrap" }}>{item.label}</span>}
+                  {showBadge && !isCollapsed && (
+                    <span style={{
+                      marginLeft: "auto",
+                      background: "#ef4444",
+                      color: "#fff",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      padding: "2px 8px",
+                      borderRadius: "9999px"
+                    }}>
+                      {unreadMessages}
+                    </span>
+                  )}
                 </Link>
               </li>
             );
