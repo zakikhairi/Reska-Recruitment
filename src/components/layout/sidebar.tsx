@@ -68,16 +68,23 @@ export function Sidebar({ userName = "User", userRole = "APPLICANT" }: SidebarPr
 
   useEffect(() => {
     if (userRole === "HR_ADMIN") {
-      fetch("/api/admin/contacts")
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success && data.conversations) {
-            // Count conversations with unread messages
-            const unread = data.conversations.filter((c: any) => c.unreadCount > 0).length;
-            setUnreadMessages(unread);
-          }
-        })
-        .catch(() => {});
+      const fetchUnread = () => {
+        fetch("/api/admin/contacts")
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.success && data.conversations) {
+              const unread = data.conversations.filter((c: any) => c.unreadCount > 0).length;
+              setUnreadMessages(unread);
+            }
+          })
+          .catch(() => {});
+      };
+
+      fetchUnread();
+
+      // Refresh every 5 seconds
+      const interval = setInterval(fetchUnread, 5000);
+      return () => clearInterval(interval);
     }
   }, [userRole]);
 
