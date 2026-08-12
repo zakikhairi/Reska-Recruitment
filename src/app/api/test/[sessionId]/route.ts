@@ -189,7 +189,32 @@ export async function GET(
       });
     }
 
-    // Allow access - either not scheduled or time has arrived
+    // Check if already submitted or scored
+    if (session.status === "SUBMITTED" || session.status === "SCORED") {
+      return NextResponse.json({
+        success: true,
+        session: {
+          id: session.id,
+          status: session.status,
+          scheduledAt: session.scheduledAt,
+          submittedAt: session.submittedAt,
+          totalScore: session.totalScore,
+          passed: session.passed,
+          startedAt: session.startedAt,
+          tabSwitchCount: session.tabSwitchCount,
+        },
+        jobTitle: application.jobPosting.title,
+        questions: safeQuestions,
+        config: {
+          totalDurationMinutes: config.totalDurationMinutes,
+          categories: config.categories.split(","),
+        },
+        canStart: false, // Already done
+        scheduledAt: session.scheduledAt,
+      });
+    }
+
+    // Allow access - either not scheduled, time has arrived, or already in progress
     return NextResponse.json({
       success: true,
       session: {
@@ -255,26 +280,64 @@ export async function POST(
         );
       }
 
-      // Check if scheduled time hasn't arrived
-      if (existingSession.scheduledAt && new Date() < existingSession.scheduledAt) {
+      // Check if scheduled time hasn't arrived (only if no startedAt yet)
+      if (!existingSession.startedAt && existingSession.scheduledAt && new Date() < existingSession.scheduledAt) {
         return NextResponse.json(
           { success: false, error: "Belum waktunya memulai tes" },
           { status: 400 }
         );
       }
 
-      // Resume existing session
+      // Resume or start existing session
+      const updateData: any = {
+        status: "IN_PROGRESS",
+      };
+      if (!existingSession.startedAt) {
+        updateData.startedAt = new Date();
+      }
+
       const updatedSession = await prisma.testSession.update({
         where: { id: existingSession.id },
-        data: {
-          status: "IN_PROGRESS",
-          startedAt: existingSession.startedAt || new Date(),
-        },
+        data: updateData,
       });
 
-      const questionIds = existingSession.questions
-        ? JSON.parse(existingSession.questions)
-        : [];
+      // If no questions yet, generate them now
+      let questionIds: string[] = [];
+      if (existingSession.questions) {
+        questionIds = JSON.parse(existingSession.questions);
+      } else {
+        // Generate questions
+        const config = existingSession.application.jobPosting.testConfig;
+        if (config) {
+          const categories = config.categories.split(",");
+          let questions = await prisma.question.findMany({
+            where: { category: { in: categories }, isActive: true },
+          });
+
+          // Simple shuffle and select
+          const shuffled = questions.sort(() => Math.random() - 0.5);
+          const selected = shuffled.slice(0, config.questionsPerCategory * categories.length);
+          questionIds = selected.map(q => q.id);
+
+          // Update session with questions
+          await prisma.testSession.update({
+            where: { id: existingSession.id },
+            data: { questions: JSON.stringify(questionIds) },
+          });
+
+          // Create answer records
+          await prisma.applicantAnswer.deleteMany({
+            where: { testSessionId: existingSession.id },
+          });
+          await prisma.applicantAnswer.createMany({
+            data: selected.map((q) => ({
+              testSessionId: existingSession.id,
+              questionId: q.id,
+              pointsEarned: 0,
+            })),
+          });
+        }
+      }
 
       return NextResponse.json({
         success: true,

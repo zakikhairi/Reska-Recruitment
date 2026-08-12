@@ -34,7 +34,11 @@ export async function GET(request: NextRequest) {
       include: {
         testSession: true,
         interview: true,
-        jobPosting: true,
+        jobPosting: {
+          include: {
+            testConfig: true,
+          },
+        },
         statusHistory: {
           orderBy: { createdAt: "desc" },
           take: 5,
@@ -52,14 +56,15 @@ export async function GET(request: NextRequest) {
         status: app.status,
       };
 
-      // Add test schedule if exists (check scheduledAt OR startedAt)
-      if (app.testSession?.scheduledAt || app.testSession?.startedAt) {
+      // Add test schedule if exists
+      if (app.testSession) {
         schedule.test = {
-          scheduledAt: app.testSession.scheduledAt || app.testSession.startedAt,
+          scheduledAt: app.testSession.scheduledAt,
           location: "Online System",
           status: app.testSession.status,
           sessionId: app.testSession.id,
           message: app.testSession.adminMessage || null,
+          durationMinutes: app.jobPosting.testConfig?.totalDurationMinutes || 90,
         };
       }
 
@@ -78,7 +83,7 @@ export async function GET(request: NextRequest) {
       return schedule;
     });
 
-    // Filter only applications with schedules
+    // Filter only applications with test sessions or interviews
     const upcomingSchedules = schedules.filter(
       (s) => s.test?.scheduledAt || s.interview?.scheduledAt
     );

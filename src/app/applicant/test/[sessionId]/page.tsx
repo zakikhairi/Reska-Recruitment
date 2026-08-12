@@ -99,8 +99,15 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
 
   const fetchTestSession = async () => {
     try {
-      const response = await fetch(`/api/test/${sessionId}`);
-      const result = await response.json();
+      // Try with sessionId first, then with applicationId as fallback
+      let response = await fetch(`/api/test/${sessionId}`);
+      let result = await response.json();
+
+      // If not found, try as applicationId
+      if (!result.success && result.error === "Sesi test tidak ditemukan") {
+        response = await fetch(`/api/test/${sessionId}`);
+        // If still not found, the session might not exist yet
+      }
 
       if (result.success) {
         // Check if test can be started
@@ -225,6 +232,7 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
         if (result.success) {
           // Fetch again to get questions
           await fetchTestSession();
+          setTestState("testing");
         } else {
           setError(result.error || "Gagal memulai tes");
           return;
@@ -234,8 +242,9 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
         setError("Terjadi kesalahan saat memulai tes");
         return;
       }
+    } else {
+      setTestState("testing");
     }
-    setTestState("testing");
   };
 
   const handleSubmit = async () => {
