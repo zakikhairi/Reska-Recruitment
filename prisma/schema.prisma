@@ -81,7 +81,6 @@ model Applicant {
 
   documents    Document[]
   applications Application[]
-  testSessions TestSession[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -269,7 +268,6 @@ model TestSession {
   id            String      @id @default(cuid())
   applicationId String      @unique
   application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-  applicant     Applicant   @relation(fields: [applicationId], references: [id], map: "TestSession_applicant_fkey")
 
   status        String    @default("SCHEDULED") // SCHEDULED, NOT_STARTED, IN_PROGRESS, PAUSED, SUBMITTED, SCORED, EXPIRED
 

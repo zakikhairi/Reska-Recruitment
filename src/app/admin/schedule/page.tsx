@@ -109,6 +109,7 @@ export default function SchedulePage() {
     message: "",
     interviewer: "",
     interviewType: "ONLINE",
+    durationMinutes: 90,
   });
   const [saving, setSaving] = useState(false);
 
@@ -224,6 +225,10 @@ export default function SchedulePage() {
         message: scheduleForm.message,
       };
 
+      if (scheduleType === "TEST") {
+        requestBody.durationMinutes = scheduleForm.durationMinutes;
+      }
+
       if (scheduleType === "INTERVIEW") {
         requestBody.interviewer = scheduleForm.interviewer;
         requestBody.interviewType = scheduleForm.interviewType;
@@ -242,7 +247,7 @@ export default function SchedulePage() {
         setShowAddModal(false);
         setSelectedJobId("");
         setScheduleType("TEST");
-        setScheduleForm({ scheduledDate: "", scheduledTime: "", endTime: "", location: "Online System", message: "", interviewer: "", interviewType: "ONLINE" });
+        setScheduleForm({ scheduledDate: "", scheduledTime: "", endTime: "", location: "Online System", message: "", interviewer: "", interviewType: "ONLINE", durationMinutes: 90 });
         fetchSchedules();
         setTimeout(() => setToast(null), 3000);
       } else {
@@ -792,6 +797,27 @@ export default function SchedulePage() {
               />
             </div>
 
+            {scheduleType === "TEST" && (
+              <div style={{ marginBottom: "16px" }}>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
+                  Durasi Tes (menit)
+                </label>
+                <select
+                  value={scheduleForm.durationMinutes}
+                  onChange={(e) => setScheduleForm({ ...scheduleForm, durationMinutes: parseInt(e.target.value) })}
+                  style={{ width: "100%", padding: "10px 12px", border: "2px solid #e5e5e5", borderRadius: "8px", fontSize: "14px", outline: "none", background: "#fff" }}
+                >
+                  <option value="30">30 menit</option>
+                  <option value="45">45 menit</option>
+                  <option value="60">60 menit</option>
+                  <option value="75">75 menit</option>
+                  <option value="90">90 menit</option>
+                  <option value="120">120 menit</option>
+                </select>
+                <p style={{ fontSize: "11px", color: "#888", marginTop: "4px" }}>Durasi ini akan digunakan untuk tes kompetensi</p>
+              </div>
+            )}
+
             {scheduleType === "INTERVIEW" && (
               <>
                 <div style={{ marginBottom: "16px" }}>
@@ -851,7 +877,7 @@ export default function SchedulePage() {
 
             <div style={{ display: "flex", gap: "12px" }}>
               <button
-                onClick={() => { setShowAddModal(false); setSelectedJobId(""); setScheduleForm({ scheduledDate: "", scheduledTime: "", endTime: "", location: "Online System", message: "", interviewer: "", interviewType: "ONLINE" }); }}
+                onClick={() => { setShowAddModal(false); setSelectedJobId(""); setScheduleForm({ scheduledDate: "", scheduledTime: "", endTime: "", location: "Online System", message: "", interviewer: "", interviewType: "ONLINE", durationMinutes: 90 }); }}
                 style={{ flex: 1, padding: "12px 20px", background: "#fff", color: "#666", border: "2px solid #e5e5e5", borderRadius: "8px", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}
               >
                 Batal

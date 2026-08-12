@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/auth";
-import { Calendar, Clock, MapPin, User, FileText, CheckCircle, AlertCircle, Play } from "lucide-react";
+import { Calendar, Clock, MapPin, User, FileText, CheckCircle, AlertCircle, Play, Timer } from "lucide-react";
 
 interface ScheduleItem {
   applicationId: string;
@@ -16,6 +16,7 @@ interface ScheduleItem {
     status: string;
     sessionId?: string;
     message?: string | null;
+    durationMinutes?: number;
   };
   interview?: {
     scheduledAt: string;
@@ -51,6 +52,19 @@ export default function SchedulePage() {
   const { user } = useAuthStore();
   const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const countdownRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Real-time clock - update every second
+  useEffect(() => {
+    countdownRef.current = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     fetchSchedules();
@@ -111,16 +125,17 @@ export default function SchedulePage() {
 
   // Check if test can be started (time has arrived)
   const canStartTest = (scheduledAt: string) => {
-    return new Date() >= new Date(scheduledAt);
+    return currentTime >= new Date(scheduledAt);
   };
 
-  // Get time remaining until test
+  // Get time remaining until test - real-time
   const getTimeRemaining = (scheduledAt: string) => {
-    const diff = new Date(scheduledAt).getTime() - new Date().getTime();
+    const diff = new Date(scheduledAt).getTime() - currentTime.getTime();
     if (diff <= 0) return null;
 
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
     if (hours > 24) {
       const days = Math.floor(hours / 24);
@@ -129,7 +144,22 @@ export default function SchedulePage() {
     if (hours > 0) {
       return `${hours} jam ${minutes} menit`;
     }
-    return `${minutes} menit`;
+    return `${minutes} menit ${seconds} detik`;
+  };
+
+  // Format countdown for display
+  const formatCountdown = (scheduledAt: string) => {
+    const diff = new Date(scheduledAt).getTime() - currentTime.getTime();
+    if (diff <= 0) return null;
+
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+    if (hours > 0) {
+      return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+    }
+    return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
   };
 
   // Get past schedules
@@ -200,32 +230,35 @@ export default function SchedulePage() {
                             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
                               <FileText className="w-5 h-5" style={{ color: "#2563eb" }} />
                               <span style={{ fontSize: "14px", fontWeight: 600, color: "#2563eb" }}>Tes Kompetensi</span>
-                              {canStartTest(schedule.test.scheduledAt) ? (
-                                <span style={{
-                                  marginLeft: "auto",
-                                  padding: "4px 10px",
-                                  background: "#16a34a",
-                                  color: "#fff",
-                                  borderRadius: "20px",
-                                  fontSize: "11px",
-                                  fontWeight: 700
-                                }}>
-                                  Bisa Dimulai
-                                </span>
-                              ) : (
-                                <span style={{
-                                  marginLeft: "auto",
-                                  padding: "4px 10px",
-                                  background: "#fef3c7",
-                                  color: "#d97706",
-                                  borderRadius: "20px",
-                                  fontSize: "11px",
-                                  fontWeight: 700
-                                }}>
-                                  {getTimeRemaining(schedule.test.scheduledAt) || "Menunggu"}
-                                </span>
-                              )}
+                              <span style={{
+                                marginLeft: "auto",
+                                padding: "4px 10px",
+                                background: canStartTest(schedule.test.scheduledAt) ? "#16a34a" : "#fef3c7",
+                                color: canStartTest(schedule.test.scheduledAt) ? "#fff" : "#d97706",
+                                borderRadius: "20px",
+                                fontSize: "11px",
+                                fontWeight: 700
+                              }}>
+                                {canStartTest(schedule.test.scheduledAt) ? "✓ Bisa Dimulai" : "Menunggu"}
+                              </span>
                             </div>
+
+                            {/* Real-time Countdown Timer */}
+                            {!canStartTest(schedule.test.scheduledAt) && (
+                              <div style={{ background: "#fff", borderRadius: "10px", padding: "16px", marginBottom: "12px", textAlign: "center", border: "2px solid #fef3c7" }}>
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", marginBottom: "8px" }}>
+                                  <Timer className="w-4 h-4" style={{ color: "#d97706" }} />
+                                  <span style={{ fontSize: "12px", color: "#92400e", fontWeight: 600 }}>Waktu menuju tes:</span>
+                                </div>
+                                <p style={{ fontSize: "32px", fontWeight: 800, color: "#d97706", fontFamily: "monospace", margin: 0, letterSpacing: "2px" }}>
+                                  {formatCountdown(schedule.test.scheduledAt)}
+                                </p>
+                                <p style={{ fontSize: "11px", color: "#b45309", marginTop: "4px" }}>
+                                  {getTimeRemaining(schedule.test.scheduledAt)}
+                                </p>
+                              </div>
+                            )}
+
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                                 <Calendar className="w-4 h-4" style={{ color: "#666" }} />
@@ -240,6 +273,12 @@ export default function SchedulePage() {
                               <MapPin className="w-4 h-4" style={{ color: "#666" }} />
                               <span style={{ fontSize: "13px", color: "#111" }}>{schedule.test.location}</span>
                             </div>
+                            {schedule.test.durationMinutes && (
+                              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "8px" }}>
+                                <Timer className="w-4 h-4" style={{ color: "#666" }} />
+                                <span style={{ fontSize: "13px", color: "#111" }}>Durasi: {schedule.test.durationMinutes} menit</span>
+                              </div>
+                            )}
                             {schedule.test?.message && (
                               <div style={{ marginTop: "12px", padding: "12px", background: "#fef3c7", borderRadius: "8px", display: "flex", alignItems: "flex-start", gap: "10px" }}>
                                 <AlertCircle className="w-5 h-5" style={{ color: "#d97706", flexShrink: 0 }} />

@@ -1,15 +1,9 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
-import Database from "better-sqlite3";
 
-const url = process.env.DATABASE_URL || "file:./prisma/dev.db";
-const dbPath = url.replace("file:", "");
-const database = new Database(dbPath);
-const adapter = new PrismaBetterSqlite3(database);
-const prisma = new PrismaClient({ adapter });
+const prisma = new PrismaClient();
 
-// Simple hash function
+// Simple hash function - must match the login route
 function simpleHash(str: string): string {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -19,7 +13,8 @@ function simpleHash(str: string): string {
   return "demo_" + Math.abs(hash).toString(16);
 }
 
-const DEMO_HASH = simpleHash("demo123");
+// Hash for "demo123"
+const DEMO_HASH = "demo_5c7bd16f";
 
 async function main() {
   console.log("🌱 Starting database seed...\n");

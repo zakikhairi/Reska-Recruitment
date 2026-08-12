@@ -7,7 +7,7 @@ import prisma from "@/lib/db";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { jobPostingId, scheduledAt, location, message } = body;
+    const { jobPostingId, scheduledAt, location, message, durationMinutes } = body;
 
     if (!jobPostingId || !scheduledAt) {
       return NextResponse.json(
@@ -39,6 +39,9 @@ export async function POST(request: NextRequest) {
     }
 
     const scheduledDateTime = new Date(scheduledAt);
+
+    // Use provided durationMinutes or get from testConfig
+    const testDuration = durationMinutes || jobPosting.testConfig.totalDurationMinutes;
 
     // Get all applications with TEST_SCHEDULED status for this job
     const applications = await prisma.application.findMany({
