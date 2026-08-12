@@ -43,11 +43,13 @@ export async function POST(request: NextRequest) {
     // Use provided durationMinutes or get from testConfig
     const testDuration = durationMinutes || jobPosting.testConfig.totalDurationMinutes;
 
-    // Get all applications with TEST_SCHEDULED status for this job
+    // Get all applications with TEST_SCHEDULED or ADMIN_CHECK status for this job
     const applications = await prisma.application.findMany({
       where: {
         jobPostingId,
-        status: "TEST_SCHEDULED",
+        status: {
+          in: ["TEST_SCHEDULED", "ADMIN_CHECK"],
+        },
       },
       include: {
         applicant: true,
@@ -57,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     if (applications.length === 0) {
       return NextResponse.json(
-        { success: false, error: "Tidak ada pelamar dengan status TEST_SCHEDULED. Pastikan pelamar sudah di-approve oleh HR." },
+        { success: false, error: "Tidak ada pelamar yang bisa dijadwalkan tes. Pastikan pelamar sudah di-review oleh HR." },
         { status: 400 }
       );
     }
@@ -92,6 +94,15 @@ export async function POST(request: NextRequest) {
         });
         scheduledList.push(app.applicant.fullName);
       }
+
+      // Update application status to TEST_SCHEDULED if it's ADMIN_CHECK
+      if (app.status === "ADMIN_CHECK") {
+        await prisma.application.update({
+          where: { id: app.id },
+          data: { status: "TEST_SCHEDULED" },
+        });
+      }
+
       scheduledCount++;
     }
 
