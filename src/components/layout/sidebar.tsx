@@ -166,39 +166,25 @@ export function Sidebar({ userName = "User", userRole = "APPLICANT" }: SidebarPr
                     {showBadge && (
                       <span style={{
                         position: "absolute",
-                        top: "-6px",
-                        right: "-6px",
+                        top: "-4px",
+                        right: "-4px",
                         background: "#ef4444",
                         color: "#fff",
                         fontSize: "10px",
                         fontWeight: 700,
-                        minWidth: "16px",
-                        height: "16px",
+                        width: "14px",
+                        height: "14px",
                         borderRadius: "9999px",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        padding: "0 4px",
                         border: "2px solid #fff"
                       }}>
-                        {unreadMessages > 9 ? "9+" : "!"}
+                        !
                       </span>
                     )}
                   </span>
                   {!isCollapsed && <span style={{ whiteSpace: "nowrap" }}>{item.label}</span>}
-                  {showBadge && !isCollapsed && (
-                    <span style={{
-                      marginLeft: "auto",
-                      background: "#ef4444",
-                      color: "#fff",
-                      fontSize: "11px",
-                      fontWeight: 700,
-                      padding: "2px 8px",
-                      borderRadius: "9999px"
-                    }}>
-                      {unreadMessages}
-                    </span>
-                  )}
                 </Link>
               </li>
             );
