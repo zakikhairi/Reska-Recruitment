@@ -1072,7 +1072,7 @@ export default function SchedulePage() {
               >
                 <option value="">Pilih Lowongan</option>
                 {jobs.map((job) => (
-                  <option key={job.id} value={job.id}>{job.title} - {divisionLabels[job.division] || job.division}</option>
+                  <option key={job.id} value={job.id}>{job.title}</option>
                 ))}
               </select>
             </div>
