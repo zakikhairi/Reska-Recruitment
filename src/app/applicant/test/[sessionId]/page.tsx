@@ -4,14 +4,21 @@ import { useState, useEffect, useRef, use } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth";
 
+interface OptionItem {
+  key: string;
+  text: string;
+}
+
 interface Question {
   id: string;
   category: string;
   stem: string;
-  optionA: string;
-  optionB: string;
-  optionC: string;
-  optionD: string;
+  options: OptionItem[]; // New shuffled format
+  optionA?: string;
+  optionB?: string;
+  optionC?: string;
+  optionD?: string;
+  _correctKey?: string; // For debugging only, remove in production
 }
 
 interface TestData {
@@ -728,15 +735,13 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
 
             {/* Answer Options */}
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {["A", "B", "C", "D"].map((option) => {
-                const optionKey = `option${option}` as keyof Question;
-                const optionText = currentQuestion[optionKey];
-                const isSelected = selectedAnswers[currentQuestion.id] === option;
+              {(currentQuestion.options || ["A", "B", "C", "D"].map(opt => ({ key: opt, text: currentQuestion[`option${opt}` as keyof Question] as string || "" }))).map((option: any) => {
+                const isSelected = selectedAnswers[currentQuestion.id] === option.key;
 
                 return (
                   <button
-                    key={option}
-                    onClick={() => handleAnswerSelect(currentQuestion.id, option)}
+                    key={option.key}
+                    onClick={() => handleAnswerSelect(currentQuestion.id, option.key)}
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -763,14 +768,14 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
                       fontWeight: 700,
                       flexShrink: 0,
                     }}>
-                      {option}
+                      {option.key}
                     </span>
                     <span style={{
                       fontSize: "15px",
                       color: isSelected ? "#fff" : "#374151",
                       lineHeight: 1.5,
                     }}>
-                      {optionText}
+                      {option.text}
                     </span>
                   </button>
                 );

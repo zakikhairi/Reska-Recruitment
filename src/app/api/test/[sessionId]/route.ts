@@ -3,6 +3,51 @@ import prisma from "@/lib/db";
 import { selectQuestionsForTest } from "@/lib/scoring";
 import { TestCategory } from "@/types";
 
+// Fisher-Yates shuffle
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+// Shuffle answer options and return mapping
+interface AnswerMapping {
+  originalOption: string; // A, B, C, D
+  displayOption: string;    // The option letter shown to user (shuffled)
+  displayText: string;     // The text shown
+}
+
+function shuffleAnswerOptions(question: any): {
+  displayOptions: AnswerMapping[];
+  correctDisplayOption: string;
+} {
+  const options = [
+    { option: "A", text: question.optionA },
+    { option: "B", text: question.optionB },
+    { option: "C", text: question.optionC },
+    { option: "D", text: question.optionD },
+  ];
+
+  const shuffled = shuffleArray(options);
+
+  // Create display options
+  const displayOptions = shuffled.map((opt, idx) => ({
+    originalOption: opt.option,
+    displayOption: String.fromCharCode(65 + idx), // A, B, C, D
+    displayText: opt.text,
+  }));
+
+  // Find which display option corresponds to the correct answer
+  const correctDisplayOption = displayOptions.find(
+    (opt) => opt.originalOption === question.correctAnswer
+  )?.displayOption || "A";
+
+  return { displayOptions, correctDisplayOption };
+}
+
 // GET: Get test configuration and questions
 export async function GET(
   request: NextRequest,
@@ -123,11 +168,26 @@ export async function GET(
 
     // Get questions
     let questions: any[] = [];
+    let answerMappings: any = {};
+
     if (session.questions) {
       const questionIds = JSON.parse(session.questions);
       questions = await prisma.question.findMany({
         where: { id: { in: questionIds } },
       });
+
+      // Check if answer mappings exist for this session
+      if (session.tabSwitchLogs) {
+        try {
+          const parsed = JSON.parse(session.tabSwitchLogs);
+          if (parsed.answerMappings) {
+            answerMappings = parsed.answerMappings;
+          }
+        } catch (e) {
+          // No mappings stored
+        }
+      }
+
       // Sort by the order in session.questions
       const orderMap = new Map(questionIds.map((id: string, idx: number) => [id, idx]));
       questions.sort((a: any, b: any) => {
@@ -137,16 +197,54 @@ export async function GET(
       });
     }
 
-    // Remove correct answers from questions for client
-    const safeQuestions = questions.map((q: typeof questions[number]) => ({
-      id: q.id,
-      category: q.category,
-      stem: q.stem,
-      optionA: q.optionA,
-      optionB: q.optionB,
-      optionC: q.optionC,
-      optionD: q.optionD,
-    }));
+    // Shuffle answer options if not already mapped
+    const safeQuestions = questions.map((q: any) => {
+      // Check if we have a saved mapping for this question
+      let mapping = answerMappings[q.id];
+
+      if (!mapping) {
+        // Generate new shuffled mapping
+        const { displayOptions, correctDisplayOption } = shuffleAnswerOptions(q);
+        mapping = {
+          displayOptions,
+          correctDisplayOption,
+        };
+        answerMappings[q.id] = mapping;
+      }
+
+      return {
+        id: q.id,
+        category: q.category,
+        stem: q.stem,
+        options: mapping.displayOptions.map((opt: any) => ({
+          key: opt.displayOption,
+          text: opt.displayText,
+        })),
+        // Store the correct answer key for validation (only send this to client securely if needed)
+        _correctKey: mapping.correctDisplayOption, // Remove in production, use for debugging only
+      };
+    });
+
+    // Save the answer mappings to session
+    if (Object.keys(answerMappings).length > 0 && session.status !== "SUBMITTED" && session.status !== "SCORED") {
+      try {
+        const existingLogs = session.tabSwitchLogs
+          ? JSON.parse(session.tabSwitchLogs)
+          : {};
+
+        await prisma.testSession.update({
+          where: { id: session.id },
+          data: {
+            tabSwitchLogs: JSON.stringify({
+              ...existingLogs,
+              answerMappings: answerMappings,
+            }),
+          },
+        });
+      } catch (e) {
+        console.error("Failed to save answer mappings:", e);
+      }
+    }
 
     // Check if already submitted or scored
     if (session.status === "SUBMITTED" || session.status === "SCORED") {
