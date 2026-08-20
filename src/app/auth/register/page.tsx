@@ -11,6 +11,11 @@ function RegisterForm({ onLoadingChange }: { onLoadingChange: (loading: boolean)
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [verificationEmail, setVerificationEmail] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
+  const [countdown, setCountdown] = useState(0);
+  const [devCode, setDevCode] = useState<string | null>(null);
   const [form, setForm] = useState({
     email: "",
     password: "",
@@ -24,6 +29,14 @@ function RegisterForm({ onLoadingChange }: { onLoadingChange: (loading: boolean)
   useEffect(() => {
     onLoadingChange(isLoading);
   }, [isLoading, onLoadingChange]);
+
+  // Countdown timer
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown]);
 
   const handleNext = () => {
     setError("");
@@ -50,21 +63,28 @@ function RegisterForm({ onLoadingChange }: { onLoadingChange: (loading: boolean)
     setStep(step + 1);
   };
 
-  const handleSubmit = async () => {
+  const handleSubmitRegistration = async () => {
     setIsLoading(true);
     setError("");
 
     // Minimum loading display time for better UX
-    const minLoadingTime = new Promise(resolve => setTimeout(resolve, 800));
+    const minLoadingTime = new Promise(resolve => setTimeout(resolve, 1000));
 
     try {
-      const result = await register({
-        email: form.email,
-        password: form.password,
-        fullName: form.name,
-        nik: form.nik,
-        phone: form.phone,
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password,
+          confirmPassword: form.password,
+          fullName: form.name,
+          nik: form.nik,
+          phone: form.phone,
+        }),
       });
+
+      const result = await response.json();
 
       // Wait for minimum time
       await minLoadingTime;
@@ -75,7 +95,14 @@ function RegisterForm({ onLoadingChange }: { onLoadingChange: (loading: boolean)
         return;
       }
 
-      router.push("/applicant/dashboard");
+      // Move to verification step
+      setVerificationEmail(form.email);
+      setDevCode(result.devCode || null);
+      setCountdown(15 * 60); // 15 minutes
+      setStep(3);
+      setSuccessMessage(result.message);
+      setIsLoading(false);
+
     } catch (err) {
       await minLoadingTime;
       setError("Terjadi kesalahan koneksi");
@@ -83,7 +110,94 @@ function RegisterForm({ onLoadingChange }: { onLoadingChange: (loading: boolean)
     }
   };
 
-  const progress = step === 1 ? 33 : step === 2 ? 66 : 100;
+  const handleVerifyCode = async () => {
+    if (!verificationCode || verificationCode.length !== 6) {
+      setError("Masukkan kode 6 digit");
+      return;
+    }
+
+    setIsLoading(true);
+    setError("");
+
+    const minLoadingTime = new Promise(resolve => setTimeout(resolve, 800));
+
+    try {
+      const response = await fetch("/api/auth/verify-register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: verificationEmail,
+          code: verificationCode,
+        }),
+      });
+
+      const result = await response.json();
+
+      await minLoadingTime;
+
+      if (!result.success) {
+        setError(result.error || "Verifikasi gagal");
+        if (result.attemptsLeft !== undefined) {
+          setError(`${result.error} (Sisa percobaan: ${result.attemptsLeft})`);
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      // Verification success - login automatically
+      const loginResult = await useAuthStore.getState().login(form.email, form.password);
+
+      if (loginResult.success) {
+        router.push("/applicant/dashboard");
+      } else {
+        // Redirect to login if auto-login fails
+        router.push("/auth/login?registered=1");
+      }
+
+    } catch (err) {
+      await minLoadingTime;
+      setError("Terjadi kesalahan koneksi");
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    if (countdown > 0) return;
+
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: verificationEmail }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setDevCode(result.devCode || null);
+        setCountdown(15 * 60);
+        setSuccessMessage("Kode baru sudah dikirim!");
+        setVerificationCode("");
+      } else {
+        setError(result.error || "Gagal mengirim kode");
+      }
+    } catch (err) {
+      setError("Terjadi kesalahan koneksi");
+    }
+
+    setIsLoading(false);
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const progress = step === 1 ? 25 : step === 2 ? 50 : step === 3 ? 75 : 100;
 
   return (
     <div style={{ width: "100%", maxWidth: "440px" }}>
@@ -189,15 +303,144 @@ function RegisterForm({ onLoadingChange }: { onLoadingChange: (loading: boolean)
             <button onClick={() => setStep(1)} style={{ flex: 1, height: "54px", border: "2px solid #e5e5e5", color: "#444444", background: "#ffffff", fontSize: "15px", fontWeight: 600, borderRadius: "12px", cursor: "pointer" }}>
               Kembali
             </button>
-            <button onClick={handleNext} style={{ flex: 1, height: "54px", background: "linear-gradient(135deg, #FF5E00 0%, #ff7a2f 100%)", color: "#ffffff", border: "none", borderRadius: "12px", fontSize: "16px", fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 20px rgba(255,94,0,0.35)" }}>
-              Lanjut
+            <button onClick={handleSubmitRegistration} disabled={isLoading} style={{ flex: 1, height: "54px", background: isLoading ? "#ccc" : "linear-gradient(135deg, #FF5E00 0%, #ff7a2f 100%)", color: "#ffffff", border: "none", borderRadius: "12px", fontSize: "16px", fontWeight: 700, cursor: isLoading ? "not-allowed" : "pointer", opacity: isLoading ? 0.7 : 1, boxShadow: isLoading ? "none" : "0 4px 20px rgba(255,94,0,0.35)" }}>
+              {isLoading ? "Memproses..." : "Daftar"}
             </button>
           </div>
         </div>
       )}
 
-      {/* Step 3 - Success */}
+      {/* Step 3 - Email Verification */}
       {step === 3 && (
+        <div style={{ textAlign: "center" }}>
+          <div style={{ width: "80px", height: "80px", background: "#e0f2fe", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#0284c7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+              <polyline points="22,6 12,13 2,6"/>
+            </svg>
+          </div>
+
+          <h2 style={{ fontSize: "28px", fontWeight: 800, color: "#111111", marginBottom: "8px" }}>Verifikasi Email</h2>
+          <p style={{ fontSize: "15px", color: "#666666", marginBottom: "24px" }}>
+            Kami telah mengirim kode verifikasi ke:<br />
+            <strong style={{ color: "#00205B" }}>{verificationEmail}</strong>
+          </p>
+
+          {successMessage && (
+            <div style={{ padding: "12px 16px", background: "#dcfce7", border: "1px solid #86efac", borderRadius: "10px", marginBottom: "20px", color: "#16a34a", fontSize: "14px" }}>
+              ✓ {successMessage}
+            </div>
+          )}
+
+          {/* Dev Mode Code Display */}
+          {devCode && (
+            <div style={{ padding: "16px", background: "#fef9c3", border: "2px dashed #ca8a04", borderRadius: "12px", marginBottom: "24px" }}>
+              <p style={{ margin: "0 0 8px 0", fontSize: "13px", color: "#854d0e", fontWeight: 600 }}>🔧 MODE PENGEMBANGAN</p>
+              <p style={{ margin: "0", fontSize: "11px", color: "#a16207" }}>Kode tidak terkirim ke email:</p>
+              <p style={{ margin: "8px 0 0 0", fontSize: "32px", fontWeight: 800, color: "#FF5E00", fontFamily: "monospace", letterSpacing: "8px" }}>{devCode}</p>
+            </div>
+          )}
+
+          <div style={{ marginBottom: "24px" }}>
+            <label style={{ display: "block", fontSize: "14px", fontWeight: 600, color: "#222222", marginBottom: "8px", textAlign: "left" }}>Kode Verifikasi</label>
+            <input
+              type="text"
+              placeholder="Masukkan 6 digit kode"
+              value={verificationCode}
+              onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              maxLength={6}
+              style={{
+                width: "100%",
+                height: "60px",
+                padding: "0 18px",
+                border: "2px solid #e5e5e5",
+                borderRadius: "12px",
+                fontSize: "24px",
+                textAlign: "center",
+                letterSpacing: "8px",
+                fontFamily: "monospace",
+                outline: "none",
+                transition: "border-color 0.2s",
+                background: "#ffffff"
+              }}
+            />
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", marginBottom: "24px" }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888888" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <span style={{ fontSize: "14px", color: "#888888" }}>
+              Kode berlaku: <strong style={{ color: countdown < 60 ? "#dc2626" : "#333" }}>{formatTime(countdown)}</strong>
+            </span>
+          </div>
+
+          {error && (
+            <div style={{ padding: "12px 16px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "10px", marginBottom: "20px", color: "#dc2626", fontSize: "14px" }}>
+              {error}
+            </div>
+          )}
+
+          <button
+            onClick={handleVerifyCode}
+            disabled={isLoading || verificationCode.length !== 6}
+            style={{
+              width: "100%",
+              height: "54px",
+              background: verificationCode.length === 6 ? "linear-gradient(135deg, #FF5E00 0%, #ff7a2f 100%)" : "#ccc",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: "12px",
+              fontSize: "16px",
+              fontWeight: 700,
+              cursor: verificationCode.length === 6 ? "pointer" : "not-allowed",
+              opacity: isLoading ? 0.7 : 1,
+              boxShadow: verificationCode.length === 6 ? "0 4px 20px rgba(255,94,0,0.35)" : "none",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "10px",
+              marginBottom: "16px"
+            }}
+          >
+            {isLoading ? (
+              <>
+                <div style={{ width: "20px", height: "20px", border: "3px solid rgba(255,255,255,0.3)", borderTopColor: "#ffffff", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+                Memverifikasi...
+              </>
+            ) : "Verifikasi"}
+          </button>
+
+          <button
+            onClick={handleResendCode}
+            disabled={isLoading || countdown > 0}
+            style={{
+              width: "100%",
+              height: "48px",
+              background: "transparent",
+              color: countdown > 0 ? "#888" : "#FF5E00",
+              border: "2px solid",
+              borderColor: countdown > 0 ? "#e5e5e5" : "#FF5E00",
+              borderRadius: "12px",
+              fontSize: "14px",
+              fontWeight: 600,
+              cursor: countdown > 0 ? "not-allowed" : "pointer",
+            }}
+          >
+            {countdown > 0 ? `Kirim ulang (${formatTime(countdown)})` : "Kirim Ulang Kode"}
+          </button>
+
+          <p style={{ marginTop: "24px", fontSize: "13px", color: "#888888" }}>
+            <Link href="/auth/register" style={{ color: "#666", textDecoration: "none" }}>
+              ← Daftar dengan email lain
+            </Link>
+          </p>
+        </div>
+      )}
+
+      {/* Step 4 - Success (after verification) */}
+      {step === 4 && (
         <div style={{ textAlign: "center" }}>
           <div style={{ width: "80px", height: "80px", background: "#dcfce7", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -206,7 +449,7 @@ function RegisterForm({ onLoadingChange }: { onLoadingChange: (loading: boolean)
           </div>
 
           <h2 style={{ fontSize: "28px", fontWeight: 800, color: "#111111", marginBottom: "8px" }}>Berhasil!</h2>
-          <p style={{ fontSize: "15px", color: "#666666", marginBottom: "32px" }}>Akun Anda telah dibuat</p>
+          <p style={{ fontSize: "15px", color: "#666666", marginBottom: "32px" }}>Akun Anda telah diverifikasi</p>
 
           <div style={{ background: "#f8f9fa", borderRadius: "14px", padding: "20px", marginBottom: "24px", textAlign: "left" }}>
             <p style={{ fontSize: "14px", fontWeight: 600, color: "#333333", marginBottom: "16px" }}>Langkah selanjutnya:</p>
@@ -232,13 +475,8 @@ function RegisterForm({ onLoadingChange }: { onLoadingChange: (loading: boolean)
             </div>
           </div>
 
-          <button onClick={handleSubmit} disabled={isLoading} style={{ width: "100%", height: "54px", background: "linear-gradient(135deg, #FF5E00 0%, #ff7a2f 100%)", color: "#ffffff", border: "none", borderRadius: "12px", fontSize: "16px", fontWeight: 700, cursor: isLoading ? "not-allowed" : "pointer", opacity: isLoading ? 0.7 : 1, boxShadow: "0 4px 20px rgba(255,94,0,0.35)", display: "flex", alignItems: "center", justifyContent: "center", gap: "10px" }}>
-            {isLoading ? (
-              <>
-                <div style={{ width: "20px", height: "20px", border: "3px solid rgba(255,255,255,0.3)", borderTopColor: "#ffffff", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
-                Memuat...
-              </>
-            ) : "Mulai Sekarang"}
+          <button onClick={() => router.push("/applicant/dashboard")} style={{ width: "100%", height: "54px", background: "linear-gradient(135deg, #FF5E00 0%, #ff7a2f 100%)", color: "#ffffff", border: "none", borderRadius: "12px", fontSize: "16px", fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 20px rgba(255,94,0,0.35)" }}>
+            Mulai Sekarang
           </button>
         </div>
       )}

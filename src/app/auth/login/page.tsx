@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthStore } from "@/stores/auth";
 
 export default function LoginPage() {
@@ -13,11 +13,21 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const searchParams = useSearchParams();
+
+  // Check for registered query param
+  useEffect(() => {
+    if (searchParams.get("registered") === "1") {
+      setSuccessMessage("Registrasi berhasil! Silakan login dengan akun Anda.");
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
+    setSuccessMessage("");
 
     // Minimum loading display time for better UX
     const minLoadingTime = new Promise(resolve => setTimeout(resolve, 800));
@@ -176,6 +186,28 @@ export default function LoginPage() {
             <h2 style={{ fontSize: "32px", fontWeight: 800, color: "#111111", marginBottom: "8px", letterSpacing: "-0.02em" }}>Masuk</h2>
             <p style={{ fontSize: "15px", color: "#666666" }}>Gunakan akun Anda untuk melanjutkan</p>
           </div>
+
+          {/* Success Message */}
+          {successMessage && (
+            <div style={{
+              padding: "14px 16px",
+              background: "#dcfce7",
+              border: "1px solid #86efac",
+              borderRadius: "12px",
+              marginBottom: "24px",
+              color: "#16a34a",
+              fontSize: "14px",
+              display: "flex",
+              alignItems: "center",
+              gap: "10px"
+            }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+              </svg>
+              {successMessage}
+            </div>
+          )}
 
           {/* Error Message */}
           {error && (
