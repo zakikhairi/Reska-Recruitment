@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 
 export interface TestConfig {
   id: string;
+  jobPostingId: string;
   jobTitle: string;
   division: string;
   categories: string[];
@@ -36,18 +37,12 @@ interface TestConfigState {
 // Save config to Prisma database
 const saveConfigToDb = async (config: TestConfig) => {
   try {
-    // First get jobs to find matching jobId
-    const jobsRes = await fetch("/api/jobs");
-    const jobsData = await jobsRes.json();
-    const jobs = jobsData.jobs || [];
-    const matchingJob = jobs.find((j: any) => j.division === config.division);
-
-    if (!matchingJob) {
-      console.log("No matching job found for division:", config.division);
+    // Use jobPostingId directly from config
+    if (!config.jobPostingId) {
+      console.error("No jobPostingId found in config");
       return;
     }
 
-    const jobId = matchingJob.id;
     const categoryCount = config.categories.length;
     const weightPerCategory = Math.round(100 / categoryCount);
     const weights: Record<string, number> = {};
@@ -62,7 +57,7 @@ const saveConfigToDb = async (config: TestConfig) => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        jobId,
+        jobId: config.jobPostingId,
         categories: config.categories.join(","),
         categoryWeights: JSON.stringify(weights),
         passingGrades: JSON.stringify(passingGrades),
@@ -79,8 +74,24 @@ const saveConfigToDb = async (config: TestConfig) => {
 
     const result = await response.json();
     console.log("Test config synced to DB:", result.success ? "OK" : result.error);
+    if (!result.success) {
+      console.error("API Error:", result.error);
+    }
   } catch (err) {
     console.error("Error saving test config to DB:", err);
+  }
+};
+
+// Delete config from Prisma database
+const deleteConfigFromDb = async (jobPostingId: string) => {
+  try {
+    const response = await fetch(`/api/admin/test-config/${jobPostingId}`, {
+      method: "DELETE",
+    });
+    const result = await response.json();
+    console.log("Test config deleted from DB:", result.success ? "OK" : result.error);
+  } catch (err) {
+    console.error("Error deleting test config from DB:", err);
   }
 };
 
@@ -103,10 +114,15 @@ export const useTestConfigStore = create<TestConfigState>()(
             config.id === id ? { ...config, ...data } : config
           ),
         })),
-      deleteConfig: (id) =>
+      deleteConfig: (id) => {
+        const config = get().configs.find(c => c.id === id);
+        if (config?.jobPostingId) {
+          deleteConfigFromDb(config.jobPostingId);
+        }
         set((state) => ({
           configs: state.configs.filter((config) => config.id !== id),
-        })),
+        }));
+      },
       getConfig: (id) => get().configs.find((config) => config.id === id),
       getConfigByDivision: (division) => get().configs.find((config) => config.division === division),
     }),

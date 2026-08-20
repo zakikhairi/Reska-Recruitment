@@ -46,6 +46,7 @@ export async function POST(
                   },
                 },
               },
+              answers: true,
             },
           },
         },
@@ -100,18 +101,43 @@ export async function POST(
       });
     });
 
+    // Get answer mappings from tabSwitchLogs (for shuffled answers)
+    let answerMappings: Record<string, any> = {};
+    if (session.tabSwitchLogs) {
+      try {
+        const parsed = JSON.parse(session.tabSwitchLogs);
+        if (parsed.answerMappings) {
+          answerMappings = parsed.answerMappings;
+        }
+      } catch (e) {
+        // No valid mappings
+      }
+    }
+
     // Get or prepare answers
     let sessionAnswers = session.answers;
 
     // If answers were passed directly (for auto-submit), save them first
     if (answers && typeof answers === "object") {
       for (const [qId, selectedAnswer] of Object.entries(answers)) {
+        // Translate display answer back to original answer using mapping
+        let originalAnswer = selectedAnswer as string;
+        if (answerMappings[qId]) {
+          const mapping = answerMappings[qId];
+          const displayOption = mapping.displayOptions?.find(
+            (opt: any) => opt.displayOption === selectedAnswer
+          );
+          if (displayOption) {
+            originalAnswer = displayOption.originalOption;
+          }
+        }
+
         const existingAnswer = sessionAnswers.find(a => a.questionId === qId);
         if (existingAnswer) {
           await prisma.applicantAnswer.update({
             where: { id: existingAnswer.id },
             data: {
-              selectedAnswer: selectedAnswer as string,
+              selectedAnswer: originalAnswer,
               answeredAt: new Date(),
             },
           });
@@ -120,7 +146,7 @@ export async function POST(
             data: {
               testSessionId: session.id,
               questionId: qId,
-              selectedAnswer: selectedAnswer as string,
+              selectedAnswer: originalAnswer,
               answeredAt: new Date(),
               pointsEarned: 0,
             },
@@ -249,10 +275,11 @@ export async function POST(
       },
       message: passed ? "Selamat! Anda lulus tes." : "Mohon maaf, Anda tidak memenuhi passing grade.",
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error submitting test:", error);
+    console.error("Error stack:", error.stack);
     return NextResponse.json(
-      { success: false, error: "Terjadi kesalahan server" },
+      { success: false, error: `Terjadi kesalahan server: ${error.message}` },
       { status: 500 }
     );
   }

@@ -40,6 +40,7 @@ interface SessionData {
   scheduledAt?: string;
   startedAt?: string;
   submittedAt?: string;
+  endTime?: string;
   totalScore?: number;
   passed?: boolean;
 }
@@ -101,6 +102,9 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
   const [canStart, setCanStart] = useState(false);
   const [countdownToStart, setCountdownToStart] = useState<number | null>(null);
   const [scheduledTime, setScheduledTime] = useState<string | null>(null);
+  const [isTestCompleted, setIsTestCompleted] = useState(false);
+  const [isTestExpired, setIsTestExpired] = useState(false);
+  const [completedMessage, setCompletedMessage] = useState<string | null>(null);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
   const countdownToStartRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -114,9 +118,29 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
       const response = await fetch(`/api/test/${sessionId}`);
       const result = await response.json();
 
+      console.log("API Response:", result);
+      console.log("isCompleted:", result.isCompleted);
+      console.log("session status:", result.session?.status);
+
       if (result.success) {
+        // Check if test is completed
+        if (result.isCompleted) {
+          console.log("Setting isTestCompleted = true");
+          setIsTestCompleted(true);
+          setCanStart(false);
+          setCompletedMessage(result.completedMessage || "Tes sudah selesai");
+        }
+        // Check if test is expired
+        else if (result.isExpired) {
+          setIsTestExpired(true);
+          setCanStart(false);
+          setCompletedMessage(result.expiredMessage || "Waktu tes sudah berakhir");
+          if (result.session) {
+            setSessionData(result.session);
+          }
+        }
         // Check if test can be started
-        if (result.canStart !== undefined) {
+        else if (result.canStart !== undefined) {
           setCanStart(result.canStart);
           setScheduledTime(result.scheduledAt || null);
 
@@ -236,6 +260,11 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
   }, [testState]);
 
   const handleStart = async () => {
+    // Prevent starting if test is completed or expired
+    if (isTestCompleted || isTestExpired) {
+      return;
+    }
+
     // If no session exists yet, create one first
     if (!testData?.questions.length) {
       try {
@@ -270,7 +299,13 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
     if (countdownRef.current) clearInterval(countdownRef.current);
     setTestState("submitted");
 
+    // Use testData.id if available, otherwise use sessionId from URL
     const currentSessionId = testData?.id || sessionId;
+    console.log("Using sessionId:", currentSessionId);
+
+    console.log("Submitting to:", `/api/test/${currentSessionId}/submit`);
+    console.log("Answers:", selectedAnswers);
+
     try {
       // Submit with answers directly (for auto-grade)
       const response = await fetch(`/api/test/${currentSessionId}/submit`, {
@@ -280,13 +315,23 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
       });
 
       const result = await response.json();
+      console.log("Submit result:", result);
 
       if (result.success) {
+        // Mark test as completed after successful submit
+        setIsTestCompleted(true);
+        setCanStart(false);
+        setCompletedMessage("Tes sudah dikerjakan");
+
         if (result.passed) {
           alert(`Selamat! ${result.message}`);
         } else {
           alert(result.message || "Tes telah selesai.");
         }
+      } else {
+        console.error("Submit failed:", result.error);
+        // Revert state if submit failed
+        setTestState("testing");
       }
     } catch (err) {
       console.error("Error submitting test:", err);
@@ -404,7 +449,7 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
           </div>
 
           {/* Countdown Timer - shown when time hasn't arrived */}
-          {!canStart && countdownToStart !== null && countdownToStart > 0 && (
+          {!canStart && countdownToStart !== null && countdownToStart > 0 && !isTestCompleted && !isTestExpired && (
             <div style={{ background: "#fffbeb", borderRadius: "14px", padding: "24px", marginBottom: "24px", textAlign: "center" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", marginBottom: "12px" }}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2">
@@ -431,6 +476,87 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
             </div>
           )}
 
+          {/* Completed/Expired Message */}
+          {(isTestCompleted || isTestExpired) && (
+            <div style={{
+              background: isTestCompleted ? "#dcfce7" : "#fee2e2",
+              borderRadius: "14px",
+              padding: "24px",
+              marginBottom: "24px",
+              textAlign: "center",
+              border: `2px solid ${isTestCompleted ? "#22c55e" : "#dc2626"}`
+            }}>
+              <div style={{
+                width: "64px",
+                height: "64px",
+                background: isTestCompleted ? "#22c55e" : "#dc2626",
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 16px"
+              }}>
+                {isTestCompleted ? (
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                    <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                ) : (
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                    <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
+              </div>
+              <h3 style={{
+                fontSize: "18px",
+                fontWeight: 700,
+                color: isTestCompleted ? "#16a34a" : "#dc2626",
+                marginBottom: "8px"
+              }}>
+                {isTestCompleted ? "Tes Sudah Dikerjakan" : "Waktu Tes Berakhir"}
+              </h3>
+              <p style={{
+                fontSize: "14px",
+                color: isTestCompleted ? "#166534" : "#991b1b",
+                margin: 0
+              }}>
+                {completedMessage || "Anda tidak dapat mengakses tes ini lagi."}
+              </p>
+              {sessionData?.totalScore !== undefined && (
+                <div style={{ marginTop: "16px", padding: "12px", background: "#fff", borderRadius: "10px" }}>
+                  <p style={{ fontSize: "12px", color: "#666", margin: "0 0 4px 0" }}>Skor Anda:</p>
+                  <p style={{ fontSize: "24px", fontWeight: 800, color: "#111", margin: 0 }}>
+                    {sessionData.totalScore}%
+                  </p>
+                  <p style={{
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    color: sessionData.passed ? "#16a34a" : "#dc2626",
+                    margin: "4px 0 0 0"
+                  }}>
+                    {sessionData.passed ? "LULUS ✓" : "TIDAK LULUS"}
+                  </p>
+                </div>
+              )}
+              <button
+                onClick={() => router.push("/applicant/schedule")}
+                style={{
+                  width: "100%",
+                  height: "48px",
+                  background: "#00205B",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "12px",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  marginTop: "16px",
+                }}
+              >
+                Kembali ke Jadwal Seleksi
+              </button>
+            </div>
+          )}
+
           <div style={{ background: "#fef3c7", borderRadius: "12px", padding: "16px", marginBottom: "28px" }}>
             <p style={{ fontSize: "13px", color: "#92400e", margin: 0, display: "flex", alignItems: "flex-start", gap: "10px" }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, marginTop: "2px" }}>
@@ -442,24 +568,24 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
 
           <button
             onClick={handleStart}
-            disabled={!canStart}
+            disabled={!canStart || isTestCompleted || isTestExpired}
             style={{
               width: "100%",
               height: "56px",
-              background: canStart ? "linear-gradient(135deg, #FF5E00, #ff7a2f)" : "#9ca3af",
+              background: (canStart && !isTestCompleted && !isTestExpired) ? "linear-gradient(135deg, #FF5E00, #ff7a2f)" : "#9ca3af",
               color: "#fff",
               border: "none",
               borderRadius: "14px",
               fontSize: "16px",
               fontWeight: 700,
-              cursor: canStart ? "pointer" : "not-allowed",
-              opacity: canStart ? 1 : 0.7,
+              cursor: (canStart && !isTestCompleted && !isTestExpired) ? "pointer" : "not-allowed",
+              opacity: 0.7,
             }}
           >
-            {canStart ? "Mulai Tes" : "Menunggu Waktu Tes..."}
+            {(isTestCompleted || isTestExpired) ? "Tes Tidak Tersedia" : canStart ? "Mulai Tes" : "Menunggu Waktu Tes..."}
           </button>
 
-          {!canStart && (
+          {!canStart && !isTestCompleted && !isTestExpired && (
             <p style={{ textAlign: "center", fontSize: "12px", color: "#888", marginTop: "12px" }}>
               Tombol akan aktif otomatis saat waktu tes tiba
             </p>

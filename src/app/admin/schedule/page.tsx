@@ -411,8 +411,8 @@ export default function SchedulePage() {
     }
   };
 
-  const totalSchedules = groupedSchedules.length;
-  const totalApplicants = groupedSchedules.reduce((sum, g) => sum + g.totalApplicants, 0);
+  const totalSchedules = groupedByJob.length;
+  const totalApplicants = groupedByJob.reduce((sum, g) => sum + g.totalApplicants, 0);
 
   return (
     <div style={{ fontFamily: "Inter, system-ui, sans-serif", minHeight: "100vh", background: "#f8f9fa" }}>
@@ -1072,7 +1072,7 @@ export default function SchedulePage() {
               >
                 <option value="">Pilih Lowongan</option>
                 {jobs.map((job) => (
-                  <option key={job.id} value={job.id}>{job.title}</option>
+                  <option key={job.id} value={job.id}>{job.title} - {divisionLabels[job.division] || job.division}</option>
                 ))}
               </select>
             </div>

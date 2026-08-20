@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -35,11 +35,13 @@ const categories = [
 
 export default function CreateTestConfigPage() {
   const router = useRouter();
+  const { jobs: storeJobs, fetchJobs } = useJobsStore();
   const { addConfig, _hasHydrated } = useTestConfigStore();
-  const { jobs } = useJobsStore();
+  const [jobs, setJobsFromStore] = useState<{id: string; title: string; division: string}[]>([]);
 
   const [formData, setFormData] = useState({
     jobTitle: "",
+    jobPostingId: "",
     division: "",
     duration: "60",
     questionsPerCategory: "10",
@@ -48,10 +50,37 @@ export default function CreateTestConfigPage() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>(["AKHLAK", "HOSPITALITY"]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Fetch jobs on mount
+  useEffect(() => {
+    const loadJobs = async () => {
+      try {
+        const response = await fetch("/api/admin/jobs");
+        const result = await response.json();
+        if (result.jobs) {
+          setJobsFromStore(result.jobs);
+        }
+      } catch (err) {
+        console.error("Failed to fetch jobs:", err);
+      }
+    };
+    loadJobs();
+  }, []);
+
   const totalQuestions = selectedCategories.length * parseInt(formData.questionsPerCategory || "0");
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData({ ...formData, [field]: value });
+    // When job posting is selected, auto-fill division from that job
+    if (field === "jobPostingId") {
+      const selectedJob = jobs.find(j => j.id === value);
+      setFormData({
+        ...formData,
+        jobPostingId: value,
+        jobTitle: selectedJob?.title || "",
+        division: selectedJob?.division || "",
+      });
+    } else {
+      setFormData({ ...formData, [field]: value });
+    }
   };
 
   const toggleCategory = (category: string) => {
@@ -63,8 +92,8 @@ export default function CreateTestConfigPage() {
   };
 
   const handleSubmit = async (active: boolean) => {
-    if (!formData.jobTitle || !formData.division || selectedCategories.length === 0) {
-      alert("Mohon lengkapi semua field wajib!");
+    if (!formData.jobPostingId || selectedCategories.length === 0) {
+      alert("Mohon pilih lowongan dan minimal satu kategori!");
       return;
     }
 
@@ -73,6 +102,7 @@ export default function CreateTestConfigPage() {
     const newConfig = {
       id: Date.now().toString(),
       jobTitle: formData.jobTitle,
+      jobPostingId: formData.jobPostingId,
       division: formData.division,
       categories: selectedCategories,
       passingGrade: parseInt(formData.passingGrade),
@@ -134,32 +164,27 @@ export default function CreateTestConfigPage() {
 
               <div style={{ marginBottom: "20px" }}>
                 <label style={{ fontSize: "14px", fontWeight: 600, color: "#111111", marginBottom: "8px", display: "block" }}>
-                  Judul Lowongan <span style={{ color: "#EF4444" }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.jobTitle}
-                  onChange={(e) => handleInputChange("jobTitle", e.target.value)}
-                  placeholder="Contoh: Pramugara Kereta Api"
-                  style={{ width: "100%", padding: "12px 16px", border: "2px solid #e5e7eb", borderRadius: "12px", fontSize: "14px", outline: "none", color: "#374151", fontWeight: 500 }}
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: "14px", fontWeight: 600, color: "#111111", marginBottom: "8px", display: "block" }}>
-                  Divisi <span style={{ color: "#EF4444" }}>*</span>
+                  Pilih Lowongan <span style={{ color: "#EF4444" }}>*</span>
                 </label>
                 <select
-                  value={formData.division}
-                  onChange={(e) => handleInputChange("division", e.target.value)}
+                  value={formData.jobPostingId}
+                  onChange={(e) => handleInputChange("jobPostingId", e.target.value)}
                   style={{ width: "100%", padding: "12px 16px", border: "2px solid #e5e7eb", borderRadius: "12px", fontSize: "14px", outline: "none", background: "#ffffff", cursor: "pointer", color: "#374151" }}
                 >
-                  <option value="">Pilih Divisi</option>
-                  {divisions.map((d) => (
-                    <option key={d.value} value={d.value}>{d.label}</option>
+                  <option value="">Pilih Lowongan</option>
+                  {jobs.map((j) => (
+                    <option key={j.id} value={j.id}>{j.title}</option>
                   ))}
                 </select>
               </div>
+
+              {formData.jobPostingId && (
+                <div style={{ padding: "12px 16px", background: "#f0f9ff", borderRadius: "12px", border: "1px solid #e0f2fe" }}>
+                  <p style={{ fontSize: "13px", color: "#374151", margin: 0 }}>
+                    <strong>Divisi:</strong> {formData.division.replace(/_/g, " ")}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Test Settings */}

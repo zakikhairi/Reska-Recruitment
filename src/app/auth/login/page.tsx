@@ -315,7 +315,7 @@ export default function LoginPage() {
               </button>
               <button
                 type="button"
-                onClick={() => { setEmail("pelamar@kai.co.id"); setPassword("demo123"); }}
+                onClick={() => { setEmail("try1@gmail.com"); setPassword("demo123"); }}
                 style={{
                   flex: 1,
                   padding: "10px 16px",
@@ -333,7 +333,7 @@ export default function LoginPage() {
             </div>
             <div style={{ fontSize: "14px", color: "#555555", lineHeight: 2 }}>
               <div><span style={{ fontWeight: 600, color: "#333333", display: "inline-block", width: "70px" }}>Admin HR</span> admin@kai.co.id / demo123</div>
-              <div><span style={{ fontWeight: 600, color: "#333333", display: "inline-block", width: "70px" }}>Pelamar</span> (Daftar baru)</div>
+              <div><span style={{ fontWeight: 600, color: "#333333", display: "inline-block", width: "70px" }}>Pelamar</span> try1@gmail.com / demo123</div>
             </div>
           </div>
 

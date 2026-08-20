@@ -110,6 +110,33 @@ export async function GET(
             },
           },
         });
+
+        // Check if session is already completed right after fetching
+        if (session && (session.status === "SUBMITTED" || session.status === "SCORED")) {
+          return NextResponse.json({
+            success: true,
+            session: {
+              id: session.id,
+              status: session.status,
+              submittedAt: session.submittedAt,
+              totalScore: session.totalScore,
+              passed: session.passed,
+              startedAt: session.startedAt,
+              tabSwitchCount: session.tabSwitchCount,
+            },
+            jobTitle: session.application?.jobPosting?.title || "Tes Kompetensi",
+            questions: [],
+            config: {
+              totalDurationMinutes: session.application?.jobPosting?.testConfig?.totalDurationMinutes || 90,
+              categories: session.application?.jobPosting?.testConfig?.categories?.split(",") || [],
+            },
+            canStart: false,
+            isCompleted: true,
+            completedMessage: session.status === "SCORED"
+              ? "Tes sudah dinilai"
+              : "Tes sudah dikerjakan",
+          });
+        }
       } else if (application.jobPosting.testConfig) {
         // No session yet, check if test is configured
         const config = application.jobPosting.testConfig;
@@ -267,6 +294,33 @@ export async function GET(
         },
         canStart: false, // Already done
         scheduledAt: scheduledAt?.toISOString() || null,
+        isCompleted: true,
+        completedMessage: session.status === "SCORED"
+          ? "Tes sudah dinilai"
+          : "Tes sudah dikerjakan",
+      });
+    }
+
+    // Check if time window has expired
+    if (session.endTime && new Date(session.endTime) < now) {
+      return NextResponse.json({
+        success: true,
+        session: {
+          id: session.id,
+          status: session.status,
+          startedAt: session.startedAt,
+          endTime: session.endTime,
+        },
+        jobTitle: application.jobPosting.title,
+        questions: [],
+        config: {
+          totalDurationMinutes: application.jobPosting.testConfig.totalDurationMinutes,
+          categories: application.jobPosting.testConfig.categories.split(","),
+        },
+        canStart: false, // Time expired
+        scheduledAt: scheduledAt?.toISOString() || null,
+        isExpired: true,
+        expiredMessage: "Waktu mengerjakan tes sudah berakhir",
       });
     }
 
