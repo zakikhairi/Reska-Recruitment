@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
-import { sendWelcomeEmail } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
   try {
@@ -122,14 +121,6 @@ export async function POST(request: NextRequest) {
     await prisma.passwordReset.delete({
       where: { userId: user.id }
     });
-
-    // Send welcome email
-    sendWelcomeEmail({
-      to: user.email,
-      name: user.applicant?.fullName || "Pengguna",
-      email: user.email,
-      password: "", // Don't send password again
-    }).catch(err => console.error("Welcome email error:", err));
 
     console.log("[VERIFY-REGISTER] ✓ Account activated:", user.email);
 
