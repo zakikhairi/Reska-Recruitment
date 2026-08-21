@@ -252,16 +252,17 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
           <div>
             <div style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", position: "sticky", top: "24px" }}>
               <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#111111", marginBottom: "20px" }}>Status</h3>
-              <div style={{ display: "flex", gap: "12px", marginBottom: "24px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "24px" }}>
                 {[
                   { value: "DRAFT", label: "Draft", color: "#F59E0B" },
                   { value: "ACTIVE", label: "Aktif", color: "#10B981" },
+                  { value: "CLOSED", label: "Ditutup", color: "#64748B" },
+                  { value: "FILLED", label: "Terisi", color: "#2563EB" },
                 ].map((s) => (
                   <div
                     key={s.value}
                     onClick={() => setStatus(s.value)}
                     style={{
-                      flex: 1,
                       padding: "12px",
                       background: status === s.value ? `${s.color}15` : "#f8f9fa",
                       border: `2px solid ${status === s.value ? s.color : "transparent"}`,

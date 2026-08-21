@@ -195,13 +195,20 @@ export default function QuestionsPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      const res = await fetch(`/api/admin/questions?id=${id}`, { method: "DELETE" });
-      if (res.ok) {
+      const res = await fetch(`/api/admin/questions?id=${id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" }
+      });
+      const data = await res.json();
+      if (data.success) {
         await fetchQuestions();
         setDeleteConfirm(null);
+      } else {
+        alert(data.error || "Gagal menghapus soal");
       }
     } catch (error) {
       console.error("Error deleting question:", error);
+      alert("Terjadi kesalahan saat menghapus soal");
     }
   };
 
