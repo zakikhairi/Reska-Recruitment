@@ -18,6 +18,43 @@ export async function PUT(
       );
     }
 
+    // Get the session to find the answer mapping
+    const session = await prisma.testSession.findUnique({
+      where: { id: sessionId },
+    });
+
+    if (!session) {
+      return NextResponse.json(
+        { success: false, error: "Session not found" },
+        { status: 404 }
+      );
+    }
+
+    // Parse answer mappings from tabSwitchLogs
+    let answerMappings: Record<string, any> = {};
+    if (session.tabSwitchLogs) {
+      try {
+        const parsed = JSON.parse(session.tabSwitchLogs);
+        if (parsed.answerMappings) {
+          answerMappings = parsed.answerMappings;
+        }
+      } catch (e) {
+        // No valid mappings
+      }
+    }
+
+    // Convert the display answer (e.g., "C") back to original answer (e.g., "A")
+    let originalAnswer = selectedAnswer;
+    if (answerMappings[questionId]) {
+      const mapping = answerMappings[questionId];
+      const displayOption = mapping.displayOptions?.find(
+        (opt: any) => opt.displayOption === selectedAnswer
+      );
+      if (displayOption) {
+        originalAnswer = displayOption.originalOption;
+      }
+    }
+
     // Update or create the answer
     const existingAnswer = await prisma.applicantAnswer.findFirst({
       where: {
@@ -30,7 +67,7 @@ export async function PUT(
       await prisma.applicantAnswer.update({
         where: { id: existingAnswer.id },
         data: {
-          selectedAnswer,
+          selectedAnswer: originalAnswer, // Store the original answer
           answeredAt: new Date(),
         },
       });
@@ -39,7 +76,7 @@ export async function PUT(
         data: {
           testSessionId: sessionId,
           questionId,
-          selectedAnswer,
+          selectedAnswer: originalAnswer,
           answeredAt: new Date(),
           pointsEarned: 0,
         },

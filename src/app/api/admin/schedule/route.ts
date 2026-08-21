@@ -109,6 +109,7 @@ export async function GET(request: NextRequest) {
       testSchedules = testSessions.map((s) => ({
         id: s.id,
         applicationId: s.applicationId,
+        jobPostingId: s.application.jobPosting.id,
         type: "TEST",
         scheduledAt: s.scheduledAt || s.startedAt,
         endTime: s.endTime,
@@ -141,6 +142,7 @@ export async function GET(request: NextRequest) {
       interviewSchedules = interviews.map((i) => ({
         id: i.id,
         applicationId: i.applicationId,
+        jobPostingId: i.application.jobPosting.id,
         type: "INTERVIEW",
         scheduledAt: i.scheduledAt,
         location: i.location,
@@ -161,26 +163,42 @@ export async function GET(request: NextRequest) {
       }
     );
 
-    // Group schedules by job posting (for batch view)
+    // Group schedules by job posting ID (for batch view - per lowongan)
     const groupedByJob = allSchedules.reduce((acc: any, schedule) => {
-      const key = schedule.position;
+      const key = schedule.jobPostingId; // Group by job posting ID
       if (!acc[key]) {
         acc[key] = {
+          jobPostingId: schedule.jobPostingId,
           position: schedule.position,
           division: schedule.division,
-          type: schedule.type,
           scheduledAt: schedule.scheduledAt,
           applicants: [],
+          testCount: 0,
+          interviewCount: 0,
         };
       }
       acc[key].applicants.push({
+        id: schedule.id,
+        applicationId: schedule.applicationId,
         applicantName: schedule.applicantName,
+        type: schedule.type,
         status: schedule.status,
+        scheduledAt: schedule.scheduledAt,
+        location: schedule.location,
+        interviewer: schedule.interviewer,
       });
+      if (schedule.type === "TEST") {
+        acc[key].testCount++;
+      } else {
+        acc[key].interviewCount++;
+      }
       return acc;
     }, {});
 
-    const groupedSchedules = Object.values(groupedByJob);
+    const groupedSchedules = Object.values(groupedByJob).map((g: any) => ({
+      ...g,
+      totalApplicants: g.applicants.length,
+    }));
 
     return NextResponse.json({
       success: true,

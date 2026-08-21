@@ -64,7 +64,7 @@ const DOCUMENT_REQUIREMENTS: DocumentRequirement[] = [
     type: "SKCK",
     label: "Pas Foto 3x4",
     required: false,
-    description: "Pas Foto ukuran 3x4 dengan latar merah"
+    description: "Pas Foto ukuran 3x4 dengan latar merah (JPG)"
   },
   {
     type: "CERTIFICATE",
@@ -73,6 +73,26 @@ const DOCUMENT_REQUIREMENTS: DocumentRequirement[] = [
     description: "Sertifikat pelatihan/sertifikasi (opsional)"
   },
 ];
+
+// Helper function to get accepted file types for each document
+const getAcceptedFileTypes = (type: string): string => {
+  // Pas Foto uses JPG
+  if (type === "SKCK") {
+    return ".jpg,.jpeg";
+  }
+  // All other documents use PDF
+  return ".pdf";
+};
+
+// Helper function to validate file type
+const validateFileType = (type: string, file: File): boolean => {
+  if (type === "SKCK") {
+    // Pas Foto must be JPG
+    return file.type === "image/jpeg" || file.type === "image/jpg";
+  }
+  // All other documents must be PDF
+  return file.type === "application/pdf";
+};
 
 export default function ApplyJobPage({ params }: { params: Promise<{ id: string }> }) {
   const [jobId, setJobId] = useState<string | null>(null);
@@ -134,6 +154,8 @@ export default function ApplyJobPage({ params }: { params: Promise<{ id: string 
 
         if (docsData.success) {
           setUploadedDocuments(docsData.documents);
+        } else {
+          console.error("Failed to fetch documents:", docsData.error);
         }
       }
     } catch (err) {
@@ -144,6 +166,16 @@ export default function ApplyJobPage({ params }: { params: Promise<{ id: string 
   const handleFileUpload = async (type: string, file: File) => {
     if (!user?.id) {
       setError("Silakan login terlebih dahulu");
+      return;
+    }
+
+    // Validate file type
+    if (!validateFileType(type, file)) {
+      if (type === "SKCK") {
+        setError("Pas Foto harus dalam format JPG");
+      } else {
+        setError("Dokumen harus dalam format PDF");
+      }
       return;
     }
 
@@ -175,7 +207,8 @@ export default function ApplyJobPage({ params }: { params: Promise<{ id: string 
       const result = await response.json();
 
       if (result.success) {
-        setUploadedDocuments(prev => [...prev, result.document]);
+        // Refresh documents from server to ensure consistency
+        await fetchApplicantDocuments();
         setError("");
       } else {
         setError(result.error || "Gagal mengupload dokumen");
@@ -202,7 +235,8 @@ export default function ApplyJobPage({ params }: { params: Promise<{ id: string 
       const result = await response.json();
 
       if (result.success) {
-        setUploadedDocuments(prev => prev.filter(d => d.id !== docId));
+        // Refresh documents from server to ensure consistency
+        await fetchApplicantDocuments();
       } else {
         setError(result.error || "Gagal menghapus dokumen");
       }
@@ -379,7 +413,7 @@ export default function ApplyJobPage({ params }: { params: Promise<{ id: string 
           <div style={styles.documentHeader}>
             <h2 style={styles.documentTitle}>📄 Upload Dokumen Lamaran</h2>
             <p style={styles.documentSubtitle}>
-              Silakan upload dokumen yang diperlukan. Format yang diizinkan: JPG, PNG, PDF (maksimal 10MB)
+              Format: Dokumen (CV, KTP, Ijazah, Transkrip, Sertifikat) = PDF | Pas Foto = JPG
             </p>
           </div>
 
@@ -438,7 +472,7 @@ export default function ApplyJobPage({ params }: { params: Promise<{ id: string 
                         )}
                         <input
                           type="file"
-                          accept=".jpg,.jpeg,.png,.pdf"
+                          accept={getAcceptedFileTypes(doc.type)}
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file) handleFileUpload(doc.type, file);

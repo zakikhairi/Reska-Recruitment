@@ -4,7 +4,6 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
-import { sendStatusNotification } from "@/lib/email";
 
 export async function GET(
   request: NextRequest,
@@ -163,12 +162,8 @@ export async function PATCH(
       },
       include: {
         applicant: {
-          include: {
-            user: {
-              select: {
-                email: true,
-              },
-            },
+          select: {
+            fullName: true,
           },
         },
         jobPosting: {
@@ -179,18 +174,6 @@ export async function PATCH(
         },
       },
     });
-
-    // Send email notification
-    if (application.applicant?.user?.email) {
-      sendStatusNotification({
-        applicantEmail: application.applicant.user.email,
-        applicantName: application.applicant.fullName,
-        jobTitle: application.jobPosting.title,
-        status: newStatus,
-        previousStatus,
-        notes,
-      }).catch(err => console.error("Email notification error:", err));
-    }
 
     return NextResponse.json({
       success: true,

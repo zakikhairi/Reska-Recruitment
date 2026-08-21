@@ -27,8 +27,10 @@ import { useJobsStore, Job } from "@/stores/jobs";
 interface Schedule {
   id: string;
   applicationId: string;
+  jobPostingId?: string;
   type: "TEST" | "INTERVIEW";
   scheduledAt?: string;
+  endTime?: string;
   location?: string;
   applicantName: string;
   position: string;
@@ -39,31 +41,23 @@ interface Schedule {
 }
 
 interface GroupedByJob {
-  jobKey: string;
+  jobPostingId: string;
   position: string;
   division: string;
-  type: "TEST" | "INTERVIEW";
-  schedules: Schedule[];
   scheduledAt?: string;
-  location?: string;
-  totalApplicants: number;
-}
-
-interface GroupedSchedule {
-  position: string;
-  division: string;
-  type: "TEST" | "INTERVIEW";
-  scheduledAt?: string;
-  location?: string;
   applicants: {
     id: string;
     applicationId: string;
     applicantName: string;
+    type: "TEST" | "INTERVIEW";
     status: string;
     scheduledAt?: string;
     location?: string;
+    interviewer?: string;
   }[];
   totalApplicants: number;
+  testCount: number;
+  interviewCount: number;
 }
 
 const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
@@ -86,7 +80,6 @@ const divisionLabels: Record<string, string> = {
 
 export default function SchedulePage() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
-  const [groupedSchedules, setGroupedSchedules] = useState<GroupedSchedule[]>([]);
   const [groupedByJob, setGroupedByJob] = useState<GroupedByJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedJobs, setExpandedJobs] = useState<Set<string>>(new Set());
@@ -341,74 +334,14 @@ export default function SchedulePage() {
       const result = await response.json();
       if (result.success) {
         setSchedules(result.schedules);
-        const grouped = groupSchedulesByJob(result.schedules);
-        setGroupedSchedules(grouped);
-        const byJob = groupSchedulesByJobPosting(result.schedules);
-        setGroupedByJob(byJob);
+        // Use groupedSchedules from API (grouped by job posting)
+        setGroupedByJob(result.groupedSchedules || []);
       }
     } catch (err) {
       console.error("Failed to fetch schedules:", err);
     } finally {
       setLoading(false);
     }
-  };
-
-  const groupSchedulesByJob = (schedules: Schedule[]): GroupedSchedule[] => {
-    const groups: Record<string, GroupedSchedule> = {};
-    schedules.forEach((schedule) => {
-      const key = `${schedule.position}-${schedule.division}-${schedule.type}`;
-      if (!groups[key]) {
-        groups[key] = {
-          position: schedule.position,
-          division: schedule.division,
-          type: schedule.type,
-          scheduledAt: schedule.scheduledAt,
-          location: schedule.location,
-          applicants: [],
-          totalApplicants: 0,
-        };
-      }
-      groups[key].applicants.push({
-        id: schedule.id,
-        applicationId: schedule.applicationId,
-        applicantName: schedule.applicantName,
-        status: schedule.status,
-        scheduledAt: schedule.scheduledAt,
-        location: schedule.location,
-      });
-      groups[key].totalApplicants++;
-    });
-    return Object.values(groups).sort((a, b) => {
-      const dateA = a.scheduledAt ? new Date(a.scheduledAt).getTime() : 0;
-      const dateB = b.scheduledAt ? new Date(b.scheduledAt).getTime() : 0;
-      return dateB - dateA;
-    });
-  };
-
-  const groupSchedulesByJobPosting = (schedules: Schedule[]): GroupedByJob[] => {
-    const groups: Record<string, GroupedByJob> = {};
-    schedules.forEach((schedule) => {
-      const key = `${schedule.position}-${schedule.division}-${schedule.type}`;
-      if (!groups[key]) {
-        groups[key] = {
-          jobKey: key,
-          position: schedule.position,
-          division: schedule.division,
-          type: schedule.type,
-          scheduledAt: schedule.scheduledAt,
-          location: schedule.location,
-          schedules: [],
-          totalApplicants: 0,
-        };
-      }
-      groups[key].schedules.push(schedule);
-      groups[key].totalApplicants++;
-    });
-    return Object.values(groups).sort((a, b) => {
-      const dateA = a.scheduledAt ? new Date(a.scheduledAt).getTime() : 0;
-      const dateB = b.scheduledAt ? new Date(b.scheduledAt).getTime() : 0;
-      return dateB - dateA;
-    });
   };
 
   const toggleJobExpand = (jobKey: string) => {
@@ -478,8 +411,8 @@ export default function SchedulePage() {
     }
   };
 
-  const totalSchedules = groupedSchedules.length;
-  const totalApplicants = groupedSchedules.reduce((sum, g) => sum + g.totalApplicants, 0);
+  const totalSchedules = groupedByJob.length;
+  const totalApplicants = groupedByJob.reduce((sum, g) => sum + g.totalApplicants, 0);
 
   return (
     <div style={{ fontFamily: "Inter, system-ui, sans-serif", minHeight: "100vh", background: "#f8f9fa" }}>
@@ -638,7 +571,7 @@ export default function SchedulePage() {
                 border: "none",
               }}
             >
-              Tes ({groupedByJob.filter(j => j.type === "TEST").length})
+              Tes ({groupedByJob.reduce((sum, j) => sum + (j.testCount || 0), 0)})
             </button>
             <button
               onClick={() => setActiveTab("INTERVIEW")}
@@ -653,13 +586,16 @@ export default function SchedulePage() {
                 border: "none",
               }}
             >
-              Interview ({groupedByJob.filter(j => j.type === "INTERVIEW").length})
+              Interview ({groupedByJob.reduce((sum, j) => sum + (j.interviewCount || 0), 0)})
             </button>
           </div>
 
           {/* Filtered jadwal */}
           {(() => {
-            const filtered = activeTab === "ALL" ? groupedByJob : groupedByJob.filter(j => j.type === activeTab);
+            // Filter by active tab (TEST, INTERVIEW, or ALL)
+            const filtered = activeTab === "ALL"
+              ? groupedByJob
+              : groupedByJob.filter(j => j.applicants.some(a => a.type === activeTab));
             return (
           <>
           {/* Jadwal per Lowongan List */}
@@ -681,26 +617,30 @@ export default function SchedulePage() {
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                 {filtered.map((job) => {
-                  const isExpanded = expandedJobs.has(job.jobKey);
+                  const isExpanded = expandedJobs.has(job.jobPostingId);
+                  const hasTest = job.testCount > 0;
+                  const hasInterview = job.interviewCount > 0;
+                  const totalCount = job.totalApplicants;
                   return (
-                    <div key={job.jobKey} style={{ background: "#ffffff", borderRadius: "12px", border: `1px solid ${selectedJob === job.jobKey ? (job.type === "TEST" ? "#4285f4" : "#ea4335") : "#e0e0e0"}`, overflow: "hidden" }}>
+                    <div key={job.jobPostingId} style={{ background: "#ffffff", borderRadius: "12px", border: `1px solid ${selectedJob === job.jobPostingId ? "#4285f4" : "#e0e0e0"}`, overflow: "hidden" }}>
                       <div
-                        onClick={() => { toggleJobExpand(job.jobKey); setSelectedJob(job.jobKey); }}
+                        onClick={() => { toggleJobExpand(job.jobPostingId); setSelectedJob(job.jobPostingId); }}
                         style={{
                           padding: "14px 16px",
                           cursor: "pointer",
-                          background: selectedJob === job.jobKey ? (job.type === "TEST" ? "#e8f0fe" : "#fce8f3") : "#ffffff",
+                          background: selectedJob === job.jobPostingId ? "#e8f0fe" : "#ffffff",
                         }}
                       >
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                            <span style={{ padding: "4px 10px", background: job.type === "TEST" ? "#4285f4" : "#ea4335", color: "#fff", borderRadius: "6px", fontSize: "11px", fontWeight: 600 }}>
-                              {job.type === "TEST" ? "TES" : "INT"}
-                            </span>
+                            <div style={{ display: "flex", gap: "4px" }}>
+                              {hasTest && <span style={{ padding: "4px 10px", background: "#4285f4", color: "#fff", borderRadius: "6px", fontSize: "11px", fontWeight: 600 }}>TES ({job.testCount})</span>}
+                              {hasInterview && <span style={{ padding: "4px 10px", background: "#ea4335", color: "#fff", borderRadius: "6px", fontSize: "11px", fontWeight: 600 }}>INT ({job.interviewCount})</span>}
+                            </div>
                             <div>
                               <p style={{ fontSize: "14px", fontWeight: 600, color: "#202124", margin: 0 }}>{job.position}</p>
                               <p style={{ fontSize: "12px", color: "#5f6368", margin: "4px 0 0 0" }}>
-                                {divisionLabels[job.division] || job.division} • {job.totalApplicants} pelamar
+                                {divisionLabels[job.division] || job.division} • {totalCount} pelamar
                               </p>
                             </div>
                           </div>
@@ -717,12 +657,12 @@ export default function SchedulePage() {
                       {isExpanded && (
                         <div style={{ borderTop: "1px solid #e0e0e0", background: "#fafafa", padding: "12px 16px" }}>
                           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                            {job.schedules.map((schedule) => {
+                            {job.applicants.map((schedule) => {
                               const statusStyle = statusConfig[schedule.status] || { bg: "#f1f5f9", text: "#64748b", label: schedule.status };
                               return (
                                 <div
                                   key={schedule.id}
-                                  onClick={(e) => { e.stopPropagation(); setSelectedSchedule(schedule); }}
+                                  onClick={(e) => { e.stopPropagation(); setSelectedSchedule(schedule as Schedule); }}
                                   style={{
                                     padding: "10px 14px",
                                     background: "#ffffff",
@@ -734,7 +674,12 @@ export default function SchedulePage() {
                                   onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#e0e0e0"; }}
                                 >
                                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                    <span style={{ fontSize: "13px", fontWeight: 500, color: "#202124" }}>{schedule.applicantName}</span>
+                                    <div>
+                                      <span style={{ fontSize: "13px", fontWeight: 500, color: "#202124" }}>{schedule.applicantName}</span>
+                                      <span style={{ marginLeft: "8px", padding: "2px 6px", background: schedule.type === "TEST" ? "#4285f4" : "#ea4335", color: "#fff", borderRadius: "4px", fontSize: "10px", fontWeight: 600 }}>
+                                        {schedule.type === "TEST" ? "TES" : "INT"}
+                                      </span>
+                                    </div>
                                     <span style={{ padding: "3px 8px", background: statusStyle.bg, color: statusStyle.text, borderRadius: "8px", fontSize: "10px", fontWeight: 600 }}>
                                       {statusStyle.label}
                                     </span>

@@ -32,6 +32,22 @@ const statusConfig: Record<string, { bg: string; text: string; label: string }> 
   PENDING: { bg: "#f1f5f9", text: "#64748b", label: "Menunggu" },
 };
 
+interface TestSessionData {
+  id: string;
+  status: string;
+  scheduledAt?: string;
+  endTime?: string;
+  submittedAt?: string;
+}
+
+interface InterviewData {
+  id: string;
+  scheduledAt: string;
+  location: string;
+  interviewer: string;
+  type: string;
+}
+
 interface ApplicationData {
   id: string;
   status: string;
@@ -42,7 +58,48 @@ interface ApplicationData {
     division: string;
     location: string;
   };
+  testSession?: TestSessionData;
+  interview?: InterviewData;
 }
+
+// Status config yang lebih detail
+const getStatusDisplay = (app: ApplicationData): { bg: string; text: string; label: string } => {
+  const now = new Date();
+
+  // Gunakan status dari database - ini adalah source of truth
+  const dbStatus = app.status;
+
+  // Mapping status database ke tampilan
+  switch (dbStatus) {
+    case "MCU":
+      return { bg: "#d1fae5", text: "#059669", label: "Medical Check-Up" };
+    case "OFFERING":
+    case "OFFERED":
+      return { bg: "#fef3c7", text: "#d97706", label: "Offering" };
+    case "ACCEPTED":
+      return { bg: "#dcfce7", text: "#16a34a", label: "Diterima" };
+    case "REJECTED":
+      return { bg: "#fee2e2", text: "#dc2626", label: "Ditolak" };
+    case "INTERVIEW":
+      // Jika ada data interview, tampilkan info interview
+      if (app.interview?.scheduledAt) {
+        return { bg: "#fce7f3", text: "#be185d", label: "Interview" };
+      }
+      return { bg: "#fce7f3", text: "#be185d", label: "Interview" };
+    case "TEST_COMPLETED":
+      return { bg: "#dcfce7", text: "#16a34a", label: "Tes Selesai" };
+    case "IN_TEST":
+      return { bg: "#e0e7ff", text: "#4f46e5", label: "Sedang Tes" };
+    case "TEST_SCHEDULED":
+      return { bg: "#dbeafe", text: "#2563eb", label: "Menunggu Tes" };
+    case "ADMIN_CHECK":
+      return { bg: "#fef3c7", text: "#d97706", label: "Menunggu Review HR" };
+    case "PENDING":
+      return { bg: "#f1f5f9", text: "#64748b", label: "Menunggu" };
+    default:
+      return statusConfig[dbStatus] || { bg: "#f1f5f9", text: "#64748b", label: dbStatus || "Menunggu" };
+  }
+};
 
 export default function ApplicantDashboardPage() {
   const { user } = useAuthStore();
@@ -55,6 +112,11 @@ export default function ApplicantDashboardPage() {
   useEffect(() => {
     fetchData();
   }, [user]);
+
+  // Recalculate stats when applications change
+  useEffect(() => {
+    // Stats are now calculated inline in render
+  }, [applications]);
 
   useEffect(() => {
     // Check if profile is complete on mount
@@ -119,7 +181,41 @@ export default function ApplicantDashboardPage() {
       const result = await response.json();
 
       if (result.success && result.applications) {
-        setApplications(result.applications);
+        // Fetch test session AND interview data for each application
+        const appsWithData = await Promise.all(
+          result.applications.map(async (app: any) => {
+            try {
+              // Fetch test session
+              const testRes = await fetch(`/api/applicant/test-session?applicationId=${app.id}`);
+              const testData = await testRes.json();
+
+              // Fetch interview data
+              const interviewRes = await fetch(`/api/applicant/interview?applicationId=${app.id}`);
+              const interviewData = await interviewRes.json();
+
+              return {
+                ...app,
+                testSession: testData.success ? {
+                  id: testData.session?.id,
+                  status: testData.session?.status,
+                  scheduledAt: testData.session?.scheduledAt,
+                  endTime: testData.session?.endTime,
+                  submittedAt: testData.session?.submittedAt,
+                } : undefined,
+                interview: interviewData.success ? {
+                  id: interviewData.interview?.id,
+                  scheduledAt: interviewData.interview?.scheduledAt,
+                  location: interviewData.interview?.location,
+                  interviewer: interviewData.interview?.interviewer,
+                  type: interviewData.interview?.type,
+                } : undefined,
+              };
+            } catch {
+              return app;
+            }
+          })
+        );
+        setApplications(appsWithData);
       }
 
       // Set user name from auth store
@@ -132,9 +228,29 @@ export default function ApplicantDashboardPage() {
     setIsLoading(false);
   };
 
-  const pendingApps = applications.filter(a => !["ACCEPTED", "REJECTED"].includes(a.status)).length;
-  const testApps = applications.filter(a => ["TEST_SCHEDULED", "IN_TEST"].includes(a.status)).length;
-  const interviewApps = applications.filter(a => a.status === "INTERVIEW").length;
+  // Stats calculation based on displayed status
+  const getStats = () => {
+    let pendingApps = 0;
+    let testApps = 0;
+    let interviewApps = 0;
+
+    applications.forEach(app => {
+      const status = getStatusDisplay(app);
+      const statusText = status.label;
+
+      if (statusText === "Interview") {
+        interviewApps++;
+      } else if (statusText.includes("Tes") || statusText === "Sedang Tes") {
+        testApps++;
+      } else if (!["Diterima", "Ditolak"].includes(statusText)) {
+        pendingApps++;
+      }
+    });
+
+    return { pendingApps, testApps, interviewApps };
+  };
+
+  const { pendingApps, testApps, interviewApps } = getStats();
 
   return (
     <div style={{ fontFamily: "Inter, sans-serif", minHeight: "100vh", background: "#f8f9fa" }}>
@@ -217,7 +333,7 @@ export default function ApplicantDashboardPage() {
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                 {applications.slice(0, 5).map((app) => {
-                  const status = statusConfig[app.status] || statusConfig.PENDING;
+                  const status = getStatusDisplay(app);
                   return (
                     <div key={app.id} style={{ padding: "20px", borderRadius: "14px", border: "2px solid #eee", cursor: "pointer", transition: "all 0.2s" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>

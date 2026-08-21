@@ -60,6 +60,7 @@ export async function GET(request: NextRequest) {
           location: "Online System",
           status: app.testSession.status,
           sessionId: app.testSession.id,
+          submittedAt: app.testSession.submittedAt,
         };
       }
 

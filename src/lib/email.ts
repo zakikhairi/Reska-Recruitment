@@ -1,391 +1,364 @@
+// Email Service - Kirim notifikasi email ke pelamar
+// Modul: NOT-001 s/d NOT-005
+
 import nodemailer from "nodemailer";
 
-// Status labels in Indonesian
-export const statusLabels: Record<string, { label: string; color: string }> = {
-  PENDING: { label: "Menunggu Review", color: "#FFA500" },
-  ADMIN_CHECK: { label: "Sedang Diverifikasi", color: "#4169E1" },
-  TEST_SCHEDULED: { label: "Tes Terjadwal", color: "#9B59B6" },
-  IN_TEST: { label: "Sedang Tes", color: "#3498DB" },
-  TEST_COMPLETED: { label: "Tes Selesai", color: "#2ECC71" },
-  INTERVIEW: { label: "Wawancara", color: "#E74C3C" },
-  MCU: { label: "MCU", color: "#1ABC9C" },
-  OFFERING: { label: "Penawaran", color: "#F39C12" },
-  ACCEPTED: { label: "Diterima", color: "#27AE60" },
-  REJECTED: { label: "Ditolak", color: "#E74C3C" },
-  WITHDRAWN: { label: "Dibatalkan", color: "#95A5A6" },
-};
+// Create transporter (reuse configuration)
+function getTransporter() {
+  const emailUser = process.env.EMAIL_USER;
+  const emailPass = process.env.EMAIL_PASS;
 
-// Create transporter
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+  // If email not configured, return null
+  if (!emailUser || !emailPass || emailPass === "your-app-password-here") {
+    return null;
+  }
 
-// Email templates
-const getEmailTemplate = (data: {
-  applicantName: string;
-  jobTitle: string;
-  status: string;
-  previousStatus?: string;
-  notes?: string;
-  interviewDate?: string;
-  interviewLocation?: string;
-  testDate?: string;
-  testLocation?: string;
-}) => {
-  const { label, color } = statusLabels[data.status] || { label: data.status, color: "#333" };
+  return nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: emailUser,
+      pass: emailPass,
+    },
+  });
+}
 
-  const statusMessage = getStatusMessage(data.status, data);
-  const timelineIcon = getTimelineIcon(data.status);
-
+// Common email header/footer template
+function getEmailTemplate(content: string): string {
   return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Notifikasi Status Lamaran</title>
-</head>
-<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5;">
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #00205B 0%, #003d8f 100%); padding: 30px; text-align: center; border-radius: 16px 16px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">KAI Recruitment</h1>
+        <p style="color: rgba(255,255,255,0.8); margin: 8px 0 0; font-size: 14px;">Sistem Rekrutmen Cerdas - PT Reska Multi Usaha</p>
+      </div>
+      <div style="background: #ffffff; padding: 40px 30px; border: 1px solid #e5e5e5; border-top: none; border-radius: 0 0 16px 16px;">
+        ${content}
+      </div>
+      <div style="text-align: center; padding: 20px; color: #888888; font-size: 12px;">
+        <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 0 0 16px;">
+        Email ini dikirim secara otomatis oleh sistem KAI Recruitment.<br>
+        Jika Anda tidak merasa melakukan aktivitas ini, abaikan email ini.<br><br>
+        © 2026 PT Reska Multi Usaha - PT Kereta Api Indonesia
+      </div>
+    </div>
+  `;
+}
 
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 30px 15px;">
-    <tr>
-      <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+// Send email helper
+async function sendEmail(to: string, subject: string, html: string): Promise<{ success: boolean; error?: string }> {
+  const transporter = getTransporter();
 
-          <!-- Header -->
-          <tr>
-            <td style="background: linear-gradient(135deg, #00205B 0%, #001a3d 100%); padding: 30px; text-align: center;">
-              <table cellpadding="0" cellspacing="0" style="margin: 0 auto;">
-                <tr>
-                  <td style="vertical-align: middle; padding-right: 15px;">
-                    <div style="width: 50px; height: 50px; background-color: #FF5E00; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
-                      <span style="color: white; font-size: 24px;">🚂</span>
-                    </div>
-                  </td>
-                  <td style="vertical-align: middle; text-align: left;">
-                    <div style="color: #ffffff; font-size: 22px; font-weight: 800; letter-spacing: -0.5px;">KAI Services</div>
-                    <div style="color: rgba(255,255,255,0.6); font-size: 12px;">Smart Recruitment System</div>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Status Banner -->
-          <tr>
-            <td style="background-color: ${color}20; padding: 25px 30px; text-align: center; border-bottom: 3px solid ${color};">
-              <div style="display: inline-block; background-color: ${color}; color: white; padding: 8px 24px; border-radius: 20px; font-size: 14px; font-weight: 600; margin-bottom: 10px;">
-                ${timelineIcon} STATUS BERUBAH
-              </div>
-              <h1 style="margin: 0; font-size: 28px; color: #00205B; font-weight: 800;">${label}</h1>
-            </td>
-          </tr>
-
-          <!-- Content -->
-          <tr>
-            <td style="padding: 30px;">
-              <p style="margin: 0 0 20px 0; font-size: 16px; color: #333333; line-height: 1.6;">
-                Halo <strong>${data.applicantName}</strong>,
-              </p>
-
-              <p style="margin: 0 0 25px 0; font-size: 16px; color: #555555; line-height: 1.6;">
-                ${statusMessage}
-              </p>
-
-              <!-- Info Box -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8f9fa; border-radius: 10px; margin-bottom: 25px;">
-                <tr>
-                  <td style="padding: 20px;">
-                    <table width="100%" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="padding: 8px 0; border-bottom: 1px solid #e9ecef;">
-                          <span style="color: #888888; font-size: 13px;">Posisi</span>
-                        </td>
-                        <td style="padding: 8px 0; border-bottom: 1px solid #e9ecef; text-align: right;">
-                          <strong style="color: #00205B;">${data.jobTitle}</strong>
-                        </td>
-                      </tr>
-                      ${data.previousStatus ? `
-                      <tr>
-                        <td style="padding: 8px 0; border-bottom: 1px solid #e9ecef;">
-                          <span style="color: #888888; font-size: 13px;">Status Sebelumnya</span>
-                        </td>
-                        <td style="padding: 8px 0; border-bottom: 1px solid #e9ecef; text-align: right;">
-                          <span style="color: #888888; text-decoration: line-through;">${statusLabels[data.previousStatus]?.label || data.previousStatus}</span>
-                        </td>
-                      </tr>
-                      ` : ''}
-                      <tr>
-                        <td style="padding: 8px 0;">
-                          <span style="color: #888888; font-size: 13px;">Status Baru</span>
-                        </td>
-                        <td style="padding: 8px 0; text-align: right;">
-                          <span style="color: ${color}; font-weight: 700;">${label}</span>
-                        </td>
-                      </tr>
-                      ${data.testDate ? `
-                      <tr>
-                        <td style="padding: 8px 0; border-top: 1px solid #e9ecef;">
-                          <span style="color: #888888; font-size: 13px;">📅 Tanggal Tes</span>
-                        </td>
-                        <td style="padding: 8px 0; border-top: 1px solid #e9ecef; text-align: right;">
-                          <strong>${data.testDate}</strong>
-                        </td>
-                      </tr>
-                      ` : ''}
-                      ${data.testLocation ? `
-                      <tr>
-                        <td style="padding: 8px 0;">
-                          <span style="color: #888888; font-size: 13px;">📍 Lokasi Tes</span>
-                        </td>
-                        <td style="padding: 8px 0; text-align: right;">
-                          <strong>${data.testLocation}</strong>
-                        </td>
-                      </tr>
-                      ` : ''}
-                      ${data.interviewDate ? `
-                      <tr>
-                        <td style="padding: 8px 0; border-top: 1px solid #e9ecef;">
-                          <span style="color: #888888; font-size: 13px;">📅 Tanggal Interview</span>
-                        </td>
-                        <td style="padding: 8px 0; border-top: 1px solid #e9ecef; text-align: right;">
-                          <strong>${data.interviewDate}</strong>
-                        </td>
-                      </tr>
-                      ` : ''}
-                      ${data.interviewLocation ? `
-                      <tr>
-                        <td style="padding: 8px 0;">
-                          <span style="color: #888888; font-size: 13px;">📍 Lokasi Interview</span>
-                        </td>
-                        <td style="padding: 8px 0; text-align: right;">
-                          <strong>${data.interviewLocation}</strong>
-                        </td>
-                      </tr>
-                      ` : ''}
-                    </table>
-                  </td>
-                </tr>
-              </table>
-
-              ${data.notes ? `
-              <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; border-radius: 0 8px 8px 0; margin-bottom: 25px;">
-                <strong style="color: #856404;">📝 Catatan dari HR:</strong>
-                <p style="margin: 10px 0 0 0; color: #856404; font-size: 14px;">${data.notes}</p>
-              </div>
-              ` : ''}
-
-              <p style="margin: 0 0 20px 0; font-size: 14px; color: #666666; line-height: 1.6;">
-                Anda dapat memantau status lamaran Anda kapan saja dengan masuk ke akun KAI Services Recruitment.
-              </p>
-
-              <table cellpadding="0" cellspacing="0" style="margin: 0;">
-                <tr>
-                  <td style="background: linear-gradient(135deg, #FF5E00 0%, #ff7a2f 100%); border-radius: 8px;">
-                    <a href="${process.env.NEXTAUTH_URL}/applicant/dashboard" style="display: inline-block; padding: 14px 30px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 15px;">
-                      Lihat Dashboard →
-                    </a>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td style="background-color: #f8f9fa; padding: 25px 30px; border-top: 1px solid #e9ecef;">
-              <p style="margin: 0 0 10px 0; font-size: 13px; color: #888888; text-align: center;">
-                Email ini dikirim secara otomatis oleh sistem KAI Services Recruitment.
-              </p>
-              <p style="margin: 0 0 15px 0; font-size: 12px; color: #aaaaaa; text-align: center;">
-                PT Reska Multi Usaha • Bagian dari PT Kereta Api Indonesia<br>
-                © ${new Date().getFullYear()} KAI Services. Hak cipta dilindungi.
-              </p>
-              <p style="margin: 0; font-size: 11px; color: #cccccc; text-align: center;">
-                Jangan balas email ini. Untuk informasi lebih lanjut, hubungi tim HR kami.
-              </p>
-            </td>
-          </tr>
-
-        </table>
-      </td>
-    </tr>
-  </table>
-
-</body>
-</html>
-`;
-};
-
-const getStatusMessage = (status: string, data: any): string => {
-  const messages: Record<string, string> = {
-    PENDING:
-      "Lamaran Anda telah kami terima dan sedang dalam antrean untuk direview oleh tim HR kami.",
-    ADMIN_CHECK:
-      "Tim HR kami sedang memverifikasi dokumen dan data diri Anda. Mohon tunggu informasi selanjutnya.",
-    TEST_SCHEDULED:
-      `Selamat! Anda berhak mengikuti tes kompetensi. Tes dijadwalkan pada ${data.testDate || "tanggal yang akan diinformasikan"}. Silakan periksa detail tes di dashboard Anda.`,
-    IN_TEST:
-      "Anda saat ini sedang mengerjakan tes kompetensi. Tetap fokus dan lakukan yang terbaik!",
-    TEST_COMPLETED:
-      "Terima kasih telah menyelesaikan tes kompetensi. Tim HR sedang memproses hasil tes Anda.",
-    INTERVIEW:
-      `Selamat! Anda telah lulus tahap tes dan diundang untuk wawancara. Jadwal: ${data.interviewDate || "segera"}. Lokasi: ${data.interviewLocation || "akan diinformasikan"}.`,
-    MCU:
-      "Anda telah lulus wawancara! Tahap selanjutnya adalah Medical Check Up (MCU). Jadwal akan diinformasikan segera.",
-    OFFERING:
-      "Selamat! Kami很开心 ingin menawarkan posisi ini kepada Anda. Silakan cek detail penawaran di dashboard.",
-    ACCEPTED:
-      "🎉 Selamat! Selamat datang di keluarga besar PT Kereta Api Indonesia! Tim HR akan segera menghubungi Anda untuk proses onboarding.",
-    REJECTED:
-      "Mohon maaf, setelah mempertimbangkan secara menyeluruh, kami belum dapat melanjutkan proses rekrutmen Anda kali ini. Terima kasih atas minat Anda.",
-    WITHDRAWN:
-      "Lamaran Anda telah dibatalkan sesuai permintaan.",
-  };
-
-  return (
-    messages[status] ||
-    `Status lamaran Anda telah diperbarui menjadi "${status}". Silakan cek dashboard untuk informasi lebih lanjut.`
-  );
-};
-
-const getTimelineIcon = (status: string): string => {
-  const icons: Record<string, string> = {
-    PENDING: "📋",
-    ADMIN_CHECK: "🔍",
-    TEST_SCHEDULED: "📝",
-    IN_TEST: "⏱️",
-    TEST_COMPLETED: "✅",
-    INTERVIEW: "🎤",
-    MCU: "🏥",
-    OFFERING: "🎁",
-    ACCEPTED: "🎊",
-    REJECTED: "😔",
-    WITHDRAWN: "🚪",
-  };
-  return icons[status] || "📌";
-};
-
-export async function sendEmail(options: {
-  to: string;
-  subject: string;
-  html: string;
-}): Promise<{ success: boolean; error?: string }> {
-  try {
-    // Skip sending if EMAIL_USER is not configured
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      console.log("Email not configured, skipping:", options.subject);
-      return { success: true };
-    }
-
-    const info = await transporter.sendMail({
-      from: `"KAI Services Recruitment" <${process.env.EMAIL_USER}>`,
-      to: options.to,
-      subject: options.subject,
-      html: options.html,
-    });
-
-    console.log("Email sent:", info.messageId);
+  // Development mode: log to console
+  if (!transporter) {
+    console.log(`[EMAIL DEV] To: ${to}`);
+    console.log(`[EMAIL DEV] Subject: ${subject}`);
+    console.log(`[EMAIL DEV] Preview: ${html.substring(0, 200)}...`);
     return { success: true };
-  } catch (error) {
-    console.error("Email send error:", error);
-    return { success: false, error: String(error) };
+  }
+
+  try {
+    await transporter.sendMail({
+      from: '"KAI Recruitment" <noreply@kai-recruitment.com>',
+      to,
+      subject,
+      html,
+    });
+    console.log(`[EMAIL] ✓ Sent to: ${to} - ${subject}`);
+    return { success: true };
+  } catch (error: any) {
+    console.error(`[EMAIL] ✗ Failed to send to ${to}:`, error.message);
+    return { success: false, error: error.message };
   }
 }
 
-export async function sendStatusNotification(data: {
-  applicantEmail: string;
-  applicantName: string;
-  jobTitle: string;
-  status: string;
-  previousStatus?: string;
-  notes?: string;
-  testDate?: string;
-  testLocation?: string;
-  interviewDate?: string;
-  interviewLocation?: string;
-}): Promise<{ success: boolean; error?: string }> {
-  const { label } = statusLabels[data.status] || { label: data.status };
+// ============================================
+// NOT-001: Email Konfirmasi Pendaftaran
+// ============================================
+export async function sendRegistrationEmail(email: string, fullName: string): Promise<{ success: boolean; error?: string }> {
+  const subject = "Pendaftaran Berhasil - KAI Recruitment";
+  const html = getEmailTemplate(`
+    <h2 style="color: #111111; margin: 0 0 20px; font-size: 22px;">🎉 Pendaftaran Berhasil!</h2>
+    <p style="color: #666666; margin: 0 0 20px; font-size: 15px; line-height: 1.6;">
+      Selamat <strong>${fullName}</strong>! akun Anda berhasil terdaftar di sistem KAI Recruitment.
+    </p>
+    <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0;">
+      <p style="margin: 0 0 10px; color: #666666; font-size: 14px;">Detail Akun:</p>
+      <p style="margin: 0; color: #00205B; font-size: 15px;">
+        <strong>Email:</strong> ${email}<br>
+        <strong>Nama:</strong> ${fullName}
+      </p>
+    </div>
+    <p style="color: #666666; margin: 20px 0; font-size: 15px; line-height: 1.6;">
+      Silakan lengkapi profil Anda dan Lamar posisi yang tersedia.
+    </p>
+    <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/applicant/complete-profile"
+       style="display: inline-block; background: #FF5E00; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; margin: 10px 0;">
+      Lengkapi Profil →
+    </a>
+    <p style="color: #888888; margin: 20px 0 0; font-size: 13px;">
+      Tim HRD kami akan menghubungi Anda setelah proses seleksi dimulai.
+    </p>
+  `);
 
-  const html = getEmailTemplate(data);
-
-  return sendEmail({
-    to: data.applicantEmail,
-    subject: `🔔 Update Status Lamaran: ${label} - ${data.jobTitle}`,
-    html,
-  });
+  return sendEmail(email, subject, html);
 }
 
-export async function sendWelcomeEmail(data: {
-  to: string;
-  name: string;
-  email: string;
-  password: string;
-}): Promise<{ success: boolean; error?: string }> {
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Selamat Datang</title>
-</head>
-<body style="margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; background-color: #f5f5f5;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 30px 15px;">
-    <tr>
-      <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
-          <tr>
-            <td style="background: linear-gradient(135deg, #00205B 0%, #001a3d 100%); padding: 30px; text-align: center;">
-              <div style="color: #ffffff; font-size: 24px; font-weight: 800;">🚂 KAI Services</div>
-              <div style="color: rgba(255,255,255,0.6); font-size: 12px;">Smart Recruitment System</div>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 30px;">
-              <h1 style="margin: 0 0 20px 0; font-size: 28px; color: #00205B;">Selamat Datang, ${data.name}! 🎉</h1>
-              <p style="margin: 0 0 20px 0; font-size: 16px; color: #555555; line-height: 1.6;">
-                Akun Anda telah berhasil dibuat. Berikut adalah informasi login Anda:
-              </p>
-              <table width="100%" cellpadding="15" cellspacing="0" style="background-color: #f8f9fa; border-radius: 10px; margin-bottom: 25px;">
-                <tr>
-                  <td><strong>Email:</strong></td>
-                  <td style="text-align: right;">${data.email}</td>
-                </tr>
-                <tr>
-                  <td><strong>Password:</strong></td>
-                  <td style="text-align: right; font-family: monospace; background: #e9ecef; padding: 5px 10px; border-radius: 4px;">${data.password}</td>
-                </tr>
-              </table>
-              <p style="margin: 0 0 20px 0; font-size: 14px; color: #666666;">
-                <strong>⚠️ Penting:</strong> Ganti password Anda setelah login untuk keamanan akun.
-              </p>
-              <a href="${process.env.NEXTAUTH_URL}/auth/login" style="display: inline-block; background: linear-gradient(135deg, #FF5E00 0%, #ff7a2f 100%); color: #ffffff; padding: 14px 30px; border-radius: 8px; text-decoration: none; font-weight: 600;">
-                Login Sekarang →
-              </a>
-            </td>
-          </tr>
-          <tr>
-            <td style="background-color: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #e9ecef;">
-              <p style="margin: 0; font-size: 12px; color: #aaaaaa;">© ${new Date().getFullYear()} KAI Services. Hak cipta dilindungi.</p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-`;
+// ============================================
+// NOT-002: Email Notifikasi Status Lamaran
+// ============================================
+export async function sendStatusChangeEmail(
+  email: string,
+  fullName: string,
+  position: string,
+  oldStatus: string,
+  newStatus: string,
+  notes?: string
+): Promise<{ success: boolean; error?: string }> {
+  const statusLabels: Record<string, { label: string; emoji: string; description: string }> = {
+    PENDING: { label: "Menunggu Review", emoji: "⏳", description: "Lamaran Anda sedang dalam antrean untuk direview oleh tim HRD." },
+    ADMIN_CHECK: { label: "Sedang Dicek", emoji: "📋", description: "Tim HRD sedang memverifikasi dokumen dan data diri Anda." },
+    TEST_SCHEDULED: { label: "Tes Dijadwalkan", emoji: "📅", description: "Selamat! Anda dijadwalkan untuk mengikuti tes kompetensi." },
+    IN_TEST: { label: "Sedang Tes", emoji: "✍️", description: "Anda sedang mengikuti tes kompetensi." },
+    TEST_COMPLETED: { label: "Tes Selesai", emoji: "✅", description: "Tes kompetensi telah selesai. Menunggu hasil." },
+    INTERVIEW: { label: "Wawancara", emoji: "🎤", description: "Selamat! Anda lolos ke tahap wawancara." },
+    MCU: { label: "Medical Check-Up", emoji: "🏥", description: "Anda akan menjalani medical check-up." },
+    OFFERING: { label: "Penawaran", emoji: "📄", description: "Selamat! Anda menerima penawaran kerja." },
+    ACCEPTED: { label: "Diterima", emoji: "🎊", description: "Selamat! Anda resmi diterima di PT Reska Multi Usaha." },
+    REJECTED: { label: "Ditolak", emoji: "😔", description: "Mohon maaf, lamaran Anda belum memenuhi kriteria pada kesempatan ini." },
+    WITHDRAWN: { label: "Dibatalkan", emoji: "🚫", description: "Lamaran telah dibatalkan." },
+  };
 
-  return sendEmail({
-    to: data.to,
-    subject: "🎉 Selamat Datang di KAI Services Recruitment!",
-    html,
+  const statusInfo = statusLabels[newStatus] || { label: newStatus, emoji: "📌", description: "Status lamaran berubah." };
+
+  const subject = `Update Status Lamaran: ${position} - ${statusInfo.label}`;
+  const html = getEmailTemplate(`
+    <h2 style="color: #111111; margin: 0 0 20px; font-size: 22px;">${statusInfo.emoji} Status Lamaran Diperbarui</h2>
+    <p style="color: #666666; margin: 0 0 20px; font-size: 15px; line-height: 1.6;">
+      Halo <strong>${fullName}</strong>, ada update untuk lamaran Anda.
+    </p>
+    <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0;">
+      <p style="margin: 0 0 10px; color: #666666; font-size: 14px;">Detail Perubahan:</p>
+      <p style="margin: 0 0 5px; font-size: 15px;">
+        <strong>Posisi:</strong> ${position}
+      </p>
+      <p style="margin: 0 0 5px; font-size: 15px;">
+        <strong>Status Lama:</strong> ${statusLabels[oldStatus]?.label || oldStatus}
+      </p>
+      <p style="margin: 0 0 15px; font-size: 15px;">
+        <strong>Status Baru:</strong> <span style="color: #FF5E00; font-weight: bold;">${statusInfo.label}</span>
+      </p>
+      <p style="margin: 0; color: #00205B; font-size: 15px;">
+        ${statusInfo.description}
+      </p>
+      ${notes ? `<p style="margin: 15px 0 0; color: #666666; font-size: 14px;"><strong>Catatan:</strong> ${notes}</p>` : ''}
+    </div>
+    <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/applicant/applications"
+       style="display: inline-block; background: #00205B; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; margin: 10px 0;">
+      Lihat Detail Lamaran →
+    </a>
+    <p style="color: #888888; margin: 20px 0 0; font-size: 13px;">
+      Terima kasih atas kepercayaan Anda melamar di PT Reska Multi Usaha.
+    </p>
+  `);
+
+  return sendEmail(email, subject, html);
+}
+
+// ============================================
+// NOT-003: Email Reminder Tes
+// ============================================
+export async function sendTestReminderEmail(
+  email: string,
+  fullName: string,
+  position: string,
+  testDate: Date,
+  testDuration: number // in minutes
+): Promise<{ success: boolean; error?: string }> {
+  const formattedDate = new Date(testDate).toLocaleDateString("id-ID", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
   });
+  const formattedTime = new Date(testDate).toLocaleTimeString("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  const subject = "Reminder: Tes Kompetensi Besok - KAI Recruitment";
+  const html = getEmailTemplate(`
+    <h2 style="color: #111111; margin: 0 0 20px; font-size: 22px;">⏰ Reminder Tes Kompetensi</h2>
+    <p style="color: #666666; margin: 0 0 20px; font-size: 15px; line-height: 1.6;">
+      Halo <strong>${fullName}</strong>, ini adalah pengingat bahwa Anda dijadwalkan mengikuti tes kompetensi besok.
+    </p>
+    <div style="background: linear-gradient(135deg, #fff3e0 0%, #fff8f0 100%); padding: 20px; border-radius: 10px; margin: 20px 0; border-left: 4px solid #FF5E00;">
+      <p style="margin: 0 0 10px; font-size: 16px;"><strong>📋 Detail Tes:</strong></p>
+      <p style="margin: 0 0 5px; font-size: 15px;"><strong>Posisi:</strong> ${position}</p>
+      <p style="margin: 0 0 5px; font-size: 15px;"><strong>Tanggal:</strong> ${formattedDate}</p>
+      <p style="margin: 0 0 5px; font-size: 15px;"><strong>Waktu:</strong> ${formattedTime} WIB</p>
+      <p style="margin: 0; font-size: 15px;"><strong>Durasi:</strong> ${testDuration} menit</p>
+    </div>
+    <div style="background: #e8f5e9; padding: 15px; border-radius: 10px; margin: 20px 0;">
+      <p style="margin: 0; color: #2e7d32; font-size: 14px; font-weight: bold;">✅ Tips Persiapan:</p>
+      <ul style="margin: 10px 0 0; padding-left: 20px; color: #555; font-size: 14px;">
+        <li>Pastikan koneksi internet stabil</li>
+        <li>Siapkan tempat yang tenang</li>
+        <li>Jangan lupa membawa alat tulis</li>
+        <li>Login 15 menit sebelum tes dimulai</li>
+      </ul>
+    </div>
+    <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/applicant/schedule"
+       style="display: inline-block; background: #FF5E00; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; margin: 10px 0;">
+      Lihat Jadwal Tes →
+    </a>
+  `);
+
+  return sendEmail(email, subject, html);
+}
+
+// ============================================
+// NOT-004: Email Hasil Tes
+// ============================================
+export async function sendTestResultEmail(
+  email: string,
+  fullName: string,
+  position: string,
+  score: number,
+  passed: boolean,
+  details?: string
+): Promise<{ success: boolean; error?: string }> {
+  const emoji = passed ? "🎉" : "😔";
+  const title = passed ? "Selamat! Anda Lulus Tes" : "Hasil Tes Kompetensi";
+  const subtitle = passed
+    ? "Selamat! Anda memenuhi passing grade dan berhak melanjutkan ke tahap berikutnya."
+    : "Mohon maaf, nilai Anda belum memenuhi passing grade yang ditetapkan.";
+
+  const subject = passed
+    ? `🎉 Selamat! Anda Lulus Tes - ${position}`
+    : `Hasil Tes Kompetensi - ${position}`;
+
+  const html = getEmailTemplate(`
+    <h2 style="color: #111111; margin: 0 0 20px; font-size: 22px;">${emoji} ${title}</h2>
+    <p style="color: #666666; margin: 0 0 20px; font-size: 15px; line-height: 1.6;">
+      Halo <strong>${fullName}</strong>, berikut hasil tes kompetensi Anda:
+    </p>
+    <div style="background: ${passed ? '#e8f5e9' : '#fff3e0'}; padding: 25px; border-radius: 12px; margin: 20px 0; text-align: center;">
+      <p style="margin: 0 0 10px; font-size: 14px; color: #666;">Skor Tes Anda</p>
+      <p style="margin: 0; font-size: 48px; font-weight: bold; color: ${passed ? '#2e7d32' : '#FF5E00'};">
+        ${score}%
+      </p>
+      <p style="margin: 10px 0 0; font-size: 16px; color: ${passed ? '#2e7d32' : '#e65100'}; font-weight: bold;">
+        ${passed ? '✅ LULUS' : '❌ BELUM LULUS'}
+      </p>
+    </div>
+    <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0;">
+      <p style="margin: 0 0 10px; font-size: 14px;"><strong>Detail:</strong></p>
+      <p style="margin: 0 0 5px; font-size: 15px;"><strong>Posisi:</strong> ${position}</p>
+      <p style="margin: 0 0 5px; font-size: 15px;"><strong>Tanggal Tes:</strong> ${new Date().toLocaleDateString("id-ID")}</p>
+      <p style="margin: 0; font-size: 15px;"><strong>Passing Grade:</strong> Ditetapkan oleh HRD</p>
+    </div>
+    <p style="color: #666666; margin: 20px 0; font-size: 15px; line-height: 1.6;">
+      ${subtitle}
+    </p>
+    ${details ? `<p style="color: #666666; margin: 20px 0; font-size: 14px;"><em>${details}</em></p>` : ''}
+    <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/applicant/applications"
+       style="display: inline-block; background: #00205B; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; margin: 10px 0;">
+      Lihat Detail Lamaran →
+    </a>
+    <p style="color: #888888; margin: 20px 0 0; font-size: 13px;">
+      ${passed ? 'Tim HRD akan menghubungi Anda untuk jadwal selanjutnya.' : 'Jangan menyerah! Masih banyak kesempatan di masa depan.'}
+    </p>
+  `);
+
+  return sendEmail(email, subject, html);
+}
+
+// ============================================
+// NOT-005: Email Pengumuman Kelulusan (Offer)
+// ============================================
+export async function sendOfferEmail(
+  email: string,
+  fullName: string,
+  position: string,
+  startDate?: Date
+): Promise<{ success: boolean; error?: string }> {
+  const formattedStartDate = startDate
+    ? new Date(startDate).toLocaleDateString("id-ID", { year: "numeric", month: "long", day: "numeric" })
+    : "Akan diinformasikan lebih lanjut";
+
+  const subject = "🎊 Selamat! Anda Diterima di PT Reska Multi Usaha";
+  const html = getEmailTemplate(`
+    <h2 style="color: #111111; margin: 0 0 20px; font-size: 22px;">🎊 Selamat! Anda Diterima</h2>
+    <p style="color: #666666; margin: 0 0 20px; font-size: 15px; line-height: 1.6;">
+      Selamat <strong>${fullName}</strong>! Setelah melewati serangkaian proses seleksi, dengan senang hati kami sampaikan bahwa Anda <strong style="color: #2e7d32;">diterima</strong> di PT Reska Multi Usaha.
+    </p>
+    <div style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); padding: 25px; border-radius: 12px; margin: 20px 0; text-align: center;">
+      <p style="margin: 0 0 10px; font-size: 14px; color: #2e7d32;">Posisi yang Ditawarkan</p>
+      <p style="margin: 0; font-size: 24px; font-weight: bold; color: #00205B;">
+        ${position}
+      </p>
+    </div>
+    <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0;">
+      <p style="margin: 0 0 15px; font-size: 16px; font-weight: bold;">📋 Langkah Selanjutnya:</p>
+      <ol style="margin: 0; padding-left: 20px; color: #555; font-size: 14px; line-height: 2;">
+        <li>Tim HRD akan menghubungi Anda untuk konfirmasi.</li>
+        <li>Siapkan dokumen yang diperlukan.</li>
+        <li>Masa Orientasi akan dijadwalkan segera.</li>
+      </ol>
+    </div>
+    <p style="color: #666666; margin: 20px 0; font-size: 15px;">
+      <strong>Tanggal Mulai:</strong> ${formattedStartDate}
+    </p>
+    <p style="color: #666666; margin: 20px 0; font-size: 15px; line-height: 1.6;">
+      Selamat bergabung bersama keluarga besar PT Kereta Api Indonesia. Kami menantikan kontribusi terbaik Anda!
+    </p>
+    <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/applicant/dashboard"
+       style="display: inline-block; background: #2e7d32; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; margin: 10px 0;">
+      Buka Dashboard →
+    </a>
+    <p style="color: #888888; margin: 20px 0 0; font-size: 13px;">
+      Jika ada pertanyaan, silakan hubungi tim HRD kami.
+    </p>
+  `);
+
+  return sendEmail(email, subject, html);
+}
+
+// ============================================
+// REG-007: Email Verifikasi Registrasi (OTP)
+// ============================================
+export async function sendRegistrationOTPEmail(
+  email: string,
+  fullName: string,
+  otpCode: string
+): Promise<{ success: boolean; error?: string }> {
+  const subject = "Verifikasi Email - KAI Recruitment";
+  const html = getEmailTemplate(`
+    <h2 style="color: #111111; margin: 0 0 20px; font-size: 22px;">📧 Verifikasi Email Anda</h2>
+    <p style="color: #666666; margin: 0 0 20px; font-size: 15px; line-height: 1.6;">
+      Halo <strong>${fullName}</strong>, terima kasih telah mendaftar di KAI Recruitment.
+      Masukkan kode verifikasi di bawah ini untuk melanjutkan:
+    </p>
+    <div style="background: linear-gradient(135deg, #f8f9fa 0%, #f0f0f0 100%); padding: 30px; border-radius: 16px; margin: 20px auto; max-width: 280px; border: 2px dashed #ddd; text-align: center;">
+      <p style="margin: 0 0 12px; color: #888888; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">Kode Verifikasi:</p>
+      <p style="margin: 0; font-size: 42px; font-weight: bold; color: #FF5E00; letter-spacing: 12px; font-family: 'Courier New', monospace;">
+        ${otpCode}
+      </p>
+    </div>
+    <p style="color: #888888; font-size: 13px; margin: 20px 0; text-align: center;">
+      ⏰ Kode berlaku selama <strong>15 menit</strong>
+    </p>
+    <div style="background: #fff3cd; padding: 16px; border-radius: 10px; margin: 20px 0; text-align: left;">
+      <p style="margin: 0; color: #856404; font-size: 13px; line-height: 1.6;">
+        <strong>⚠️ Penting:</strong><br>
+        • Jangan bagikan kode ini ke siapapun<br>
+        • Tim KAI Recruitment tidak akan meminta kode ini<br>
+        • Jika Anda tidak merasa mendaftar, abaikan email ini
+      </p>
+    </div>
+    <p style="color: #888888; margin: 20px 0 0; font-size: 13px;">
+      Setelah email diverifikasi, Anda bisa langsung login dan melamar posisi yang tersedia.
+    </p>
+  `);
+
+  return sendEmail(email, subject, html);
 }

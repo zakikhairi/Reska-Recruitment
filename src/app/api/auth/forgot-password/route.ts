@@ -75,11 +75,9 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Create transporter - use SSL on port 465
+    // Create transporter
     const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true,
+      service: "gmail",
       auth: {
         user: emailUser,
         pass: emailPass,

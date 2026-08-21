@@ -3,7 +3,6 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
-import { sendStatusNotification } from "@/lib/email";
 
 // Valid statuses
 const validStatuses = [
@@ -70,35 +69,6 @@ export async function PATCH(
     });
 
     console.log("Update successful:", application.status);
-
-    // Send email notification (async, don't wait)
-    if (application.applicantId) {
-      // Get applicant and user details for email
-      const appWithDetails = await prisma.application.findUnique({
-        where: { id },
-        include: {
-          applicant: {
-            include: { user: true }
-          },
-          jobPosting: true
-        }
-      });
-
-      if (appWithDetails?.applicant?.user?.email) {
-        sendStatusNotification({
-          applicantEmail: appWithDetails.applicant.user.email,
-          applicantName: appWithDetails.applicant.fullName,
-          jobTitle: appWithDetails.jobPosting.title,
-          status,
-          previousStatus,
-          notes: body.notes,
-          testDate: body.testDate,
-          testLocation: body.testLocation,
-          interviewDate: body.interviewDate,
-          interviewLocation: body.interviewLocation,
-        }).catch(err => console.error("Email notification error:", err));
-      }
-    }
 
     return NextResponse.json({
       success: true,
