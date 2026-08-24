@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth";
-import { CheckCircle, XCircle } from "lucide-react";
+import { CheckCircle, XCircle, Camera, Upload, X } from "lucide-react";
 
 // Strict validation - only allow specific characters per field
 const sanitizeInput = (value: string, fieldName: string): string => {
@@ -29,6 +29,10 @@ export default function ProfilePage() {
   const { user } = useAuthStore();
   const [isEditing, setIsEditing] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photoLoading, setPhotoLoading] = useState(false);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     fullName: "",
     nik: "",
@@ -72,6 +76,10 @@ export default function ProfilePage() {
               weight: a.weight?.toString() || "",
               university: a.university || "",
             });
+            // Set photo URL
+            if (a.photoUrl) {
+              setPhotoUrl(a.photoUrl);
+            }
             setIsLoaded(true);
           }
         })
@@ -188,6 +196,88 @@ export default function ProfilePage() {
     setIsLoaded(false);
   };
 
+  // Photo upload handler
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!["image/jpeg", "image/jpg"].includes(file.type)) {
+        showToast("Hanya format JPG/JPEG yang diizinkan", "error");
+        return;
+      }
+      if (file.size > 2 * 1024 * 1024) {
+        showToast("Ukuran file maksimal 2MB", "error");
+        return;
+      }
+      // Preview the image
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setPhotoUrl(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handlePhotoUpload = async () => {
+    const fileInput = fileInputRef.current?.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = fileInput?.files?.[0];
+    if (!file) {
+      showToast("Pilih foto terlebih dahulu", "error");
+      return;
+    }
+
+    setPhotoLoading(true);
+    try {
+      // Upload original file directly
+      const formData = new FormData();
+      formData.append("photo", file);
+      formData.append("userId", user?.id || "");
+
+      const res = await fetch("/api/applicant/photo", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast("Foto berhasil diupload!", "success");
+        setShowPhotoModal(false);
+        // Update photo URL with server path
+        setPhotoUrl(data.photoUrl);
+      } else {
+        showToast(data.error || "Gagal upload foto", "error");
+        // Revert to original photo
+        const originalRes = await fetch(`/api/applicant/profile?userId=${user?.id}`);
+        const originalData = await originalRes.json();
+        const a = originalData.profile || originalData.applicant;
+        setPhotoUrl(a?.photoUrl || "");
+      }
+    } catch {
+      showToast("Terjadi kesalahan koneksi", "error");
+    } finally {
+      setPhotoLoading(false);
+    }
+  };
+
+  const handlePhotoDelete = async () => {
+    setPhotoLoading(true);
+    try {
+      const res = await fetch(`/api/applicant/photo?userId=${user?.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast("Foto berhasil dihapus!", "success");
+        setPhotoUrl("");
+        setShowPhotoModal(false);
+      } else {
+        showToast(data.error || "Gagal hapus foto", "error");
+      }
+    } catch {
+      showToast("Terjadi kesalahan koneksi", "error");
+    } finally {
+      setPhotoLoading(false);
+    }
+  };
+
   return (
     <div style={{ fontFamily: "Inter, system-ui, sans-serif", minHeight: "100vh", background: "#f8f9fa", padding: "24px" }}>
       <div style={{ maxWidth: "800px", margin: "0 auto" }}>
@@ -217,8 +307,21 @@ export default function ProfilePage() {
         <div style={{ background: "#fff", borderRadius: "16px", padding: "32px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", marginBottom: "24px" }}>
           {/* Avatar */}
           <div style={{ display: "flex", alignItems: "center", gap: "20px", marginBottom: "32px", paddingBottom: "32px", borderBottom: "1px solid #eee" }}>
-            <div style={{ width: "80px", height: "80px", background: "linear-gradient(135deg, #00205B 0%, #003380 100%)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "28px", fontWeight: 700 }}>
-              {form.fullName?.split(" ").map(n => n[0]).join("").slice(0, 2) || "AW"}
+            <div style={{ position: "relative", cursor: "pointer" }} onClick={() => !isEditing && setShowPhotoModal(true)}>
+              {photoUrl ? (
+                <img
+                  src={photoUrl}
+                  alt="Profile"
+                  style={{ width: "80px", height: "80px", borderRadius: "50%", objectFit: "cover", border: "3px solid #FF5E00" }}
+                />
+              ) : (
+                <div style={{ width: "80px", height: "80px", background: "linear-gradient(135deg, #00205B 0%, #003380 100%)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "28px", fontWeight: 700 }}>
+                  {form.fullName?.split(" ").map(n => n[0]).join("").slice(0, 2) || "AW"}
+                </div>
+              )}
+              <div style={{ position: "absolute", bottom: "0", right: "0", width: "28px", height: "28px", background: "#FF5E00", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #fff" }}>
+                <Camera size={14} color="#fff" />
+              </div>
             </div>
             <div>
               <h2 style={{ fontSize: "24px", fontWeight: 700, color: "#111", marginBottom: "4px" }}>{form.fullName || "Nama Lengkap"}</h2>
@@ -527,6 +630,156 @@ export default function ProfilePage() {
           }
         }
       `}</style>
+
+      {/* Photo Upload Modal */}
+      {showPhotoModal && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0,0,0,0.6)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
+        }} onClick={() => setShowPhotoModal(false)}>
+          <div style={{
+            background: "#fff",
+            borderRadius: "16px",
+            padding: "24px",
+            width: "400px",
+            maxWidth: "90%",
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+              <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#111" }}>Foto Profil</h3>
+              <button onClick={() => setShowPhotoModal(false)} style={{ background: "none", border: "none", cursor: "pointer", padding: "4px" }}>
+                <X size={20} color="#666" />
+              </button>
+            </div>
+
+            {/* Photo Preview */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: "20px" }}>
+              {/* Preview Box */}
+              <div
+                style={{
+                  width: "200px",
+                  height: "200px",
+                  borderRadius: "12px",
+                  overflow: "hidden",
+                  border: "3px solid #FF5E00",
+                  position: "relative",
+                  background: "#f0f0f0",
+                }}
+              >
+                {photoUrl ? (
+                  <img
+                    src={photoUrl}
+                    alt="Preview"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                ) : (
+                  <div style={{
+                    width: "100%",
+                    height: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}>
+                    <Camera size={48} color="#999" />
+                  </div>
+                )}
+              </div>
+
+              <p style={{ marginTop: "12px", fontSize: "12px", color: "#888", textAlign: "center" }}>
+                Foto akan disimpan apa adanya
+              </p>
+            </div>
+
+            {/* File Input */}
+            <div ref={fileInputRef} style={{ marginBottom: "20px" }}>
+              <input
+                type="file"
+                accept="image/jpeg,image/jpg"
+                onChange={handlePhotoChange}
+                style={{ display: "none" }}
+                id="photo-upload"
+              />
+              <label
+                htmlFor="photo-upload"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  width: "100%",
+                  padding: "12px",
+                  border: "2px dashed #FF5E00",
+                  borderRadius: "10px",
+                  background: "#FFF5F0",
+                  color: "#FF5E00",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                <Upload size={18} />
+                {photoUrl ? "Ganti Foto" : "Pilih Foto"}
+              </label>
+              <p style={{ fontSize: "11px", color: "#888", textAlign: "center", marginTop: "8px" }}>
+                Format: JPG/JPEG, Maksimal 2MB
+              </p>
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ display: "flex", gap: "12px" }}>
+              {photoUrl && (
+                <button
+                  onClick={handlePhotoDelete}
+                  disabled={photoLoading}
+                  style={{
+                    flex: 1,
+                    padding: "12px",
+                    border: "2px solid #ef4444",
+                    borderRadius: "10px",
+                    background: "#fff",
+                    color: "#ef4444",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    cursor: photoLoading ? "not-allowed" : "pointer",
+                    opacity: photoLoading ? 0.6 : 1,
+                  }}
+                >
+                  Hapus
+                </button>
+              )}
+              <button
+                onClick={handlePhotoUpload}
+                disabled={photoLoading || !photoUrl}
+                style={{
+                  flex: 1,
+                  padding: "12px",
+                  border: "none",
+                  borderRadius: "10px",
+                  background: "#FF5E00",
+                  color: "#fff",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  cursor: photoLoading || !photoUrl ? "not-allowed" : "pointer",
+                  opacity: photoLoading || !photoUrl ? 0.6 : 1,
+                }}
+              >
+                {photoLoading ? "Mengupload..." : "Simpan"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

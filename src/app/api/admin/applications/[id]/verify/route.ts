@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
+import { sendStatusChangeEmail } from "@/lib/email";
 
 export async function GET(
   request: NextRequest,
@@ -67,6 +68,7 @@ export async function GET(
           university: application.applicant.university,
           height: application.applicant.height,
           weight: application.applicant.weight,
+          photoUrl: application.applicant.photoUrl,
           documents: application.applicant.documents.map((doc: typeof application.applicant.documents[number]) => ({
             id: doc.id,
             type: doc.type,
@@ -104,9 +106,17 @@ export async function PATCH(
       );
     }
 
-    // Get current application
+    // Get current application with user info
     const currentApp = await prisma.application.findUnique({
       where: { id },
+      include: {
+        applicant: {
+          include: {
+            user: true,
+          },
+        },
+        jobPosting: true,
+      },
     });
 
     if (!currentApp) {
@@ -175,6 +185,48 @@ export async function PATCH(
       },
     });
 
+    // Send email notification
+    const applicantEmail = currentApp.applicant?.user?.email;
+    const applicantName = currentApp.applicant?.fullName || "Kandidat";
+    const positionTitle = currentApp.jobPosting?.title || "Posisi";
+
+    if (applicantEmail) {
+      console.log("[VERIFY] Sending email notification to:", applicantEmail);
+
+      // Determine email notes based on status
+      let emailNotes = notes;
+      if (!emailNotes) {
+        if (newStatus === "REJECTED") {
+          emailNotes = "Mohon maaf, setelah mempertimbangkan secara keseluruhan, kami memutuskan untuk tidak melanjutkan proses rekrutmen Anda pada kesempatan kali ini. Terima kasih atas minat Anda dan kami mendoakan yang terbaik untuk perjalanan karir Anda.";
+        } else if (newStatus === "TEST_SCHEDULED") {
+          emailNotes = "Silakan cek jadwal tes di akun Anda dan pastikan mengerjakan tes tepat waktu.";
+        } else if (newStatus === "INTERVIEW") {
+          emailNotes = "Tim HRD akan menghubungi Anda untuk menjadwalkan wawancara. Pastikan nomor HP dan email Anda aktif.";
+        } else if (newStatus === "ACCEPTED") {
+          emailNotes = "Selamat! Tim HRD akan menghubungi Anda untuk proses lebih lanjut.";
+        }
+      }
+
+      try {
+        const emailResult = await sendStatusChangeEmail(
+          applicantEmail,
+          applicantName,
+          positionTitle,
+          previousStatus,
+          newStatus,
+          emailNotes
+        );
+
+        if (emailResult.success) {
+          console.log("[VERIFY] ✓ Email notification sent successfully");
+        } else {
+          console.log("[VERIFY] ⚠️ Email notification failed:", emailResult.error);
+        }
+      } catch (emailError) {
+        console.error("[VERIFY] Error sending email:", emailError);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       data: {
@@ -183,8 +235,8 @@ export async function PATCH(
         previousStatus,
       },
       message: action === "approve"
-        ? "Lamaran berhasil diverifikasi dan dilanjutkan ke tahap tes"
-        : "Lamaran berhasil ditolak",
+        ? "Lamaran berhasil diverifikasi. Email notifikasi sudah dikirim."
+        : "Lamaran berhasil ditolak. Email notifikasi sudah dikirim.",
     });
   } catch (error) {
     console.error("Error verifying application:", error);
