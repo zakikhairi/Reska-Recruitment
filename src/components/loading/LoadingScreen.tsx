@@ -1,42 +1,41 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
 export default function LoadingScreen() {
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setIsLoading(false);
-    }, 800);
-
-    return () => clearTimeout(timeout);
-  }, []);
-
-  if (!isLoading) return null;
-
   return (
     <div style={styles.container}>
-      <div style={styles.spinnerContainer}>
-        {/* Outer spinner - Orange */}
-        <div style={styles.outerSpinner}>
-          <div style={styles.outerSpinnerInner} />
-        </div>
-
-        {/* Inner spinner - Blue */}
-        <div style={styles.innerSpinner}>
-          <div style={styles.innerSpinnerInner} />
+      <div style={styles.content}>
+        <h1 style={styles.title}>KAI Services</h1>
+        <div style={styles.dotsContainer}>
+          <span style={styles.dot}></span>
+          <span style={styles.dot}></span>
+          <span style={styles.dot}></span>
         </div>
       </div>
 
       <style>{`
-        @keyframes spinClockwise {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
         }
-        @keyframes spinCounterClockwise {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(-360deg); }
+        @keyframes bounce {
+          0%, 60%, 100% { transform: translateY(0); }
+          30% { transform: translateY(-6px); }
+        }
+        .loading-title {
+          animation: fadeIn 0.6s ease-out forwards;
+        }
+        .loading-dots span {
+          display: inline-block;
+          animation: bounce 1.4s infinite ease-in-out both;
+        }
+        .loading-dots span:nth-child(1) {
+          animation-delay: -0.32s;
+        }
+        .loading-dots span:nth-child(2) {
+          animation-delay: -0.16s;
+        }
+        .loading-dots span:nth-child(3) {
+          animation-delay: 0s;
         }
       `}</style>
     </div>
@@ -56,53 +55,28 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: "center",
     zIndex: 9999,
   },
-  spinnerContainer: {
-    position: "relative" as const,
-    width: "60px",
-    height: "60px",
+  content: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "20px",
   },
-  outerSpinner: {
-    position: "absolute" as const,
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "100%",
-    border: "4px solid transparent",
-    borderTopColor: "#FF5E00",
-    borderRadius: "50%",
-    animation: "spinClockwise 1s linear infinite",
+  title: {
+    fontFamily: "system-ui, -apple-system, sans-serif",
+    fontSize: "28px",
+    fontWeight: 700,
+    color: "#00205B",
+    margin: 0,
+    letterSpacing: "1px",
   },
-  outerSpinnerInner: {
-    position: "absolute" as const,
-    top: "4px",
-    left: "4px",
-    right: "4px",
-    bottom: "4px",
-    border: "4px solid transparent",
-    borderBottomColor: "#FF5E00",
-    borderRadius: "50%",
-    animation: "spinCounterClockwise 1.5s linear infinite",
+  dotsContainer: {
+    display: "flex",
+    gap: "8px",
   },
-  innerSpinner: {
-    position: "absolute" as const,
-    top: "10px",
-    left: "10px",
-    width: "calc(100% - 20px)",
-    height: "calc(100% - 20px)",
-    border: "4px solid transparent",
-    borderTopColor: "#00205B",
+  dot: {
+    width: "10px",
+    height: "10px",
     borderRadius: "50%",
-    animation: "spinCounterClockwise 1.2s linear infinite",
-  },
-  innerSpinnerInner: {
-    position: "absolute" as const,
-    top: "4px",
-    left: "4px",
-    right: "4px",
-    bottom: "4px",
-    border: "4px solid transparent",
-    borderBottomColor: "#00205B",
-    borderRadius: "50%",
-    animation: "spinClockwise 0.8s linear infinite",
+    background: "#FF5E00",
   },
 };

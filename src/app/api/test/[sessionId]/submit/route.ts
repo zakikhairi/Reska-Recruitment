@@ -207,8 +207,22 @@ export async function POST(
     }
 
     // Calculate weighted scores
-    const categoryWeights = JSON.parse(config.categoryWeights);
-    const passingGrades = JSON.parse(config.passingGrades);
+    let categoryWeights = typeof config.categoryWeights === 'string'
+      ? JSON.parse(config.categoryWeights)
+      : config.categoryWeights;
+    // Handle double-stringified data
+    if (typeof categoryWeights === 'string') {
+      categoryWeights = JSON.parse(categoryWeights);
+    }
+
+    let passingGrades = typeof config.passingGrades === 'string'
+      ? JSON.parse(config.passingGrades)
+      : config.passingGrades;
+    // Handle double-stringified data
+    if (typeof passingGrades === 'string') {
+      passingGrades = JSON.parse(passingGrades);
+    }
+
     let totalWeightedScore = 0;
 
     for (const category of categories) {

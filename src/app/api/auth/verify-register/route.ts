@@ -108,11 +108,42 @@ export async function POST(request: NextRequest) {
 
     console.log("[VERIFY-REGISTER] ✓ Code verified! Activating account...");
 
-    // Activate user - update emailVerified to true
+    // Parse registration data
+    let registrationData: { nik: string; fullName: string; phone: string } | null = null;
+    if (user.registrationData) {
+      try {
+        registrationData = JSON.parse(user.registrationData);
+      } catch (e) {
+        console.error("[VERIFY-REGISTER] Failed to parse registration data");
+      }
+    }
+
+    // Create applicant from registration data
+    if (registrationData) {
+      await prisma.applicant.create({
+        data: {
+          userId: user.id,
+          nik: registrationData.nik,
+          fullName: registrationData.fullName,
+          phone: registrationData.phone,
+          dateOfBirth: new Date("1995-01-01"),
+          placeOfBirth: "",
+          gender: "MALE",
+          address: "",
+          city: "",
+          postalCode: "",
+          education: "SMA",
+        },
+      });
+      console.log("[VERIFY-REGISTER] ✓ Applicant created for:", registrationData.fullName);
+    }
+
+    // Activate user - update emailVerified to true and clear registration data
     const updatedUser = await prisma.user.update({
       where: { id: user.id },
       data: {
         emailVerified: true,
+        registrationData: null, // Clear temp data
       },
       include: { applicant: true }
     });

@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { jobPostingId, scheduledAt, location, message, interviewer, interviewType } = body;
+    const { jobPostingId, scheduledAt, location, message, interviewer, interviewType, zoomLink } = body;
 
     if (!jobPostingId || !scheduledAt) {
       return NextResponse.json(
@@ -151,6 +151,7 @@ export async function POST(request: NextRequest) {
           location: location || "Online System",
           interviewer: interviewer,
           type: interviewType || "ONLINE",
+          zoomLink: zoomLink || null,
           notes: message || null,
         },
         create: {
@@ -159,6 +160,7 @@ export async function POST(request: NextRequest) {
           location: location || "Online System",
           interviewer: interviewer,
           type: interviewType || "ONLINE",
+          zoomLink: zoomLink || null,
           notes: message || null,
         },
       });
@@ -181,6 +183,7 @@ export async function POST(request: NextRequest) {
       location: location || "Online System",
       interviewer,
       interviewType,
+      zoomLink: zoomLink || null,
       scheduledList,
       notes: message || null,
     });

@@ -157,6 +157,7 @@ export const interviews = pgTable('interviews', {
   location: varchar('location', { length: 255 }).notNull(),
   interviewer: varchar('interviewer', { length: 255 }).notNull(),
   type: interviewTypeEnum('type').default('RECORDING').notNull(),
+  zoomLink: varchar('zoom_link', { length: 500 }),
   notes: text('notes'),
   score: integer('score'),
   result: interviewResultEnum('result'),

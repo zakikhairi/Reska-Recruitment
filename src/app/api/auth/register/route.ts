@@ -138,6 +138,7 @@ export async function POST(request: NextRequest) {
     const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
     // Create user with verification code
+    // Store registration data temporarily - applicant will be created AFTER verification
     const passwordHash = simpleHash(password);
     const user = await prisma.user.create({
       data: {
@@ -145,6 +146,7 @@ export async function POST(request: NextRequest) {
         passwordHash,
         role: "APPLICANT",
         emailVerified: false,
+        registrationData: JSON.stringify({ nik, fullName, phone }),
         passwordReset: {
           create: {
             code,
@@ -152,25 +154,10 @@ export async function POST(request: NextRequest) {
             attempts: 0,
           },
         },
-        applicant: {
-          create: {
-            nik,
-            fullName,
-            phone,
-            dateOfBirth: new Date("1995-01-01"),
-            placeOfBirth: "",
-            gender: "MALE",
-            address: "",
-            city: "",
-            postalCode: "",
-            education: "SMA",
-          },
-        },
       },
-      include: { applicant: true },
     });
 
-    console.log("[REGISTER] User created:", user.id, "- Sending verification code");
+    console.log("[REGISTER] User created:", user.id, "- Pending verification");
 
     // Send verification email
     const emailSent = await sendVerificationEmail(email, fullName, code);
