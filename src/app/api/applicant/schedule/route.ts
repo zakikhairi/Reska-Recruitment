@@ -73,6 +73,7 @@ export async function GET(request: NextRequest) {
           type: app.interview.type,
           result: app.interview.result,
           notes: app.interview.notes,
+          zoomLink: app.interview.zoomLink,
         };
       }
 

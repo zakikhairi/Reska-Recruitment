@@ -147,6 +147,7 @@ export async function GET(request: NextRequest) {
         scheduledAt: i.scheduledAt,
         location: i.location,
         interviewer: i.interviewer,
+        zoomLink: i.zoomLink,
         applicantName: i.application.applicant.fullName,
         position: i.application.jobPosting.title,
         division: i.application.jobPosting.division,
@@ -186,6 +187,7 @@ export async function GET(request: NextRequest) {
         scheduledAt: schedule.scheduledAt,
         location: schedule.location,
         interviewer: schedule.interviewer,
+        zoomLink: schedule.zoomLink,
       });
       if (schedule.type === "TEST") {
         acc[key].testCount++;

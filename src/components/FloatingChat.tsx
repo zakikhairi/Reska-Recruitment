@@ -86,7 +86,16 @@ export default function FloatingChat() {
     setLoading(true);
     try {
       const response = await fetch(`/api/contact?email=${encodeURIComponent(user.email)}`);
+
+      // Check if response is ok before parsing JSON
+      if (!response.ok) {
+        console.error("[CHAT] Fetch conversations failed with status:", response.status);
+        setLoading(false);
+        return;
+      }
+
       const result = await response.json();
+
       if (result.success) {
         const newConversations = result.conversations || [];
         console.log("[CHAT] Fetched conversations:", newConversations.map(c => ({ id: c.id, unread: c.unreadCount })));
@@ -97,9 +106,11 @@ export default function FloatingChat() {
           console.log("[CHAT] Auto-opening single conversation");
           openConversation(newConversations[0]);
         }
+      } else {
+        console.error("[CHAT] API returned error:", result.error);
       }
     } catch (err) {
-      console.error("Error fetching conversations:", err);
+      console.error("[CHAT] Error fetching conversations:", err);
     }
     setLoading(false);
   };
@@ -107,13 +118,22 @@ export default function FloatingChat() {
   const fetchMessages = async (conversationId: string) => {
     try {
       const response = await fetch(`/api/contact?conversationId=${conversationId}`);
+
+      // Check if response is ok before parsing JSON
+      if (!response.ok) {
+        console.error("[CHAT] Fetch messages failed with status:", response.status);
+        return;
+      }
+
       const result = await response.json();
       if (result.success) {
         console.log("[CHAT] Fetched messages:", result.messages.length);
         setMessages(result.messages);
+      } else {
+        console.error("[CHAT] API returned error:", result.error);
       }
     } catch (err) {
-      console.error("Error fetching messages:", err);
+      console.error("[CHAT] Error fetching messages:", err);
     }
   };
 

@@ -4,6 +4,20 @@ import prisma from "@/lib/db";
 // GET: Get all job postings for admin (including inactive/draft)
 export async function GET() {
   try {
+    // First, auto-close jobs that have passed their deadline
+    const now = new Date();
+    await prisma.jobPosting.updateMany({
+      where: {
+        status: "ACTIVE",
+        deadline: {
+          lt: now,
+        },
+      },
+      data: {
+        status: "CLOSED",
+      },
+    });
+
     const jobs = await prisma.jobPosting.findMany({
       orderBy: { createdAt: "desc" },
       include: {

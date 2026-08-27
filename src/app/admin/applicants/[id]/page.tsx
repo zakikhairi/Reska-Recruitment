@@ -46,6 +46,7 @@ interface ApplicantData {
     university?: string;
     height?: number;
     weight?: number;
+    photoUrl?: string;
     documents: Array<{
       id: string;
       type: string;
@@ -327,6 +328,7 @@ export default function ApplicantDetailPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           status: newStatus,
+          notes: undefined, // Notes handled separately in verify route
           db: localDB, // Send local database to server
         }),
       });
@@ -339,7 +341,7 @@ export default function ApplicantDetailPage() {
           saveLocalDB(result.db);
         }
         await fetchApplicantData();
-        showToast(`Status berhasil diubah ke: ${getStatusConfig(newStatus).label}`, "success");
+        showToast(`Status berhasil diubah ke: ${getStatusConfig(newStatus).label}. Email notifikasi sudah dikirim.`, "success");
       } else {
         showToast(result.error || "Terjadi kesalahan", "error");
       }
@@ -418,8 +420,14 @@ export default function ApplicantDetailPage() {
           </Link>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <div style={{ display: "flex", gap: "20px", alignItems: "center" }}>
-              <div style={{ width: "72px", height: "72px", background: "linear-gradient(135deg, #00205B 0%, #003380 100%)", borderRadius: "16px", display: "flex", alignItems: "center", justifyContent: "center", color: "#ffffff", fontSize: "24px", fontWeight: 700 }}>
-                {applicant.fullName?.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() || "AP"}
+              <div style={{ width: "72px", height: "72px", borderRadius: "16px", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", background: "#f0f0f0" }}>
+                {applicant.photoUrl ? (
+                  <img src={applicant.photoUrl} alt={applicant.fullName || "Foto"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : (
+                  <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, #00205B 0%, #003380 100%)", display: "flex", alignItems: "center", justifyContent: "center", color: "#ffffff", fontSize: "24px", fontWeight: 700 }}>
+                    {applicant.fullName?.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() || "AP"}
+                  </div>
+                )}
               </div>
               <div>
                 <h1 style={{ fontSize: "28px", fontWeight: 800, color: "#00205B", marginBottom: "4px" }}>{applicant.fullName || "Nama Tidak Diketahui"}</h1>
@@ -1232,17 +1240,21 @@ export default function ApplicantDetailPage() {
               <div style={{
                 width: "48px",
                 height: "48px",
-                background: "linear-gradient(135deg, #00205B 0%, #003380 100%)",
                 borderRadius: "12px",
+                overflow: "hidden",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "#ffffff",
-                fontSize: "16px",
-                fontWeight: 700,
+                background: "#f0f0f0",
                 flexShrink: 0
               }}>
-                {applicant.fullName?.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() || "AP"}
+                {applicant.photoUrl ? (
+                  <img src={applicant.photoUrl} alt={applicant.fullName || "Foto"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : (
+                  <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, #00205B 0%, #003380 100%)", display: "flex", alignItems: "center", justifyContent: "center", color: "#ffffff", fontSize: "16px", fontWeight: 700 }}>
+                    {applicant.fullName?.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() || "AP"}
+                  </div>
+                )}
               </div>
               <div>
                 <p style={{ fontSize: "15px", fontWeight: 700, color: "#111111", marginBottom: "2px" }}>
@@ -1388,17 +1400,21 @@ export default function ApplicantDetailPage() {
               <div style={{
                 width: "48px",
                 height: "48px",
-                background: "linear-gradient(135deg, #00205B 0%, #003380 100%)",
                 borderRadius: "12px",
+                overflow: "hidden",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "#ffffff",
-                fontSize: "16px",
-                fontWeight: 700,
+                background: "#f0f0f0",
                 flexShrink: 0
               }}>
-                {applicant.fullName?.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() || "AP"}
+                {applicant.photoUrl ? (
+                  <img src={applicant.photoUrl} alt={applicant.fullName || "Foto"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : (
+                  <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, #00205B 0%, #003380 100%)", display: "flex", alignItems: "center", justifyContent: "center", color: "#ffffff", fontSize: "16px", fontWeight: 700 }}>
+                    {applicant.fullName?.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() || "AP"}
+                  </div>
+                )}
               </div>
               <div>
                 <p style={{ fontSize: "15px", fontWeight: 700, color: "#111111", marginBottom: "2px" }}>

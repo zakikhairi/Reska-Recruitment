@@ -38,8 +38,12 @@ export default function AdminLayout({
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-[#FF5E00] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-[#64748B]">Memuat...</p>
+          <h1 className="text-2xl font-bold text-[#00205B] mb-4">KAI Services</h1>
+          <div className="flex gap-2 justify-center">
+            <span className="w-2.5 h-2.5 bg-[#FF5E00] rounded-full animate-bounce" style={{ animationDelay: "0s" }}></span>
+            <span className="w-2.5 h-2.5 bg-[#FF5E00] rounded-full animate-bounce" style={{ animationDelay: "0.16s" }}></span>
+            <span className="w-2.5 h-2.5 bg-[#FF5E00] rounded-full animate-bounce" style={{ animationDelay: "0.32s" }}></span>
+          </div>
         </div>
       </div>
     );
@@ -51,8 +55,12 @@ export default function AdminLayout({
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-[#FF5E00] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-[#64748B]">Mengalihkan...</p>
+          <h1 className="text-2xl font-bold text-[#00205B] mb-4">KAI Services</h1>
+          <div className="flex gap-2 justify-center">
+            <span className="w-2.5 h-2.5 bg-[#FF5E00] rounded-full animate-bounce" style={{ animationDelay: "0s" }}></span>
+            <span className="w-2.5 h-2.5 bg-[#FF5E00] rounded-full animate-bounce" style={{ animationDelay: "0.16s" }}></span>
+            <span className="w-2.5 h-2.5 bg-[#FF5E00] rounded-full animate-bounce" style={{ animationDelay: "0.32s" }}></span>
+          </div>
         </div>
       </div>
     );

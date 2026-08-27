@@ -21,6 +21,7 @@ import {
   X,
   List,
   Grid3X3,
+  Video,
 } from "lucide-react";
 import { useJobsStore, Job } from "@/stores/jobs";
 
@@ -38,6 +39,7 @@ interface Schedule {
   status: string;
   interviewer?: string;
   applicantId?: string;
+  zoomLink?: string;
 }
 
 interface GroupedByJob {
@@ -54,6 +56,7 @@ interface GroupedByJob {
     scheduledAt?: string;
     location?: string;
     interviewer?: string;
+    zoomLink?: string;
   }[];
   totalApplicants: number;
   testCount: number;
@@ -104,6 +107,7 @@ export default function SchedulePage() {
     message: "",
     interviewer: "",
     interviewType: "ONLINE",
+    zoomLink: "",
   });
   const [saving, setSaving] = useState(false);
 
@@ -270,6 +274,7 @@ export default function SchedulePage() {
       if (scheduleType === "INTERVIEW") {
         requestBody.interviewer = scheduleForm.interviewer;
         requestBody.interviewType = scheduleForm.interviewType;
+        requestBody.zoomLink = scheduleForm.zoomLink || null;
       }
 
       const response = await fetch(apiEndpoint, {
@@ -285,7 +290,7 @@ export default function SchedulePage() {
         setShowAddModal(false);
         setSelectedJobId("");
         setScheduleType("TEST");
-        setScheduleForm({ scheduledDate: "", scheduledTime: "", endTime: "", location: "Online System", message: "", interviewer: "", interviewType: "ONLINE" });
+        setScheduleForm({ scheduledDate: "", scheduledTime: "", endTime: "", location: "Online System", message: "", interviewer: "", interviewType: "ONLINE", zoomLink: "" });
         fetchSchedules();
         setTimeout(() => setToast(null), 3000);
       } else {
@@ -391,7 +396,12 @@ export default function SchedulePage() {
     setDeleting(true);
 
     try {
-      const response = await fetch(`/api/admin/test-schedule/${deleteModal.schedule.id}`, {
+      // Use different API based on schedule type
+      const apiEndpoint = deleteModal.schedule.type === "INTERVIEW"
+        ? `/api/admin/interview-schedule/delete?id=${deleteModal.schedule.id}`
+        : `/api/admin/test-schedule/${deleteModal.schedule.id}`;
+
+      const response = await fetch(apiEndpoint, {
         method: "DELETE",
       });
       const result = await response.json();
@@ -1128,6 +1138,22 @@ export default function SchedulePage() {
                     <option value="OFFLINE">Offline / Tatap Muka</option>
                   </select>
                 </div>
+                {scheduleForm.interviewType === "ONLINE" && (
+                  <div style={{ marginBottom: "16px" }}>
+                    <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
+                      <Video className="w-4 h-4 inline mr-1" />
+                      Link Zoom / Google Meet
+                    </label>
+                    <input
+                      type="url"
+                      value={scheduleForm.zoomLink}
+                      onChange={(e) => setScheduleForm({ ...scheduleForm, zoomLink: e.target.value })}
+                      placeholder="https://zoom.us/j/xxx atau https://meet.google.com/xxx"
+                      style={{ width: "100%", padding: "10px 12px", border: "2px solid #e5e5e5", borderRadius: "8px", fontSize: "14px", outline: "none" }}
+                    />
+                    <p style={{ fontSize: "11px", color: "#888", marginTop: "4px" }}>Link akan diberikan ke pelamar untuk bergabung ke interview</p>
+                  </div>
+                )}
               </>
             )}
 
@@ -1160,7 +1186,7 @@ export default function SchedulePage() {
 
             <div style={{ display: "flex", gap: "12px" }}>
               <button
-                onClick={() => { setShowAddModal(false); setSelectedJobId(""); setScheduleForm({ scheduledDate: "", scheduledTime: "", endTime: "", location: "Online System", message: "", interviewer: "", interviewType: "ONLINE" }); }}
+                onClick={() => { setShowAddModal(false); setSelectedJobId(""); setScheduleForm({ scheduledDate: "", scheduledTime: "", endTime: "", location: "Online System", message: "", interviewer: "", interviewType: "ONLINE", zoomLink: "" }); }}
                 style={{ flex: 1, padding: "12px 20px", background: "#fff", color: "#666", border: "2px solid #e5e5e5", borderRadius: "8px", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}
               >
                 Batal

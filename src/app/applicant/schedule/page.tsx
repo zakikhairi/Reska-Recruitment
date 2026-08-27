@@ -40,6 +40,7 @@ interface ScheduleItem {
     location?: string;
     interviewer: string;
     type: string;
+    zoomLink?: string | null;
   };
 }
 
@@ -793,6 +794,39 @@ export default function SchedulePage() {
                               <strong>Interviewer:</strong> {schedule.interview.interviewer}
                             </span>
                           </div>
+                        )}
+
+                        {/* Zoom/Meet Link Button */}
+                        {schedule.interview.zoomLink && (
+                          <a
+                            href={schedule.interview.zoomLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ textDecoration: "none" }}
+                          >
+                            <button
+                              style={{
+                                width: "100%",
+                                padding: "14px",
+                                background: "linear-gradient(135deg, #be185d, #9d174d)",
+                                color: "#fff",
+                                border: "none",
+                                borderRadius: "12px",
+                                fontSize: "14px",
+                                fontWeight: 600,
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: "8px",
+                                boxShadow: "0 4px 14px rgba(190, 24, 93, 0.4)",
+                                marginTop: "8px",
+                              }}
+                            >
+                              <Video className="w-5 h-5" />
+                              Gabung Interview Sekarang
+                            </button>
+                          </a>
                         )}
                       </div>
                     )}
