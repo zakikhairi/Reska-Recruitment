@@ -236,20 +236,20 @@ export default function HomePage() {
             </div>
           </AnimatedSection>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "24px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "20px", alignItems: "stretch" }} className="benefits-grid">
             {[
-              { title: "Asuransi Kesehatan", desc: "BPJS & Asuransi Tambahan untuk karyawan", icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#00205B" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" strokeLinecap="round" strokeLinejoin="round"/></svg> },
-              { title: "Cuti & Tunjangan", desc: "THR, cuti tahunan & hari besar", icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#00205B" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> },
-              { title: "Jenjang Karier", desc: "Pelatihan & pengembangan skill", icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#00205B" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg> },
-              { title: "Lingkungan Kerja", desc: "Profesional & suportif", icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#00205B" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> },
+              { title: "Asuransi Kesehatan", desc: "BPJS & Asuransi Tambahan", icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00205B" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" strokeLinecap="round" strokeLinejoin="round"/></svg> },
+              { title: "Cuti & Tunjangan", desc: "THR, cuti tahunan & hari besar", icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00205B" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> },
+              { title: "Jenjang Karier", desc: "Pelatihan & pengembangan skill", icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00205B" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg> },
+              { title: "Lingkungan Kerja", desc: "Profesional & suportif", icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00205B" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> },
             ].map((b, i) => (
               <AnimatedCard key={i} delay={i * 100}>
-                <div style={{ background: "#ffffff", padding: "32px", borderRadius: "16px", textAlign: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", transition: "transform 0.3s, box-shadow 0.3s" }}
+                <div style={{ background: "#ffffff", padding: "24px", borderRadius: "16px", textAlign: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", transition: "transform 0.3s, box-shadow 0.3s", display: "flex", flexDirection: "column", height: "100%", minHeight: "220px", justifyContent: "center" }}
                   onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-8px)"; e.currentTarget.style.boxShadow = "0 12px 24px rgba(0,0,0,0.12)"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.06)"; }}>
-                  <div style={{ width: "64px", height: "64px", background: "#f0f4ff", borderRadius: "16px", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>{b.icon}</div>
-                  <h3 style={{ fontSize: "17px", fontWeight: 700, marginBottom: "10px", color: "#111111" }}>{b.title}</h3>
-                  <p style={{ fontSize: "14px", color: "#666666", lineHeight: 1.5 }}>{b.desc}</p>
+                  <div style={{ width: "52px", height: "52px", background: "#f0f4ff", borderRadius: "14px", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", flexShrink: 0 }}>{b.icon}</div>
+                  <h3 style={{ fontSize: "16px", fontWeight: 700, marginBottom: "8px", color: "#111111" }}>{b.title}</h3>
+                  <p style={{ fontSize: "13px", color: "#666666", lineHeight: 1.5, margin: 0 }}>{b.desc}</p>
                 </div>
               </AnimatedCard>
             ))}
@@ -442,7 +442,7 @@ export default function HomePage() {
           </AnimatedSection>
 
           <AnimatedSection delay={200}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "20px", alignItems: "stretch" }} className="about-grid">
               {[
                 { title: "BUMN Terpercaya", desc: "Bagian dari KAI Indonesia", icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FF5E00" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4 8 4v14"/><path d="M9 21v-6h6v6"/></svg> },
                 { title: "Pelatihan Berkala", desc: "Pengembangan kompetensi", icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FF5E00" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg> },
@@ -450,8 +450,8 @@ export default function HomePage() {
                 { title: "Inovasi Digital", desc: "Sistem modern", icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FF5E00" strokeWidth="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> },
               ].map((item, i) => (
                 <AnimatedCard key={i} delay={i * 100}>
-                  <div style={{ background: "rgba(255,255,255,0.08)", padding: "28px", borderRadius: "16px", backdropFilter: "blur(10px)" }}>
-                    <div style={{ marginBottom: "14px" }}>{item.icon}</div>
+                  <div style={{ background: "rgba(255,255,255,0.08)", padding: "28px", borderRadius: "16px", backdropFilter: "blur(10px)", display: "flex", flexDirection: "column", height: "100%", minHeight: "200px" }}>
+                    <div style={{ marginBottom: "14px", flexShrink: 0 }}>{item.icon}</div>
                     <div style={{ fontSize: "16px", fontWeight: 700, marginBottom: "8px" }}>{item.title}</div>
                     <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.6)" }}>{item.desc}</div>
                   </div>
@@ -504,6 +504,14 @@ export default function HomePage() {
         }
         @media (max-width: 900px) {
           section > div:first-child { grid-template-columns: 1fr !important; gap: 48px !important; }
+        }
+        @media (max-width: 768px) {
+          .benefits-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .about-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+        @media (max-width: 480px) {
+          .benefits-grid { grid-template-columns: 1fr !important; }
+          .about-grid { grid-template-columns: 1fr !important; }
         }
       `}</style>
     </div>

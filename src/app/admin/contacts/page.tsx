@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { MessageCircle, Send, Clock, CheckCircle, RefreshCw, User, Search, X } from "lucide-react";
+import { MessageCircle, Send, Clock, CheckCircle, RefreshCw, User, Search, X, Check } from "lucide-react";
 
 interface ChatMessage {
   id: string;
@@ -51,7 +51,7 @@ export default function AdminContactsPage() {
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [statusFilter]);
+  }, []);
 
   // Show toast notification
   const showNotificationToast = (message: string) => {
@@ -94,16 +94,27 @@ export default function AdminContactsPage() {
   const fetchConversations = async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const url = statusFilter === "all" ? "/api/admin/contacts" : `/api/admin/contacts?status=${statusFilter}`;
-      const response = await fetch(url);
+      // Always fetch ALL conversations (without status filter) for consistent stats
+      const response = await fetch("/api/admin/contacts");
       const result = await response.json();
 
       if (result.success) {
-        const newConversations = result.conversations || [];
+        const allConversations = result.conversations || [];
+
+        // Calculate stats locally based on ALL conversations
+        const uniqueEmails = new Set(allConversations.map(c => c.applicantEmail));
+        const activeCount = allConversations.filter(c => c.status === "ACTIVE").length;
+        const closedCount = allConversations.filter(c => c.status === "CLOSED").length;
+
+        const localStats = {
+          total: uniqueEmails.size,
+          active: activeCount,
+          closed: closedCount
+        };
 
         // Check for new messages (conversations that weren't there before or have new unread)
         if (silent && prevConversationsRef.current.length > 0) {
-          for (const newConv of newConversations) {
+          for (const newConv of allConversations) {
             const prevConv = prevConversationsRef.current.find(c => c.applicantEmail === newConv.applicantEmail);
             if (!prevConv && newConv.unreadCount && newConv.unreadCount > 0) {
               // New conversation with unread
@@ -115,9 +126,9 @@ export default function AdminContactsPage() {
           }
         }
 
-        prevConversationsRef.current = newConversations;
-        setConversations(newConversations);
-        setStats(result.stats || { total: 0, active: 0, closed: 0 });
+        prevConversationsRef.current = allConversations;
+        setConversations(allConversations);
+        setStats(localStats);
       }
     } catch (err) {
       console.error("Error fetching conversations:", err);
@@ -190,6 +201,37 @@ export default function AdminContactsPage() {
     setMessages([]);
   };
 
+  const markConversationComplete = async () => {
+    if (!activeConversation) return;
+
+    try {
+      const response = await fetch("/api/admin/contacts", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conversationId: activeConversation.id,
+          status: "CLOSED",
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Update local state
+        setConversations(prev => prev.map(conv =>
+          conv.id === activeConversation.id
+            ? { ...conv, status: "CLOSED" }
+            : conv
+        ));
+        setActiveConversation(null);
+        setMessages([]);
+        fetchConversations();
+      }
+    } catch (err) {
+      console.error("Error marking conversation complete:", err);
+    }
+  };
+
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr);
     const now = new Date();
@@ -202,11 +244,20 @@ export default function AdminContactsPage() {
     return date.toLocaleDateString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
   };
 
-  // Filter conversations by search
-  const filteredConversations = conversations.filter((conv) =>
-    conv.applicantName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    conv.applicantEmail.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter conversations by status and search
+  const filteredConversations = conversations.filter((conv) => {
+    // Filter by status
+    if (statusFilter !== "all" && conv.status !== statusFilter) {
+      return false;
+    }
+    // Filter by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      return conv.applicantName.toLowerCase().includes(query) ||
+             conv.applicantEmail.toLowerCase().includes(query);
+    }
+    return true;
+  });
 
   return (
     <div style={{ fontFamily: "Inter, sans-serif", minHeight: "100vh", background: "#f8f9fa" }}>
@@ -333,13 +384,13 @@ export default function AdminContactsPage() {
             </div>
           ) : (
             <>
-              {/* Conversation List */}
+              {/* Conversation List - Always visible on left */}
               <div style={{
-                width: activeConversation ? "350px" : "100%",
-                borderRight: activeConversation ? "1px solid #eee" : "none",
+                width: "320px",
+                borderRight: "1px solid #eee",
                 display: "flex",
                 flexDirection: "column",
-                transition: "width 0.3s ease",
+                flexShrink: 0,
               }}>
                 {/* Search */}
                 <div style={{ padding: "16px", borderBottom: "1px solid #eee" }}>
@@ -387,17 +438,17 @@ export default function AdminContactsPage() {
                           gap: "12px",
                         }}
                       >
-                        <div style={{ width: "48px", height: "48px", background: "#FF5E00", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                          <span style={{ color: "#fff", fontWeight: 700, fontSize: "16px" }}>
+                        <div style={{ width: "44px", height: "44px", background: "#FF5E00", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <span style={{ color: "#fff", fontWeight: 700, fontSize: "14px" }}>
                             {conv.applicantName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
                           </span>
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                            <span style={{ fontSize: "14px", fontWeight: 600, color: "#111" }}>{conv.applicantName}</span>
-                            <span style={{ fontSize: "11px", color: "#888" }}>{formatTime(conv.lastMessageAt)}</span>
+                            <span style={{ fontSize: "13px", fontWeight: 600, color: "#111" }}>{conv.applicantName}</span>
+                            <span style={{ fontSize: "10px", color: "#888" }}>{formatTime(conv.lastMessageAt)}</span>
                           </div>
-                          <p style={{ fontSize: "13px", color: "#666", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          <p style={{ fontSize: "12px", color: "#666", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {conv.messages[0]?.message || "Mulai percakapan baru"}
                           </p>
                         </div>
@@ -421,97 +472,126 @@ export default function AdminContactsPage() {
                 </div>
               </div>
 
-              {/* Chat Panel */}
-              {activeConversation && (
+              {/* Chat Panel - Show when conversation is selected */}
+              {activeConversation ? (
                 <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
                   {/* Chat Header */}
-                  <div style={{ padding: "16px 20px", borderBottom: "1px solid #eee", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                      <div style={{ width: "44px", height: "44px", background: "#FF5E00", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <User className="w-5 h-5" style={{ color: "#fff" }} />
+                  <div style={{ padding: "14px 16px", borderBottom: "1px solid #eee", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <div style={{ width: "40px", height: "40px", background: "#FF5E00", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <User className="w-4 h-4" style={{ color: "#fff" }} />
                       </div>
                       <div>
-                        <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#111", margin: 0 }}>{activeConversation.applicantName}</h3>
-                        <p style={{ fontSize: "12px", color: "#666", margin: 0 }}>{activeConversation.applicantEmail}</p>
+                        <h3 style={{ fontSize: "15px", fontWeight: 700, color: "#111", margin: 0 }}>{activeConversation.applicantName}</h3>
+                        <p style={{ fontSize: "11px", color: "#666", margin: 0 }}>{activeConversation.applicantEmail}</p>
                       </div>
                     </div>
-                    <button
-                      onClick={closeConversation}
-                      style={{
-                        padding: "8px",
-                        background: "#f1f5f9",
-                        border: "none",
-                        borderRadius: "8px",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <X className="w-5 h-5" style={{ color: "#64748b" }} />
-                    </button>
+                    <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                      {activeConversation.status === "ACTIVE" && (
+                        <button
+                          onClick={markConversationComplete}
+                          style={{
+                            padding: "8px 14px",
+                            background: "#16a34a",
+                            border: "none",
+                            borderRadius: "8px",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            color: "#fff",
+                            fontSize: "12px",
+                            fontWeight: 600,
+                          }}
+                        >
+                          <Check className="w-3 h-3" />
+                          Selesai
+                        </button>
+                      )}
+                      <button
+                        onClick={closeConversation}
+                        style={{
+                          padding: "6px",
+                          background: "#f1f5f9",
+                          border: "none",
+                          borderRadius: "8px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <X className="w-4 h-4" style={{ color: "#64748b" }} />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Messages */}
-                  <div style={{ flex: 1, overflowY: "auto", padding: "20px", background: "#f8f9fa" }}>
-                    {messages.map((msg) => {
-                      const isMe = msg.senderType === "HR_ADMIN";
-                      return (
-                        <div
-                          key={msg.id}
-                          style={{
-                            display: "flex",
-                            justifyContent: isMe ? "flex-end" : "flex-start",
-                            marginBottom: "16px",
-                          }}
-                        >
-                          <div style={{
-                            maxWidth: "70%",
-                            display: "flex",
-                            flexDirection: isMe ? "row-reverse" : "row",
-                            alignItems: "flex-end",
-                            gap: "10px",
-                          }}>
-                            {!isMe && (
-                              <div style={{ width: "32px", height: "32px", background: "#FF5E00", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                                <User className="w-4 h-4" style={{ color: "#fff" }} />
+                  <div style={{ flex: 1, overflowY: "auto", padding: "16px", background: "#f8f9fa" }}>
+                    {messages.length === 0 ? (
+                      <div style={{ textAlign: "center", padding: "40px", color: "#999" }}>
+                        <p style={{ fontSize: "13px" }}>Belum ada pesan</p>
+                      </div>
+                    ) : (
+                      messages.map((msg) => {
+                        const isMe = msg.senderType === "HR_ADMIN";
+                        return (
+                          <div
+                            key={msg.id}
+                            style={{
+                              display: "flex",
+                              justifyContent: isMe ? "flex-end" : "flex-start",
+                              marginBottom: "12px",
+                            }}
+                          >
+                            <div style={{
+                              maxWidth: "70%",
+                              display: "flex",
+                              flexDirection: isMe ? "row-reverse" : "row",
+                              alignItems: "flex-end",
+                              gap: "8px",
+                            }}>
+                              {!isMe && (
+                                <div style={{ width: "28px", height: "28px", background: "#FF5E00", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                  <User className="w-3 h-3" style={{ color: "#fff" }} />
+                                </div>
+                              )}
+                              <div>
+                                <div style={{
+                                  background: isMe ? "linear-gradient(135deg, #00205B, #003380)" : "#fff",
+                                  color: isMe ? "#fff" : "#333",
+                                  padding: "10px 14px",
+                                  borderRadius: isMe ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
+                                  boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                                }}>
+                                  <p style={{ fontSize: "13px", margin: 0, lineHeight: 1.5 }}>{msg.message}</p>
+                                </div>
+                                <div style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                  marginTop: "4px",
+                                  justifyContent: isMe ? "flex-end" : "flex-start",
+                                }}>
+                                  <span style={{ fontSize: "10px", color: "#999" }}>{formatTime(msg.createdAt)}</span>
+                                  {isMe && (
+                                    <CheckCircle className="w-3 h-3" style={{ color: "#16a34a" }} />
+                                  )}
+                                </div>
                               </div>
-                            )}
-                            <div>
-                              <div style={{
-                                background: isMe ? "linear-gradient(135deg, #00205B, #003380)" : "#fff",
-                                color: isMe ? "#fff" : "#333",
-                                padding: "12px 16px",
-                                borderRadius: isMe ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-                                boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                              }}>
-                                <p style={{ fontSize: "14px", margin: 0, lineHeight: 1.5 }}>{msg.message}</p>
-                              </div>
-                              <div style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "4px",
-                                marginTop: "6px",
-                                justifyContent: isMe ? "flex-end" : "flex-start",
-                              }}>
-                                <span style={{ fontSize: "11px", color: "#999" }}>{formatTime(msg.createdAt)}</span>
-                                {isMe && (
-                                  <CheckCircle className="w-3 h-3" style={{ color: "#16a34a" }} />
-                                )}
-                              </div>
+                              {isMe && (
+                                <div style={{ width: "28px", height: "28px", background: "#00205B", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                  <span style={{ fontSize: "10px", color: "#fff", fontWeight: 700 }}>HR</span>
+                                </div>
+                              )}
                             </div>
-                            {isMe && (
-                              <div style={{ width: "32px", height: "32px", background: "#00205B", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                                <span style={{ fontSize: "11px", color: "#fff", fontWeight: 700 }}>HR</span>
-                              </div>
-                            )}
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })
+                    )}
                     <div ref={messagesEndRef} />
                   </div>
 
                   {/* Message Input */}
-                  <form onSubmit={handleSendReply} style={{ padding: "16px", borderTop: "1px solid #eee", background: "#fff" }}>
-                    <div style={{ display: "flex", gap: "12px", alignItems: "flex-end" }}>
+                  <form onSubmit={handleSendReply} style={{ padding: "12px", borderTop: "1px solid #eee", background: "#fff" }}>
+                    <div style={{ display: "flex", gap: "10px", alignItems: "flex-end" }}>
                       <input
                         type="text"
                         placeholder="Ketik balasan..."
@@ -519,10 +599,10 @@ export default function AdminContactsPage() {
                         onChange={(e) => setNewMessage(e.target.value)}
                         style={{
                           flex: 1,
-                          padding: "14px 18px",
+                          padding: "12px 16px",
                           border: "2px solid #eee",
                           borderRadius: "24px",
-                          fontSize: "14px",
+                          fontSize: "13px",
                           outline: "none",
                         }}
                       />
@@ -530,8 +610,8 @@ export default function AdminContactsPage() {
                         type="submit"
                         disabled={isSubmitting || !newMessage.trim()}
                         style={{
-                          width: "48px",
-                          height: "48px",
+                          width: "44px",
+                          height: "44px",
                           background: newMessage.trim() ? "#16a34a" : "#ddd",
                           border: "none",
                           borderRadius: "50%",
@@ -543,22 +623,20 @@ export default function AdminContactsPage() {
                         }}
                       >
                         {isSubmitting ? (
-                          <div style={{ width: "20px", height: "20px", border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+                          <div style={{ width: "18px", height: "18px", border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
                         ) : (
-                          <Send className="w-5 h-5" style={{ color: "#fff" }} />
+                          <Send className="w-4 h-4" style={{ color: "#fff" }} />
                         )}
                       </button>
                     </div>
                   </form>
                 </div>
-              )}
-
-              {/* Empty State */}
-              {!activeConversation && (
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flex: 1, padding: "40px", textAlign: "center" }}>
-                  <div>
-                    <MessageCircle className="w-16 h-16" style={{ color: "#ddd", margin: "0 auto 16px" }} />
-                    <p style={{ color: "#888", fontSize: "14px" }}>Pilih percakapan untuk memulai chat</p>
+              ) : (
+                /* Empty state when no conversation selected */
+                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div style={{ textAlign: "center" }}>
+                    <MessageCircle className="w-12 h-12" style={{ color: "#ddd", margin: "0 auto 12px" }} />
+                    <p style={{ color: "#999", fontSize: "13px" }}>Pilih percakapan untuk memulai chat</p>
                   </div>
                 </div>
               )}

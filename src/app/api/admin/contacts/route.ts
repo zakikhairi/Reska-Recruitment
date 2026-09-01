@@ -1,6 +1,7 @@
 // API Route: Chat Conversations (Admin)
 // GET /api/admin/contacts - Get all conversations
 // POST /api/admin/contacts - Send reply from admin
+// PATCH /api/admin/contacts - Update conversation status
 
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
@@ -161,6 +162,39 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Admin send reply error:", error);
+    return NextResponse.json(
+      { success: false, error: "Terjadi kesalahan server" },
+      { status: 500 }
+    );
+  }
+}
+
+// PATCH - Update conversation status
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { conversationId, status } = body;
+
+    if (!conversationId || !status) {
+      return NextResponse.json(
+        { success: false, error: "conversationId dan status harus diisi" },
+        { status: 400 }
+      );
+    }
+
+    await prisma.contactConversation.update({
+      where: { id: conversationId },
+      data: { status },
+    });
+
+    console.log(`[CHAT] Conversation ${conversationId} status updated to ${status}`);
+
+    return NextResponse.json({
+      success: true,
+      message: "Status percakapan diperbarui",
+    });
+  } catch (error) {
+    console.error("Admin update status error:", error);
     return NextResponse.json(
       { success: false, error: "Terjadi kesalahan server" },
       { status: 500 }
