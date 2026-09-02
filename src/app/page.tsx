@@ -3,6 +3,12 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 
+// Slideshow Images
+const heroImages = [
+  { src: "/kais-hero.jpg", alt: "KAI Services - Kereta Api Indonesia" },
+  { src: "/kais-about.jpg", alt: "Tentang KAI Services" },
+];
+
 interface Job {
   id: string;
   title: string;
@@ -95,6 +101,47 @@ export default function HomePage() {
   const [activeFilter, setActiveFilter] = useState("Semua");
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const slideshowRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Slideshow auto-advance
+  useEffect(() => {
+    slideshowRef.current = setInterval(() => {
+      setIsTransitioning(true);
+      setTimeout(() => {
+        setCurrentSlide((prev) => (prev + 1) % heroImages.length);
+        setIsTransitioning(false);
+      }, 300);
+    }, 5000); // Change every 5 seconds
+
+    return () => {
+      if (slideshowRef.current) {
+        clearInterval(slideshowRef.current);
+      }
+    };
+  }, []);
+
+  // Manual slide change
+  const goToSlide = (index: number) => {
+    if (index === currentSlide) return;
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setCurrentSlide(index);
+      setIsTransitioning(false);
+    }, 300);
+    // Reset timer
+    if (slideshowRef.current) {
+      clearInterval(slideshowRef.current);
+    }
+    slideshowRef.current = setInterval(() => {
+      setIsTransitioning(true);
+      setTimeout(() => {
+        setCurrentSlide((prev) => (prev + 1) % heroImages.length);
+        setIsTransitioning(false);
+      }, 300);
+    }, 5000);
+  };
 
   useEffect(() => {
     fetch('/api/jobs')
@@ -178,21 +225,59 @@ export default function HomePage() {
 
       {/* Hero */}
       <section style={{ paddingTop: "72px", position: "relative", color: "#ffffff", minHeight: "700px" }}>
-        {/* Background Image */}
-        <img
-          src="/kais-hero.jpg"
-          alt="KAI Services"
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            objectPosition: "center top",
-            zIndex: 0
-          }}
-        />
+        {/* Slideshow Background */}
+        <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", zIndex: 0 }}>
+          {heroImages.map((img, index) => (
+            <img
+              key={index}
+              src={img.src}
+              alt={img.alt}
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                objectPosition: "center top",
+                opacity: index === currentSlide ? 1 : 0,
+                transition: "opacity 0.5s ease-in-out",
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Slideshow Navigation Dots */}
+        <div style={{
+          position: "absolute",
+          bottom: "120px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          display: "flex",
+          gap: "10px",
+          zIndex: 10,
+        }}>
+          {heroImages.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => goToSlide(index)}
+              style={{
+                width: index === currentSlide ? "32px" : "12px",
+                height: "12px",
+                borderRadius: "6px",
+                background: index === currentSlide ? "#FF5E00" : "rgba(255,255,255,0.5)",
+                border: "none",
+                cursor: "pointer",
+                transition: "all 0.3s ease",
+                padding: 0,
+              }}
+              aria-label={`Go to slide ${index + 1}`}
+            />
+          ))}
+        </div>
+
+        {/* Dark Overlay */}
+        <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "linear-gradient(135deg, rgba(0,32,91,0.85) 0%, rgba(12,35,64,0.75) 100%)", zIndex: 1 }} />
         {/* Dark Overlay */}
         <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "linear-gradient(135deg, rgba(0,32,91,0.85) 0%, rgba(12,35,64,0.75) 100%)", zIndex: 1 }} />
         <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "100px 32px", display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "80px", alignItems: "center", position: "relative", zIndex: 2 }} className="hero-content">
