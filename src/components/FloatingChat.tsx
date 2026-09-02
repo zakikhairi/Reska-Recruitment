@@ -98,7 +98,7 @@ export default function FloatingChat() {
 
       if (result.success) {
         const newConversations = result.conversations || [];
-        console.log("[CHAT] Fetched conversations:", newConversations.map(c => ({ id: c.id, unread: c.unreadCount })));
+        console.log("[CHAT] Fetched conversations:", newConversations.map((c: any) => ({ id: c.id, unread: c.unreadCount })));
         setConversations(newConversations);
 
         // Auto-open conversation if there's only one

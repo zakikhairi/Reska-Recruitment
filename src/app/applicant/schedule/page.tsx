@@ -689,7 +689,7 @@ export default function SchedulePage() {
                     )}
 
                     {/* Interview Card */}
-                    {hasInterview && (
+                    {hasInterview && schedule.interview && (
                       <div style={{
                         background: "#fdf2f8",
                         borderRadius: "16px",

@@ -125,7 +125,7 @@ const getStatusDisplay = (app: ApplicationData): { bg: string; text: string; lab
     case "PENDING":
       return { bg: "#f1f5f9", text: "#64748b", label: "Menunggu" };
     default:
-      return statusConfig[dbStatus] || { bg: "#f1f5f9", text: "#64748b", label: dbStatus || "Menunggu" };
+      return { bg: "#f1f5f9", text: "#64748b", label: dbStatus || "Menunggu" };
   }
 };
 

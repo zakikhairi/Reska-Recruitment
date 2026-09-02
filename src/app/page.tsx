@@ -29,6 +29,57 @@ const divisionLabels: Record<string, string> = {
 
 const filters = ["Semua", "Layanan Kereta", "IT Staff", "Logistik", "ResClean", "Admin"];
 
+const heroSlides = [
+  {
+    image: "https://minimax-algeng-chat-tts-us.oss-us-east-1.aliyuncs.com/ccv2%2F2026-09-02%2FMiniMax-M2.7%2F2044203945915593601%2F1ecd505471cf2240985edcde02ee2f7c3bc2a9adb9efd42131f915173ca939aa..png?Expires=1788405702&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=KBjA35kV0ebhl%2BFxid%2FdDo5lqEE%3D",
+    badge: "PT Reska Multi Usaha - Anak Perusahaan KAI",
+    titleLine1: "Bergabung dengan",
+    titleHighlight: "Keluarga Besar",
+    titleLine2: "KAI Services",
+    description: "Jadilah bagian dari perusahaan railway terbesar di Indonesia. Kami mencari talenta terbaik untuk memberikan layanan kereta api terbaik.",
+  },
+  {
+    image: "https://minimax-algeng-chat-tts-us.oss-us-east-1.aliyuncs.com/ccv2%2F2026-09-02%2FMiniMax-M2.7%2F2044203945915593601%2Fa65df92393b0235ca19459c7aaf2da12d99b19a13d93cd80e4a1ffd0c9fdc191..jpeg?Expires=1788417434&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=GLG%2FrnX2u2tx9QTy6kh%2B6bvJ7qc%3D",
+    badge: "Layanan Kebersihan & Fasilitas - RESClean",
+    titleLine1: "Wujudkan Standar",
+    titleHighlight: "Kebersihan & Kenyamanan",
+    titleLine2: "Armada Kereta Api",
+    description: "Bergabunglah bersama tim profesional RESClean dalam menjaga standar kebersihan, higienitas, dan kenyamanan seluruh armada serta stasiun kereta api di Indonesia.",
+  },
+  {
+    image: "https://minimax-algeng-chat-tts-us.oss-us-east-1.aliyuncs.com/ccv2%2F2026-09-02%2FMiniMax-M2.7%2F2044203945915593601%2F3d10e71c3bdf15a8e462af0b213ce3d3ea840a81179089d926a2619f98f5d803..jpeg?Expires=1788417651&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=T2JTBX35oQMIX72z6BK21rL9LpE%3D",
+    badge: "Kuliner & Restorasi Kereta Api - On Train Culinary",
+    titleLine1: "Sajikan Cita Rasa",
+    titleHighlight: "Kuliner Nusantara",
+    titleLine2: "Di Atas Rel Kereta",
+    description: "Kembangkan keahlian kuliner Anda bersama tim Chef dan Katering KAI Services untuk menghadirkan pengalaman hidangan lezat berstandar tinggi bagi jutaan penumpang.",
+  },
+  {
+    image: "https://minimax-algeng-chat-tts-us.oss-us-east-1.aliyuncs.com/ccv2%2F2026-09-02%2FMiniMax-M2.7%2F2044203945915593601%2F43a42117a8e14751936ba094bca1166b76464a7f28d87a344f35431071d967b4..jpeg?Expires=1788417888&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=aYyzDaLPuLIHQSh36aumVWlk9Bk%3D",
+    badge: "Manajemen Kawasan Stasiun - ResParking",
+    titleLine1: "Kelola Layanan Parkir",
+    titleHighlight: "Modern & Terintegrasi",
+    titleLine2: "Di Seluruh Stasiun",
+    description: "Tingkatkan efisiensi mobilitas masyarakat dengan bergabung di divisi manajemen parkir dan pelayanan terdepan kawasan stasiun kereta api modern.",
+  },
+  {
+    image: "https://minimax-algeng-chat-tts-us.oss-us-east-1.aliyuncs.com/ccv2%2F2026-09-02%2FMiniMax-M2.7%2F2044203945915593601%2F9cc5e689ea6479808284ecec29179f56190ff9f19e3a7485ce570884d1baa46d..jpeg?Expires=1788417894&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=Mo%2B5omAx5HOhgyPBjM5M%2BnQALzU%3D",
+    badge: "Hospitality & Barista - Loko Coffee Shop",
+    titleLine1: "Karier Kreatif di",
+    titleHighlight: "Loko Coffee Shop",
+    titleLine2: "Kafe Ikonik Kereta Api",
+    description: "Salurkan passion barista dan hospitality Anda di jaringan coffee shop ternama KAI Services yang selalu menemani momen perjalanan dan kehangatan pelanggan.",
+  },
+  {
+    image: "https://minimax-algeng-chat-tts-us.oss-us-east-1.aliyuncs.com/ccv2%2F2026-09-02%2FMiniMax-M2.7%2F2044203945915593601%2F4a74bc40598186edb9d3085a65c28f75c06c036e2dff47581585cef9739afafe..jpeg?Expires=1788417897&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=okmexeL8kmtm%2B%2BWy21t8egPCAR8%3D",
+    badge: "Keamanan & Pelayanan - Security & Customer Care",
+    titleLine1: "Berikan Rasa Aman &",
+    titleHighlight: "Pelayanan Sepenuh Hati",
+    titleLine2: "Untuk Pelanggan KAI",
+    description: "Jadilah garda terdepan keamanan dan kenyamanan stasiun, melayani jutaan penumpang kereta api setiap hari dengan integritas dan dedikasi prima.",
+  },
+];
+
 // Intersection Observer Hook
 function useScrollAnimation(options = {}) {
   const ref = useRef<HTMLDivElement>(null);
@@ -90,17 +141,103 @@ function AnimatedCard({ children, delay = 0 }: { children: React.ReactNode; dela
   );
 }
 
+// Rolling Wheel / Odometer Digit Counter
+function RollingDigit({ digit, delay = 0, isRolling }: { digit: string; delay?: number; isRolling: boolean }) {
+  const isNumber = !isNaN(parseInt(digit, 10)) && digit.trim() !== "";
+  if (!isNumber) {
+    return (
+      <span style={{ display: "inline-block", height: "1.15em", lineHeight: "1.15em", verticalAlign: "top" }}>
+        {digit}
+      </span>
+    );
+  }
+
+  const num = parseInt(digit, 10);
+  const sequence = [
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+    ...Array.from({ length: num + 1 }, (_, i) => i)
+  ];
+  const targetIndex = 20 + num;
+  const totalCount = sequence.length;
+
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        height: "1.15em",
+        lineHeight: "1.15em",
+        overflow: "hidden",
+        verticalAlign: "top",
+        position: "relative",
+      }}
+    >
+      <span
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          transform: isRolling ? `translateY(-${(targetIndex / totalCount) * 100}%)` : "translateY(0%)",
+          transition: isRolling
+            ? `transform ${1.6 + delay * 0.15}s cubic-bezier(0.12, 0.9, 0.25, 1) ${delay}s`
+            : "none",
+        }}
+      >
+        {sequence.map((n, i) => (
+          <span
+            key={i}
+            style={{
+              height: "1.15em",
+              lineHeight: "1.15em",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            {n}
+          </span>
+        ))}
+      </span>
+    </span>
+  );
+}
+
+function RollingText({ text, delay = 0, isRolling }: { text: string; delay?: number; isRolling: boolean }) {
+  const chars = text.split("");
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+      {chars.map((char, i) => (
+        <RollingDigit
+          key={i}
+          digit={char}
+          delay={delay + i * 0.07}
+          isRolling={isRolling}
+        />
+      ))}
+    </span>
+  );
+}
+
 export default function HomePage() {
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("Semua");
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isStatsRolling, setIsStatsRolling] = useState(false);
+  const [showAnnouncement, setShowAnnouncement] = useState(true);
+
+  // Trigger stats rolling wheel animation on initial mount / page load
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsStatsRolling(true);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Auto-advance background slideshow
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentSlide(prev => (prev + 1) % 6);
+      setCurrentSlide(prev => (prev + 1) % heroSlides.length);
     }, 5000);
     return () => clearInterval(interval);
   }, []);
@@ -141,6 +278,247 @@ export default function HomePage() {
 
   return (
     <div style={{ fontFamily: "Inter, system-ui, -apple-system, sans-serif", minHeight: "100vh", background: "#ffffff", color: "#111111", margin: 0, padding: 0 }}>
+      {/* Important Announcement Popup Modal */}
+      {showAnnouncement && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 18, 50, 0.72)",
+            backdropFilter: "blur(8px)",
+            WebkitBackdropFilter: "blur(8px)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+            animation: "modalFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowAnnouncement(false);
+          }}
+        >
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: "24px",
+              maxWidth: "520px",
+              width: "100%",
+              overflow: "hidden",
+              boxShadow: "0 25px 60px -12px rgba(0, 32, 91, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.15)",
+              animation: "modalScaleIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+              position: "relative",
+            }}
+          >
+            {/* Top Banner Header */}
+            <div
+              style={{
+                background: "linear-gradient(135deg, #00205B 0%, #003399 100%)",
+                padding: "32px 24px 24px",
+                textAlign: "center",
+                position: "relative",
+                overflow: "hidden",
+              }}
+            >
+              {/* Subtle Decorative Background Circles */}
+              <div
+                style={{
+                  position: "absolute",
+                  top: "-40px",
+                  right: "-40px",
+                  width: "140px",
+                  height: "140px",
+                  borderRadius: "50%",
+                  background: "rgba(255, 94, 0, 0.15)",
+                  pointerEvents: "none",
+                }}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: "-30px",
+                  left: "-30px",
+                  width: "110px",
+                  height: "110px",
+                  borderRadius: "50%",
+                  background: "rgba(255, 255, 255, 0.08)",
+                  pointerEvents: "none",
+                }}
+              />
+
+              {/* Close Button */}
+              <button
+                onClick={() => setShowAnnouncement(false)}
+                style={{
+                  position: "absolute",
+                  top: "16px",
+                  right: "16px",
+                  background: "rgba(255, 255, 255, 0.15)",
+                  border: "none",
+                  color: "#ffffff",
+                  width: "32px",
+                  height: "32px",
+                  borderRadius: "50%",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "18px",
+                  lineHeight: 1,
+                  transition: "all 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "rgba(255, 94, 0, 0.9)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "rgba(255, 255, 255, 0.15)";
+                }}
+                aria-label="Tutup"
+              >
+                ✕
+              </button>
+
+              {/* Official KAI Services Logo Card */}
+              <div
+                style={{
+                  background: "#ffffff",
+                  borderRadius: "16px",
+                  padding: "10px 22px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: "0 8px 20px rgba(0, 0, 0, 0.2)",
+                  marginBottom: "16px",
+                }}
+              >
+                <img
+                  src="/_logo_kais.png"
+                  alt="Logo KAI Services"
+                  style={{ height: "46px", width: "auto", objectFit: "contain" }}
+                />
+              </div>
+
+              <h3
+                style={{
+                  color: "#ffffff",
+                  fontSize: "22px",
+                  fontWeight: 800,
+                  margin: 0,
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                Pemberitahuan Penting
+              </h3>
+            </div>
+
+            {/* Body Content */}
+            <div style={{ padding: "28px 28px 24px" }}>
+              <p
+                style={{
+                  fontSize: "14.5px",
+                  color: "#475569",
+                  lineHeight: 1.65,
+                  margin: "0 0 20px 0",
+                  textAlign: "center",
+                }}
+              >
+                Terima kasih telah mengunjungi situs rekrutmen resmi <strong>KAI Services</strong> (PT Reska Multi Usaha). Dengan melanjutkan mengakses situs ini, Anda dianggap telah membaca dan menyetujui ketentuan penggunaan yang berlaku.
+              </p>
+
+              {/* Warning Alert Box */}
+              <div
+                style={{
+                  background: "#fffbeb",
+                  border: "1.5px solid #fef3c7",
+                  borderRadius: "16px",
+                  padding: "16px 18px",
+                  marginBottom: "28px",
+                  display: "flex",
+                  gap: "12px",
+                  alignItems: "flex-start",
+                }}
+              >
+                <div
+                  style={{
+                    width: "28px",
+                    height: "28px",
+                    borderRadius: "50%",
+                    background: "#fef3c7",
+                    color: "#d97706",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                    marginTop: "2px",
+                  }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+                <div>
+                  <div
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: 700,
+                      color: "#92400e",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    Perhatian:
+                  </div>
+                  <p
+                    style={{
+                      fontSize: "13px",
+                      color: "#78350f",
+                      lineHeight: 1.55,
+                      margin: 0,
+                    }}
+                  >
+                    Seluruh informasi lowongan yang tertera di situs ini adalah resmi dari <strong>PT Reska Multi Usaha (KAI Services)</strong>. KAI Services <strong>tidak memungut biaya apapun</strong> dalam seluruh proses rekrutmen. Waspada terhadap tindakan penipuan yang mengatasnamakan KAI Services.
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Button */}
+              <div style={{ textAlign: "center" }}>
+                <button
+                  onClick={() => setShowAnnouncement(false)}
+                  style={{
+                    background: "linear-gradient(135deg, #FF5E00 0%, #FF7A00 100%)",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: "14px",
+                    padding: "14px 44px",
+                    fontSize: "15px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    boxShadow: "0 8px 24px rgba(255, 94, 0, 0.35)",
+                    transition: "transform 0.2s, box-shadow 0.2s",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                    e.currentTarget.style.boxShadow = "0 10px 28px rgba(255, 94, 0, 0.45)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "translateY(0)";
+                    e.currentTarget.style.boxShadow = "0 8px 24px rgba(255, 94, 0, 0.35)";
+                  }}
+                >
+                  Saya Mengerti
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: "#ffffff", borderBottom: "1px solid #eeeeee" }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "0 32px", height: "72px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -189,96 +567,24 @@ export default function HomePage() {
       <section style={{ paddingTop: "72px", position: "relative", color: "#ffffff", minHeight: "700px" }}>
         {/* Background Image Slideshow */}
         <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", zIndex: 0 }}>
-          <img
-            src="https://minimax-algeng-chat-tts-us.oss-us-east-1.aliyuncs.com/ccv2%2F2026-09-02%2FMiniMax-M2.7%2F2044203945915593601%2F1ecd505471cf2240985edcde02ee2f7c3bc2a9adb9efd42131f915173ca939aa..png?Expires=1788405702&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=KBjA35kV0ebhl%2BFxid%2FdDo5lqEE%3D"
-            alt="KAI Services"
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              objectPosition: "center top",
-              opacity: currentSlide === 0 ? 1 : 0,
-              transition: "opacity 1s ease-in-out"
-            }}
-          />
-          <img
-            src="https://minimax-algeng-chat-tts-us.oss-us-east-1.aliyuncs.com/ccv2%2F2026-09-02%2FMiniMax-M2.7%2F2044203945915593601%2Fa65df92393b0235ca19459c7aaf2da12d99b19a13d93cd80e4a1ffd0c9fdc191..jpeg?Expires=1788417434&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=GLG%2FrnX2u2tx9QTy6kh%2B6bvJ7qc%3D"
-            alt="KAI Services Banner"
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              objectPosition: "center top",
-              opacity: currentSlide === 1 ? 1 : 0,
-              transition: "opacity 1s ease-in-out"
-            }}
-          />
-          <img
-            src="https://minimax-algeng-chat-tts-us.oss-us-east-1.aliyuncs.com/ccv2%2F2026-09-02%2FMiniMax-M2.7%2F2044203945915593601%2F3d10e71c3bdf15a8e462af0b213ce3d3ea840a81179089d926a2619f98f5d803..jpeg?Expires=1788417651&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=T2JTBX35oQMIX72z6BK21rL9LpE%3D"
-            alt="KAI Services Banner 2"
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              objectPosition: "center top",
-              opacity: currentSlide === 2 ? 1 : 0,
-              transition: "opacity 1s ease-in-out"
-            }}
-          />
-          <img
-            src="https://minimax-algeng-chat-tts-us.oss-us-east-1.aliyuncs.com/ccv2%2F2026-09-02%2FMiniMax-M2.7%2F2044203945915593601%2F43a42117a8e14751936ba094bca1166b76464a7f28d87a344f35431071d967b4..jpeg?Expires=1788417888&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=aYyzDaLPuLIHQSh36aumVWlk9Bk%3D"
-            alt="KAI Services Banner 3"
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              objectPosition: "center top",
-              opacity: currentSlide === 3 ? 1 : 0,
-              transition: "opacity 1s ease-in-out"
-            }}
-          />
-          <img
-            src="https://minimax-algeng-chat-tts-us.oss-us-east-1.aliyuncs.com/ccv2%2F2026-09-02%2FMiniMax-M2.7%2F2044203945915593601%2F9cc5e689ea6479808284ecec29179f56190ff9f19e3a7485ce570884d1baa46d..jpeg?Expires=1788417894&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=Mo%2B5omAx5HOhgyPBjM5M%2BnQALzU%3D"
-            alt="KAI Services Banner 4"
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              objectPosition: "center top",
-              opacity: currentSlide === 4 ? 1 : 0,
-              transition: "opacity 1s ease-in-out"
-            }}
-          />
-          <img
-            src="https://minimax-algeng-chat-tts-us.oss-us-east-1.aliyuncs.com/ccv2%2F2026-09-02%2FMiniMax-M2.7%2F2044203945915593601%2F4a74bc40598186edb9d3085a65c28f75c06c036e2dff47581585cef9739afafe..jpeg?Expires=1788417897&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=okmexeL8kmtm%2B%2BWy21t8egPCAR8%3D"
-            alt="KAI Services Banner 5"
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              objectPosition: "center top",
-              opacity: currentSlide === 5 ? 1 : 0,
-              transition: "opacity 1s ease-in-out"
-            }}
-          />
+          {heroSlides.map((slide, index) => (
+            <img
+              key={index}
+              src={slide.image}
+              alt={slide.badge}
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                objectPosition: "center top",
+                opacity: currentSlide === index ? 1 : 0,
+                transition: "opacity 1s ease-in-out"
+              }}
+            />
+          ))}
         </div>
 
         {/* Dark Overlay */}
@@ -286,7 +592,7 @@ export default function HomePage() {
 
         {/* Navigation Arrows */}
         <button
-          onClick={() => setCurrentSlide(prev => (prev - 1 + 6) % 6)}
+          onClick={() => setCurrentSlide(prev => (prev - 1 + heroSlides.length) % heroSlides.length)}
           style={{
             position: "absolute",
             left: "24px",
@@ -297,6 +603,7 @@ export default function HomePage() {
             height: "48px",
             background: "rgba(255,255,255,0.2)",
             backdropFilter: "blur(8px)",
+            WebkitBackdropFilter: "blur(8px)",
             border: "1px solid rgba(255,255,255,0.3)",
             borderRadius: "50%",
             cursor: "pointer",
@@ -304,12 +611,11 @@ export default function HomePage() {
             alignItems: "center",
             justifyContent: "center",
             color: "#ffffff",
-            fontSize: "24px",
-            fontWeight: "bold",
+            padding: 0,
             transition: "all 0.3s ease",
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = "rgba(255,94,0,0.8)";
+            e.currentTarget.style.background = "rgba(255,94,0,0.85)";
             e.currentTarget.style.transform = "translateY(-50%) scale(1.1)";
           }}
           onMouseLeave={(e) => {
@@ -318,11 +624,13 @@ export default function HomePage() {
           }}
           aria-label="Previous slide"
         >
-          ‹
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", marginLeft: "-2px" }}>
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
         </button>
 
         <button
-          onClick={() => setCurrentSlide(prev => (prev + 1) % 6)}
+          onClick={() => setCurrentSlide(prev => (prev + 1) % heroSlides.length)}
           style={{
             position: "absolute",
             right: "24px",
@@ -333,6 +641,7 @@ export default function HomePage() {
             height: "48px",
             background: "rgba(255,255,255,0.2)",
             backdropFilter: "blur(8px)",
+            WebkitBackdropFilter: "blur(8px)",
             border: "1px solid rgba(255,255,255,0.3)",
             borderRadius: "50%",
             cursor: "pointer",
@@ -340,12 +649,11 @@ export default function HomePage() {
             alignItems: "center",
             justifyContent: "center",
             color: "#ffffff",
-            fontSize: "24px",
-            fontWeight: "bold",
+            padding: 0,
             transition: "all 0.3s ease",
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = "rgba(255,94,0,0.8)";
+            e.currentTarget.style.background = "rgba(255,94,0,0.85)";
             e.currentTarget.style.transform = "translateY(-50%) scale(1.1)";
           }}
           onMouseLeave={(e) => {
@@ -354,7 +662,9 @@ export default function HomePage() {
           }}
           aria-label="Next slide"
         >
-          ›
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", marginRight: "-2px" }}>
+            <path d="M9 18l6-6-6-6" />
+          </svg>
         </button>
 
         {/* Navigation Dots */}
@@ -367,7 +677,7 @@ export default function HomePage() {
           gap: "10px",
           zIndex: 10,
         }}>
-          {[0, 1, 2, 3, 4, 5].map((index) => (
+          {heroSlides.map((_, index) => (
             <button
               key={index}
               onClick={() => setCurrentSlide(index)}
@@ -387,18 +697,18 @@ export default function HomePage() {
         </div>
 
         <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "100px 32px", display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "80px", alignItems: "center", position: "relative", zIndex: 2 }} className="hero-content">
-          <div>
-            <AnimatedSection delay={0}>
-              <div style={{ display: "inline-block", padding: "8px 16px", background: "rgba(255,255,255,0.1)", borderRadius: "24px", fontSize: "14px", fontWeight: 500, marginBottom: "24px" }}>
-                PT Reska Multi Usaha - Anak Perusahaan KAI
+          <div style={{ minHeight: "360px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+            <div key={currentSlide} style={{ animation: "heroSlideFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards" }}>
+              <div style={{ display: "inline-block", padding: "8px 16px", background: "rgba(255,255,255,0.12)", backdropFilter: "blur(6px)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: "24px", fontSize: "14px", fontWeight: 500, marginBottom: "24px" }}>
+                {heroSlides[currentSlide]?.badge}
               </div>
-              <h1 style={{ fontSize: "clamp(36px, 5vw, 56px)", fontWeight: 800, lineHeight: 1.1, marginBottom: "24px", letterSpacing: "-0.02em" }}>
-                Bergabung dengan<br/>
-                <span style={{ color: "#FF5E00" }}>Keluarga Besar</span><br/>
-                KAI Services
+              <h1 style={{ fontSize: "clamp(34px, 4.8vw, 54px)", fontWeight: 800, lineHeight: 1.15, marginBottom: "24px", letterSpacing: "-0.02em" }}>
+                {heroSlides[currentSlide]?.titleLine1}<br/>
+                <span style={{ color: "#FF5E00" }}>{heroSlides[currentSlide]?.titleHighlight}</span><br/>
+                {heroSlides[currentSlide]?.titleLine2}
               </h1>
-              <p style={{ fontSize: "18px", color: "rgba(255,255,255,0.7)", lineHeight: 1.7, marginBottom: "40px", maxWidth: "520px" }}>
-                Jadilah bagian dari perusahaan railway terbesar di Indonesia. Kami mencari talenta terbaik untuk memberikan layanan kereta api terbaik.
+              <p style={{ fontSize: "17px", color: "rgba(255,255,255,0.85)", lineHeight: 1.7, marginBottom: "40px", maxWidth: "520px" }}>
+                {heroSlides[currentSlide]?.description}
               </p>
               <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
                 <Link href="/auth/register">
@@ -415,15 +725,22 @@ export default function HomePage() {
                   </button>
                 </Link>
               </div>
-            </AnimatedSection>
+            </div>
           </div>
 
           <AnimatedSection delay={200} className="hero-stats">
             <div style={{ background: "rgba(255,255,255,0.08)", borderRadius: "20px", padding: "32px", backdropFilter: "blur(10px)" }}>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "32px" }}>
-                {[{v: "12,500+", l: "Total Pelamar"}, {v: "24", l: "Posisi Terbuka"}, {v: "1,200+", l: "Terserap 2025"}, {v: "18 Kota", l: "Cabang"}].map((s, i) => (
+                {[
+                  { v: "12,500+", l: "Total Pelamar" },
+                  { v: "24", l: "Posisi Terbuka" },
+                  { v: "1,200+", l: "Terserap 2025" },
+                  { v: "18 Kota", l: "Cabang" }
+                ].map((s, i) => (
                   <div key={i} style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: "36px", fontWeight: 800, color: "#FF5E00", lineHeight: 1.1, marginBottom: "6px" }}>{s.v}</div>
+                    <div style={{ fontSize: "36px", fontWeight: 800, color: "#FF5E00", lineHeight: 1.1, marginBottom: "6px" }}>
+                      <RollingText text={s.v} delay={i * 0.15} isRolling={isStatsRolling} />
+                    </div>
                     <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>{s.l}</div>
                   </div>
                 ))}
@@ -1078,6 +1395,33 @@ export default function HomePage() {
       </footer>
 
       <style>{`
+        @keyframes modalFadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        @keyframes modalScaleIn {
+          from {
+            opacity: 0;
+            transform: scale(0.92) translateY(16px);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
+        }
+
+        @keyframes heroSlideFadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(16px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
         /* Desktop only nav */
         @media (max-width: 1024px) {
           .desktop-nav { display: none !important; }
