@@ -3,12 +3,6 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 
-// Slideshow Images
-const heroImages = [
-  { src: "/kais-hero.jpg", alt: "KAI Services - Kereta Api Indonesia" },
-  { src: "/kais-about.jpg", alt: "Tentang KAI Services" },
-];
-
 interface Job {
   id: string;
   title: string;
@@ -102,55 +96,14 @@ export default function HomePage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const slideshowRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Slideshow auto-advance
+  // Auto-advance background slideshow
   useEffect(() => {
-    slideshowRef.current = setInterval(() => {
-      setIsTransitioning(true);
-      setTimeout(() => {
-        setCurrentSlide((prev) => (prev + 1) % heroImages.length);
-        setIsTransitioning(false);
-      }, 300);
-    }, 5000); // Change every 5 seconds
-
-    return () => {
-      if (slideshowRef.current) {
-        clearInterval(slideshowRef.current);
-      }
-    };
-  }, []);
-
-  // Manual slide change
-  const goToSlide = (index: number) => {
-    if (index === currentSlide) return;
-    setIsTransitioning(true);
-    setTimeout(() => {
-      setCurrentSlide(index);
-      setIsTransitioning(false);
-    }, 300);
-    // Reset timer
-    if (slideshowRef.current) {
-      clearInterval(slideshowRef.current);
-    }
-    slideshowRef.current = setInterval(() => {
-      setIsTransitioning(true);
-      setTimeout(() => {
-        setCurrentSlide((prev) => (prev + 1) % heroImages.length);
-        setIsTransitioning(false);
-      }, 300);
+    const interval = setInterval(() => {
+      setCurrentSlide(prev => (prev + 1) % 6);
     }, 5000);
-  };
-
-  // Next/Previous slide
-  const nextSlide = () => {
-    goToSlide((currentSlide + 1) % heroImages.length);
-  };
-
-  const prevSlide = () => {
-    goToSlide((currentSlide - 1 + heroImages.length) % heroImages.length);
-  };
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     fetch('/api/jobs')
@@ -234,65 +187,106 @@ export default function HomePage() {
 
       {/* Hero */}
       <section style={{ paddingTop: "72px", position: "relative", color: "#ffffff", minHeight: "700px" }}>
-        {/* Slideshow Background */}
+        {/* Background Image Slideshow */}
         <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", zIndex: 0 }}>
-          {heroImages.map((img, index) => (
-            <img
-              key={index}
-              src={img.src}
-              alt={img.alt}
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                objectPosition: "center top",
-                opacity: index === currentSlide ? 1 : 0,
-                transition: "opacity 0.5s ease-in-out",
-              }}
-            />
-          ))}
+          <img
+            src="https://minimax-algeng-chat-tts-us.oss-us-east-1.aliyuncs.com/ccv2%2F2026-09-02%2FMiniMax-M2.7%2F2044203945915593601%2F1ecd505471cf2240985edcde02ee2f7c3bc2a9adb9efd42131f915173ca939aa..png?Expires=1788405702&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=KBjA35kV0ebhl%2BFxid%2FdDo5lqEE%3D"
+            alt="KAI Services"
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: "center top",
+              opacity: currentSlide === 0 ? 1 : 0,
+              transition: "opacity 1s ease-in-out"
+            }}
+          />
+          <img
+            src="https://minimax-algeng-chat-tts-us.oss-us-east-1.aliyuncs.com/ccv2%2F2026-09-02%2FMiniMax-M2.7%2F2044203945915593601%2Fa65df92393b0235ca19459c7aaf2da12d99b19a13d93cd80e4a1ffd0c9fdc191..jpeg?Expires=1788417434&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=GLG%2FrnX2u2tx9QTy6kh%2B6bvJ7qc%3D"
+            alt="KAI Services Banner"
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: "center top",
+              opacity: currentSlide === 1 ? 1 : 0,
+              transition: "opacity 1s ease-in-out"
+            }}
+          />
+          <img
+            src="https://minimax-algeng-chat-tts-us.oss-us-east-1.aliyuncs.com/ccv2%2F2026-09-02%2FMiniMax-M2.7%2F2044203945915593601%2F3d10e71c3bdf15a8e462af0b213ce3d3ea840a81179089d926a2619f98f5d803..jpeg?Expires=1788417651&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=T2JTBX35oQMIX72z6BK21rL9LpE%3D"
+            alt="KAI Services Banner 2"
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: "center top",
+              opacity: currentSlide === 2 ? 1 : 0,
+              transition: "opacity 1s ease-in-out"
+            }}
+          />
+          <img
+            src="https://minimax-algeng-chat-tts-us.oss-us-east-1.aliyuncs.com/ccv2%2F2026-09-02%2FMiniMax-M2.7%2F2044203945915593601%2F43a42117a8e14751936ba094bca1166b76464a7f28d87a344f35431071d967b4..jpeg?Expires=1788417888&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=aYyzDaLPuLIHQSh36aumVWlk9Bk%3D"
+            alt="KAI Services Banner 3"
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: "center top",
+              opacity: currentSlide === 3 ? 1 : 0,
+              transition: "opacity 1s ease-in-out"
+            }}
+          />
+          <img
+            src="https://minimax-algeng-chat-tts-us.oss-us-east-1.aliyuncs.com/ccv2%2F2026-09-02%2FMiniMax-M2.7%2F2044203945915593601%2F9cc5e689ea6479808284ecec29179f56190ff9f19e3a7485ce570884d1baa46d..jpeg?Expires=1788417894&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=Mo%2B5omAx5HOhgyPBjM5M%2BnQALzU%3D"
+            alt="KAI Services Banner 4"
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: "center top",
+              opacity: currentSlide === 4 ? 1 : 0,
+              transition: "opacity 1s ease-in-out"
+            }}
+          />
+          <img
+            src="https://minimax-algeng-chat-tts-us.oss-us-east-1.aliyuncs.com/ccv2%2F2026-09-02%2FMiniMax-M2.7%2F2044203945915593601%2F4a74bc40598186edb9d3085a65c28f75c06c036e2dff47581585cef9739afafe..jpeg?Expires=1788417897&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=okmexeL8kmtm%2B%2BWy21t8egPCAR8%3D"
+            alt="KAI Services Banner 5"
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: "center top",
+              opacity: currentSlide === 5 ? 1 : 0,
+              transition: "opacity 1s ease-in-out"
+            }}
+          />
         </div>
 
-        {/* Slideshow Navigation Dots */}
-        <div style={{
-          position: "absolute",
-          bottom: "120px",
-          left: "50%",
-          transform: "translateX(-50%)",
-          display: "flex",
-          gap: "10px",
-          zIndex: 10,
-        }}>
-          {heroImages.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => goToSlide(index)}
-              style={{
-                width: index === currentSlide ? "32px" : "12px",
-                height: "12px",
-                borderRadius: "6px",
-                background: index === currentSlide ? "#FF5E00" : "rgba(255,255,255,0.5)",
-                border: "none",
-                cursor: "pointer",
-                transition: "all 0.3s ease",
-                padding: 0,
-              }}
-              aria-label={`Go to slide ${index + 1}`}
-            />
-          ))}
-        </div>
-
-        {/* Dark Overlay */}
-        <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "linear-gradient(135deg, rgba(0,32,91,0.85) 0%, rgba(12,35,64,0.75) 100%)", zIndex: 1 }} />
         {/* Dark Overlay */}
         <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "linear-gradient(135deg, rgba(0,32,91,0.85) 0%, rgba(12,35,64,0.75) 100%)", zIndex: 1 }} />
 
         {/* Navigation Arrows */}
         <button
-          onClick={prevSlide}
+          onClick={() => setCurrentSlide(prev => (prev - 1 + 6) % 6)}
           style={{
             position: "absolute",
             left: "24px",
@@ -328,7 +322,7 @@ export default function HomePage() {
         </button>
 
         <button
-          onClick={nextSlide}
+          onClick={() => setCurrentSlide(prev => (prev + 1) % 6)}
           style={{
             position: "absolute",
             right: "24px",
@@ -362,6 +356,35 @@ export default function HomePage() {
         >
           ›
         </button>
+
+        {/* Navigation Dots */}
+        <div style={{
+          position: "absolute",
+          bottom: "120px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          display: "flex",
+          gap: "10px",
+          zIndex: 10,
+        }}>
+          {[0, 1, 2, 3, 4, 5].map((index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentSlide(index)}
+              style={{
+                width: currentSlide === index ? "32px" : "12px",
+                height: "12px",
+                borderRadius: "6px",
+                background: currentSlide === index ? "#FF5E00" : "rgba(255,255,255,0.5)",
+                border: "none",
+                cursor: "pointer",
+                transition: "all 0.3s ease",
+                padding: 0,
+              }}
+              aria-label={`Go to slide ${index + 1}`}
+            />
+          ))}
+        </div>
 
         <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "100px 32px", display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "80px", alignItems: "center", position: "relative", zIndex: 2 }} className="hero-content">
           <div>
@@ -442,70 +465,18 @@ export default function HomePage() {
       </section>
 
       {/* Steps */}
-      <section style={{ padding: "100px 32px", background: "#ffffff" }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
-          <AnimatedSection>
-            <div style={{ textAlign: "center", marginBottom: "56px" }}>
-              <h2 style={{ fontSize: "36px", fontWeight: 700, color: "#00205B", marginBottom: "14px", letterSpacing: "-0.02em" }}>Cara Melamar</h2>
-              <p style={{ fontSize: "16px", color: "#666666" }}>Proses sederhana dalam 5 langkah mudah</p>
-            </div>
-          </AnimatedSection>
-
-          <div style={{ display: "flex", justifyContent: "center", gap: "0", flexWrap: "wrap" }} className="steps-container">
-            {[
-              {n: "01", t: "Daftar", d: "Buat akun baru", color: "#FF5E00" },
-              {n: "02", t: "Pilih", d: "Lowongan sesuai bidang", color: "#00205B" },
-              {n: "03", t: "Tes", d: "Tes kompetensi online", color: "#FF5E00" },
-              {n: "04", t: "Interview", d: "Seleksi lanjutan", color: "#00205B" },
-              {n: "05", t: "Offering", d: "Terima & bergabung", color: "#FF5E00" }
-            ].map((s, i) => (
-              <div key={i} style={{
-                display: "flex",
-                alignItems: "flex-start"
-              }}>
-                {/* Connector line - positioned above text, aligned with top of circle */}
-                {i > 0 && (
-                  <div style={{
-                    width: "40px",
-                    height: "3px",
-                    background: i % 2 === 0 ? "#00205B" : "#FF5E00",
-                    flexShrink: 0,
-                    marginTop: "32px",
-                  }} className="step-connector" />
-                )}
-
-                <div style={{
-                  textAlign: "center",
-                  padding: "0 20px",
-                  transition: "transform 0.3s",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                }}
-                  onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-8px)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; }}>
-
-                  <div style={{
-                    width: "64px",
-                    height: "64px",
-                    background: s.color,
-                    color: "#ffffff",
-                    borderRadius: "50%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "20px",
-                    fontWeight: 800,
-                    boxShadow: `0 8px 24px ${s.color}40`,
-                  }}>{s.n}</div>
-
-                  <div style={{ fontSize: "16px", fontWeight: 700, color: "#111111", marginTop: "16px", marginBottom: "6px" }}>{s.t}</div>
-                  <div style={{ fontSize: "13px", color: "#888888" }}>{s.d}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+      <section id="cara-melamar" style={{ padding: "0", background: "#ffffff" }}>
+        <AnimatedSection>
+          <img
+            src="https://minimax-algeng-chat-tts-us.oss-us-east-1.aliyuncs.com/ccv2%2F2026-09-02%2FMiniMax-M2.7%2F2044203945915593601%2Fa8fb75e09b26e9c237b5c39f62abce17ef45d5afc5c39cb03093b0fd2d85c030..jpeg?Expires=1788419439&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=QiThk2e9ODtQw2ZGWxhs2G55EfY%3D"
+            alt="Cara Melamar"
+            style={{
+              width: "100%",
+              height: "auto",
+              display: "block"
+            }}
+          />
+        </AnimatedSection>
       </section>
 
       {/* Jobs */}
