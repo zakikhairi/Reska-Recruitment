@@ -465,18 +465,70 @@ export default function HomePage() {
       </section>
 
       {/* Steps */}
-      <section id="cara-melamar" style={{ padding: "0", background: "#ffffff" }}>
-        <AnimatedSection>
-          <img
-            src="https://minimax-algeng-chat-tts-us.oss-us-east-1.aliyuncs.com/ccv2%2F2026-09-02%2FMiniMax-M2.7%2F2044203945915593601%2Fa8fb75e09b26e9c237b5c39f62abce17ef45d5afc5c39cb03093b0fd2d85c030..jpeg?Expires=1788419439&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=QiThk2e9ODtQw2ZGWxhs2G55EfY%3D"
-            alt="Cara Melamar"
-            style={{
-              width: "100%",
-              height: "auto",
-              display: "block"
-            }}
-          />
-        </AnimatedSection>
+      <section id="cara-melamar" style={{ padding: "80px 32px", background: "#ffffff" }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+          <AnimatedSection>
+            <div style={{ textAlign: "center", marginBottom: "56px" }}>
+              <h2 style={{ fontSize: "36px", fontWeight: 700, color: "#00205B", marginBottom: "14px", letterSpacing: "-0.02em" }}>Cara Melamar</h2>
+              <p style={{ fontSize: "16px", color: "#666666" }}>Proses sederhana dalam 5 langkah mudah</p>
+            </div>
+          </AnimatedSection>
+
+          <div style={{ display: "flex", justifyContent: "center", gap: "0", flexWrap: "wrap" }} className="steps-container">
+            {[
+              {n: "01", t: "Daftar", d: "Buat akun baru", color: "#FF5E00" },
+              {n: "02", t: "Pilih", d: "Lowongan sesuai bidang", color: "#00205B" },
+              {n: "03", t: "Tes", d: "Tes kompetensi online", color: "#FF5E00" },
+              {n: "04", t: "Interview", d: "Seleksi lanjutan", color: "#00205B" },
+              {n: "05", t: "Offering", d: "Terima & bergabung", color: "#FF5E00" }
+            ].map((s, i) => (
+              <div key={i} style={{
+                display: "flex",
+                alignItems: "flex-start"
+              }}>
+                {/* Connector line - positioned above text, aligned with top of circle */}
+                {i > 0 && (
+                  <div style={{
+                    width: "40px",
+                    height: "3px",
+                    background: i % 2 === 0 ? "#00205B" : "#FF5E00",
+                    flexShrink: 0,
+                    marginTop: "32px",
+                  }} className="step-connector" />
+                )}
+
+                <div style={{
+                  textAlign: "center",
+                  padding: "0 20px",
+                  transition: "transform 0.3s",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                }}
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-8px)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; }}>
+
+                  <div style={{
+                    width: "64px",
+                    height: "64px",
+                    background: s.color,
+                    color: "#ffffff",
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "20px",
+                    fontWeight: 800,
+                    boxShadow: `0 8px 24px ${s.color}40`,
+                  }}>{s.n}</div>
+
+                  <div style={{ fontSize: "16px", fontWeight: 700, color: "#111111", marginTop: "16px", marginBottom: "6px" }}>{s.t}</div>
+                  <div style={{ fontSize: "13px", color: "#888888" }}>{s.d}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
 
       {/* Jobs */}
