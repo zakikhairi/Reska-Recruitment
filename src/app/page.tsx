@@ -143,6 +143,15 @@ export default function HomePage() {
     }, 5000);
   };
 
+  // Next/Previous slide
+  const nextSlide = () => {
+    goToSlide((currentSlide + 1) % heroImages.length);
+  };
+
+  const prevSlide = () => {
+    goToSlide((currentSlide - 1 + heroImages.length) % heroImages.length);
+  };
+
   useEffect(() => {
     fetch('/api/jobs')
       .then(res => res.json())
@@ -280,6 +289,80 @@ export default function HomePage() {
         <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "linear-gradient(135deg, rgba(0,32,91,0.85) 0%, rgba(12,35,64,0.75) 100%)", zIndex: 1 }} />
         {/* Dark Overlay */}
         <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "linear-gradient(135deg, rgba(0,32,91,0.85) 0%, rgba(12,35,64,0.75) 100%)", zIndex: 1 }} />
+
+        {/* Navigation Arrows */}
+        <button
+          onClick={prevSlide}
+          style={{
+            position: "absolute",
+            left: "24px",
+            top: "50%",
+            transform: "translateY(-50%)",
+            zIndex: 10,
+            width: "48px",
+            height: "48px",
+            background: "rgba(255,255,255,0.2)",
+            backdropFilter: "blur(8px)",
+            border: "1px solid rgba(255,255,255,0.3)",
+            borderRadius: "50%",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#ffffff",
+            fontSize: "24px",
+            fontWeight: "bold",
+            transition: "all 0.3s ease",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "rgba(255,94,0,0.8)";
+            e.currentTarget.style.transform = "translateY(-50%) scale(1.1)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "rgba(255,255,255,0.2)";
+            e.currentTarget.style.transform = "translateY(-50%) scale(1)";
+          }}
+          aria-label="Previous slide"
+        >
+          ‹
+        </button>
+
+        <button
+          onClick={nextSlide}
+          style={{
+            position: "absolute",
+            right: "24px",
+            top: "50%",
+            transform: "translateY(-50%)",
+            zIndex: 10,
+            width: "48px",
+            height: "48px",
+            background: "rgba(255,255,255,0.2)",
+            backdropFilter: "blur(8px)",
+            border: "1px solid rgba(255,255,255,0.3)",
+            borderRadius: "50%",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#ffffff",
+            fontSize: "24px",
+            fontWeight: "bold",
+            transition: "all 0.3s ease",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "rgba(255,94,0,0.8)";
+            e.currentTarget.style.transform = "translateY(-50%) scale(1.1)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "rgba(255,255,255,0.2)";
+            e.currentTarget.style.transform = "translateY(-50%) scale(1)";
+          }}
+          aria-label="Next slide"
+        >
+          ›
+        </button>
+
         <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "100px 32px", display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "80px", alignItems: "center", position: "relative", zIndex: 2 }} className="hero-content">
           <div>
             <AnimatedSection delay={0}>
