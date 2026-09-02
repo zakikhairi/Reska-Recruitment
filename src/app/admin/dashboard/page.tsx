@@ -1145,10 +1145,69 @@ export default function AdminDashboardPage() {
           .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
           .main-grid { grid-template-columns: 1fr !important; }
         }
+
+        /* Mobile Responsive Styles */
+        @media (max-width: 1024px) {
+          /* Hide desktop header on mobile */
+          .desktop-header {
+            display: none !important;
+          }
+
+          /* Show mobile header styles */
+          .mobile-dashboard-header {
+            display: flex !important;
+          }
+
+          /* Stack header elements on mobile */
+          .header-actions {
+            flex-wrap: wrap;
+            gap: 8px;
+          }
+
+          /* Mobile stats - 2 columns */
+          .stats-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 12px !important;
+          }
+
+          /* Mobile table - card style */
+          .mobile-table-row {
+            display: flex !important;
+          }
+
+          /* Mobile quick actions - stack vertically */
+          .quick-actions-grid {
+            flex-direction: column !important;
+          }
+        }
+
+        /* Extra small screens */
+        @media (max-width: 640px) {
+          .stats-grid {
+            grid-template-columns: 1fr !important;
+          }
+
+          .stat-card {
+            padding: 16px !important;
+          }
+
+          .stat-number {
+            font-size: 28px !important;
+          }
+        }
+
         button:hover { border-color: #FF5E00 !important; }
         input:focus { border-color: #FF5E00 !important; }
         .notification-item:hover {
           background: #f8f9fa !important;
+        }
+
+        /* Mobile notification panel adjustments */
+        @media (max-width: 1024px) {
+          .notification-panel {
+            width: calc(100vw - 32px) !important;
+            right: -16px !important;
+          }
         }
       `}</style>
 

@@ -160,6 +160,22 @@ export default function HomePage() {
         </div>
       </header>
 
+      {/* Mobile Header */}
+      <div className="mobile-header">
+        <Link href="/" style={{ display: "flex", alignItems: "center", gap: "10px", textDecoration: "none" }}>
+          <img src="/_logo_kais.png" alt="KAI Services" style={{ width: "40px", height: "40px", objectFit: "contain" }} />
+          <span style={{ fontWeight: 700, fontSize: "16px", color: "#00205B" }}>KAI Services</span>
+        </Link>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <Link href="/auth/login">
+            <button style={{ padding: "8px 14px", fontSize: "13px", fontWeight: 600, background: "#f1f5f9", border: "none", borderRadius: "8px", cursor: "pointer", color: "#00205B" }}>Masuk</button>
+          </Link>
+          <Link href="/auth/register">
+            <button style={{ padding: "8px 14px", fontSize: "13px", fontWeight: 600, background: "#FF5E00", border: "none", borderRadius: "8px", cursor: "pointer", color: "#ffffff" }}>Daftar</button>
+          </Link>
+        </div>
+      </div>
+
       {/* Hero */}
       <section style={{ paddingTop: "72px", position: "relative", color: "#ffffff", minHeight: "700px" }}>
         {/* Background Image */}
@@ -179,7 +195,7 @@ export default function HomePage() {
         />
         {/* Dark Overlay */}
         <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "linear-gradient(135deg, rgba(0,32,91,0.85) 0%, rgba(12,35,64,0.75) 100%)", zIndex: 1 }} />
-        <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "100px 32px", display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "80px", alignItems: "center", position: "relative", zIndex: 2 }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "100px 32px", display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "80px", alignItems: "center", position: "relative", zIndex: 2 }} className="hero-content">
           <div>
             <AnimatedSection delay={0}>
               <div style={{ display: "inline-block", padding: "8px 16px", background: "rgba(255,255,255,0.1)", borderRadius: "24px", fontSize: "14px", fontWeight: 500, marginBottom: "24px" }}>
@@ -211,7 +227,7 @@ export default function HomePage() {
             </AnimatedSection>
           </div>
 
-          <AnimatedSection delay={200}>
+          <AnimatedSection delay={200} className="hero-stats">
             <div style={{ background: "rgba(255,255,255,0.08)", borderRadius: "20px", padding: "32px", backdropFilter: "blur(10px)" }}>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "32px" }}>
                 {[{v: "12,500+", l: "Total Pelamar"}, {v: "24", l: "Posisi Terbuka"}, {v: "1,200+", l: "Terserap 2025"}, {v: "18 Kota", l: "Cabang"}].map((s, i) => (
@@ -267,7 +283,7 @@ export default function HomePage() {
             </div>
           </AnimatedSection>
 
-          <div style={{ display: "flex", justifyContent: "center", gap: "0", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", justifyContent: "center", gap: "0", flexWrap: "wrap" }} className="steps-container">
             {[
               {n: "01", t: "Daftar", d: "Buat akun baru", color: "#FF5E00" },
               {n: "02", t: "Pilih", d: "Lowongan sesuai bidang", color: "#00205B" },
@@ -287,7 +303,7 @@ export default function HomePage() {
                     background: i % 2 === 0 ? "#00205B" : "#FF5E00",
                     flexShrink: 0,
                     marginTop: "32px",
-                  }} />
+                  }} className="step-connector" />
                 )}
 
                 <div style={{
@@ -355,7 +371,7 @@ export default function HomePage() {
             </div>
           </AnimatedSection>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "28px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "28px" }} className="jobs-grid">
             {loading ? (
               <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "60px", background: "#ffffff", borderRadius: "16px" }}>
                 <p style={{ color: "#666666" }}>Memuat lowongan...</p>
@@ -425,7 +441,7 @@ export default function HomePage() {
 
       {/* About */}
       <section id="tentang" style={{ padding: "80px 32px", background: "linear-gradient(135deg, #00205B 0%, #0C2340 100%)", color: "#ffffff" }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "80px", alignItems: "center" }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "80px", alignItems: "center" }} className="about-grid-container">
           <AnimatedSection>
             <h2 style={{ fontSize: "36px", fontWeight: 700, marginBottom: "24px", letterSpacing: "-0.02em" }}>Tentang KAI Services</h2>
             <p style={{ color: "rgba(255,255,255,0.7)", lineHeight: 1.8, marginBottom: "20px", fontSize: "16px" }}>
@@ -499,19 +515,99 @@ export default function HomePage() {
       </footer>
 
       <style>{`
+        /* Desktop only nav */
         @media (max-width: 1024px) {
           .desktop-nav { display: none !important; }
+          .header-actions { display: none !important; }
         }
+
+        /* Mobile header */
+        .mobile-header {
+          display: none;
+        }
+
+        @media (max-width: 1024px) {
+          .mobile-header {
+            display: flex !important;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            background: #ffffff;
+            border-bottom: 1px solid #eeeeee;
+            padding: 12px 16px;
+            align-items: center;
+            justify-content: space-between;
+          }
+        }
+
+        /* Grid adjustments */
         @media (max-width: 900px) {
           section > div:first-child { grid-template-columns: 1fr !important; gap: 48px !important; }
         }
+
+        /* Benefits grid */
         @media (max-width: 768px) {
           .benefits-grid { grid-template-columns: repeat(2, 1fr) !important; }
           .about-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .jobs-grid { grid-template-columns: repeat(2, 1fr) !important; }
         }
+
+        /* Extra small screens */
         @media (max-width: 480px) {
           .benefits-grid { grid-template-columns: 1fr !important; }
           .about-grid { grid-template-columns: 1fr !important; }
+          .jobs-grid { grid-template-columns: 1fr !important; }
+        }
+
+        /* Jobs grid class */
+        .jobs-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 28px;
+        }
+
+        /* Hero mobile */
+        @media (max-width: 1024px) {
+          .hero-content {
+            padding: 120px 16px 60px !important;
+          }
+          .hero-stats {
+            display: none !important;
+          }
+        }
+
+        /* Steps mobile */
+        @media (max-width: 768px) {
+          .steps-container {
+            flex-direction: column !important;
+            align-items: center !important;
+          }
+          .step-connector {
+            display: none !important;
+          }
+        }
+
+        /* Add class to step connectors */
+        .step-connector {
+          display: flex;
+        }
+
+        /* About section mobile */
+        @media (max-width: 768px) {
+          .about-grid-container {
+            grid-template-columns: 1fr !important;
+            gap: 40px !important;
+          }
+        }
+
+        /* Footer mobile */
+        @media (max-width: 480px) {
+          footer > div {
+            flex-direction: column !important;
+            text-align: center !important;
+          }
         }
       `}</style>
     </div>
