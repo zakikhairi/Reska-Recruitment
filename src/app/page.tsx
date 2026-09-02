@@ -464,69 +464,421 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Steps */}
-      <section id="cara-melamar" style={{ padding: "80px 32px", background: "#ffffff" }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
-          <AnimatedSection>
-            <div style={{ textAlign: "center", marginBottom: "56px" }}>
-              <h2 style={{ fontSize: "36px", fontWeight: 700, color: "#00205B", marginBottom: "14px", letterSpacing: "-0.02em" }}>Cara Melamar</h2>
-              <p style={{ fontSize: "16px", color: "#666666" }}>Proses sederhana dalam 5 langkah mudah</p>
-            </div>
-          </AnimatedSection>
+      {/* Steps (Pelni-style 5 Steps adapted for KAI Services) */}
+      <section id="cara-melamar" style={{ padding: "100px 32px", background: "#ffffff", position: "relative", overflow: "hidden" }}>
+        <div style={{ maxWidth: "1240px", margin: "0 auto" }}>
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1.35fr",
+            gap: "60px",
+            alignItems: "center"
+          }} className="how-to-apply-grid">
 
-          <div style={{ display: "flex", justifyContent: "center", gap: "0", flexWrap: "wrap" }} className="steps-container">
-            {[
-              {n: "01", t: "Daftar", d: "Buat akun baru", color: "#FF5E00" },
-              {n: "02", t: "Pilih", d: "Lowongan sesuai bidang", color: "#00205B" },
-              {n: "03", t: "Tes", d: "Tes kompetensi online", color: "#FF5E00" },
-              {n: "04", t: "Interview", d: "Seleksi lanjutan", color: "#00205B" },
-              {n: "05", t: "Offering", d: "Terima & bergabung", color: "#FF5E00" }
-            ].map((s, i) => (
-              <div key={i} style={{
-                display: "flex",
-                alignItems: "flex-start"
-              }}>
-                {/* Connector line - positioned above text, aligned with top of circle */}
-                {i > 0 && (
-                  <div style={{
-                    width: "40px",
-                    height: "3px",
-                    background: i % 2 === 0 ? "#00205B" : "#FF5E00",
-                    flexShrink: 0,
-                    marginTop: "32px",
-                  }} className="step-connector" />
-                )}
+            {/* Left Column */}
+            <AnimatedSection>
+              <div>
+                {/* Official KAI Services Logo at Top Left */}
+                <div style={{ marginBottom: "24px" }}>
+                  <img
+                    src="/logo-kai-services.svg"
+                    alt="Logo KAI Services"
+                    style={{ height: "54px", width: "auto", objectFit: "contain" }}
+                  />
+                </div>
 
-                <div style={{
-                  textAlign: "center",
-                  padding: "0 20px",
-                  transition: "transform 0.3s",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                }}
-                  onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-8px)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; }}>
+                <h2 style={{
+                  fontSize: "42px",
+                  fontWeight: 800,
+                  lineHeight: 1.2,
+                  marginBottom: "32px",
+                  letterSpacing: "-0.02em"
+                }}>
+                  <span style={{ color: "#00205B", display: "block" }}>Langkah-langkah</span>
+                  <span style={{ color: "#111827", display: "block" }}>Cara Melamar</span>
+                  <span style={{ color: "#111827" }}>Lowongan di </span>
+                  <span style={{ color: "#FF5E00" }}>KAI Services</span>
+                </h2>
 
-                  <div style={{
-                    width: "64px",
-                    height: "64px",
-                    background: s.color,
-                    color: "#ffffff",
-                    borderRadius: "50%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "20px",
-                    fontWeight: 800,
-                    boxShadow: `0 8px 24px ${s.color}40`,
-                  }}>{s.n}</div>
-
-                  <div style={{ fontSize: "16px", fontWeight: 700, color: "#111111", marginTop: "16px", marginBottom: "6px" }}>{s.t}</div>
-                  <div style={{ fontSize: "13px", color: "#888888" }}>{s.d}</div>
+                {/* 5 Checklist Items */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginTop: "24px" }}>
+                  {[
+                    "Registrasikan Akun Anda",
+                    "Lengkapi Data Diri & Dokumen",
+                    "Pilih Lowongan Sesuai Kualifikasi",
+                    "Ikuti Tes Kompetensi & Interview",
+                    "Terima Offering & Bergabung"
+                  ].map((text, idx) => (
+                    <div key={idx} style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                      <div style={{
+                        width: "28px",
+                        height: "28px",
+                        borderRadius: "50%",
+                        background: idx === 4 ? "#FF5E00" : "#00205B",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                        boxShadow: idx === 4 ? "0 4px 10px rgba(255,94,0,0.3)" : "0 4px 10px rgba(0,32,91,0.25)"
+                      }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      </div>
+                      <span style={{ fontSize: "15px", fontWeight: 600, color: "#1E293B" }}>
+                        {text}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
-            ))}
+            </AnimatedSection>
+
+            {/* Right Column: 5 Cards Grid */}
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(2, 1fr)",
+              gap: "28px",
+              position: "relative"
+            }} className="how-to-apply-cards">
+
+              {/* Card 01 - Registrasi */}
+              <AnimatedCard delay={100}>
+                <div style={{
+                  background: "linear-gradient(135deg, #00205B 0%, #003380 100%)",
+                  borderRadius: "24px",
+                  padding: "40px 24px 28px 28px",
+                  color: "#FFFFFF",
+                  position: "relative",
+                  boxShadow: "0 16px 36px rgba(0,32,91,0.2)",
+                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                  height: "100%",
+                  minHeight: "220px",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between"
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translateY(-8px)";
+                  e.currentTarget.style.boxShadow = "0 24px 48px rgba(0,32,91,0.3)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = "0 16px 36px rgba(0,32,91,0.2)";
+                }}>
+                  {/* Floating Illustrated Badge */}
+                  <div style={{
+                    position: "absolute",
+                    top: "-20px",
+                    left: "-14px",
+                    width: "60px",
+                    height: "60px",
+                    background: "#FFFFFF",
+                    borderRadius: "18px",
+                    boxShadow: "0 10px 24px rgba(0,0,0,0.14)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center"
+                  }}>
+                    <svg width="36" height="36" viewBox="0 0 64 64" fill="none">
+                      <rect x="14" y="10" width="36" height="44" rx="8" fill="#F8FAFC" stroke="#CBD5E1" strokeWidth="2" />
+                      <rect x="22" y="6" width="20" height="8" rx="4" fill="#FF5E00" />
+                      <circle cx="28" cy="10" r="2" fill="#FFFFFF" />
+                      <circle cx="36" cy="10" r="2" fill="#FFFFFF" />
+                      <rect x="20" y="22" width="16" height="3" rx="1.5" fill="#00205B" />
+                      <rect x="20" y="30" width="22" height="3" rx="1.5" fill="#94A3B8" />
+                      <rect x="20" y="38" width="18" height="3" rx="1.5" fill="#94A3B8" />
+                      <circle cx="44" cy="23" r="3" fill="#10B981" />
+                      <path d="M46 40L36 50L32 51L33 47L43 37L46 40Z" fill="#38BDF8" />
+                      <path d="M43 37L46 40L49 37L46 34L43 37Z" fill="#FF5E00" />
+                    </svg>
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
+                    <h3 style={{ fontSize: "18px", fontWeight: 700, margin: 0, paddingRight: "10px", lineHeight: 1.3, color: "#FFFFFF" }}>
+                      Registrasikan<br />Akun Anda
+                    </h3>
+                    <span style={{ fontSize: "44px", fontWeight: 900, lineHeight: 0.9, opacity: 0.95, color: "#FFFFFF", letterSpacing: "-0.04em" }}>
+                      01
+                    </span>
+                  </div>
+
+                  <p style={{ fontSize: "13px", lineHeight: 1.6, color: "rgba(255,255,255,0.85)", margin: 0 }}>
+                    Daftarkan diri Anda untuk membuat akun pribadi di platform rekrutmen kami.
+                  </p>
+                </div>
+              </AnimatedCard>
+
+              {/* Card 02 - Lengkapi Data Diri */}
+              <AnimatedCard delay={200}>
+                <div style={{
+                  background: "linear-gradient(135deg, #0284C7 0%, #38BDF8 100%)",
+                  borderRadius: "24px",
+                  padding: "40px 24px 28px 28px",
+                  color: "#FFFFFF",
+                  position: "relative",
+                  boxShadow: "0 16px 36px rgba(2,132,199,0.25)",
+                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                  height: "100%",
+                  minHeight: "220px",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  marginTop: "30px"
+                }}
+                className="staggered-card-2"
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translateY(-8px)";
+                  e.currentTarget.style.boxShadow = "0 24px 48px rgba(2,132,199,0.35)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = "0 16px 36px rgba(2,132,199,0.25)";
+                }}>
+                  {/* Floating Illustrated Badge */}
+                  <div style={{
+                    position: "absolute",
+                    top: "-20px",
+                    left: "-14px",
+                    width: "60px",
+                    height: "60px",
+                    background: "#FFFFFF",
+                    borderRadius: "18px",
+                    boxShadow: "0 10px 24px rgba(0,0,0,0.14)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center"
+                  }}>
+                    <svg width="36" height="36" viewBox="0 0 64 64" fill="none">
+                      <rect x="14" y="8" width="36" height="48" rx="6" fill="#FFFFFF" stroke="#CBD5E1" strokeWidth="2" />
+                      <path d="M36 22L40 19L44 22V8H36V22Z" fill="#FF5E00" />
+                      <rect x="20" y="16" width="12" height="12" rx="3" fill="#0284C7" />
+                      <circle cx="26" cy="20" r="3" fill="#FFFFFF" />
+                      <path d="M22 27C22 25 24 24 26 24C28 24 30 25 30 27" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" />
+                      <rect x="20" y="34" width="24" height="3" rx="1.5" fill="#00205B" />
+                      <rect x="20" y="41" width="18" height="3" rx="1.5" fill="#94A3B8" />
+                      <rect x="20" y="47" width="22" height="3" rx="1.5" fill="#94A3B8" />
+                    </svg>
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
+                    <h3 style={{ fontSize: "18px", fontWeight: 700, margin: 0, paddingRight: "10px", lineHeight: 1.3, color: "#FFFFFF" }}>
+                      Lengkapi Data<br />Diri Anda
+                    </h3>
+                    <span style={{ fontSize: "44px", fontWeight: 900, lineHeight: 0.9, opacity: 0.95, color: "#FFFFFF", letterSpacing: "-0.04em" }}>
+                      02
+                    </span>
+                  </div>
+
+                  <p style={{ fontSize: "13px", lineHeight: 1.6, color: "rgba(255,255,255,0.9)", margin: 0 }}>
+                    Sampaikan informasi tentang diri Anda dengan mengunggah CV atau Resume Anda ke dalam akun Anda.
+                  </p>
+                </div>
+              </AnimatedCard>
+
+              {/* Card 03 - Cari Lowongan */}
+              <AnimatedCard delay={300}>
+                <div style={{
+                  background: "linear-gradient(135deg, #1D4ED8 0%, #3B82F6 100%)",
+                  borderRadius: "24px",
+                  padding: "40px 24px 28px 28px",
+                  color: "#FFFFFF",
+                  position: "relative",
+                  boxShadow: "0 16px 36px rgba(29,78,216,0.25)",
+                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                  height: "100%",
+                  minHeight: "220px",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between"
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translateY(-8px)";
+                  e.currentTarget.style.boxShadow = "0 24px 48px rgba(29,78,216,0.35)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = "0 16px 36px rgba(29,78,216,0.25)";
+                }}>
+                  {/* Floating Illustrated Badge */}
+                  <div style={{
+                    position: "absolute",
+                    top: "-20px",
+                    left: "-14px",
+                    width: "60px",
+                    height: "60px",
+                    background: "#FFFFFF",
+                    borderRadius: "18px",
+                    boxShadow: "0 10px 24px rgba(0,0,0,0.14)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center"
+                  }}>
+                    <svg width="36" height="36" viewBox="0 0 64 64" fill="none">
+                      <rect x="12" y="10" width="34" height="44" rx="6" fill="#FFFFFF" stroke="#CBD5E1" strokeWidth="2" />
+                      <rect x="18" y="18" width="16" height="4" rx="2" fill="#00205B" />
+                      <rect x="18" y="26" width="22" height="3" rx="1.5" fill="#0284C7" />
+                      <rect x="18" y="33" width="18" height="3" rx="1.5" fill="#94A3B8" />
+                      <rect x="18" y="40" width="20" height="3" rx="1.5" fill="#94A3B8" />
+                      <circle cx="42" cy="38" r="10" fill="#E0F2FE" stroke="#0284C7" strokeWidth="3" />
+                      <path d="M49 45L56 52" stroke="#FF5E00" strokeWidth="4" strokeLinecap="round" />
+                      <circle cx="40" cy="36" r="3" fill="#0284C7" opacity="0.4" />
+                    </svg>
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
+                    <h3 style={{ fontSize: "18px", fontWeight: 700, margin: 0, paddingRight: "10px", lineHeight: 1.3, color: "#FFFFFF" }}>
+                      Pilih Karir<br />Impian Anda
+                    </h3>
+                    <span style={{ fontSize: "44px", fontWeight: 900, lineHeight: 0.9, opacity: 0.95, color: "#FFFFFF", letterSpacing: "-0.04em" }}>
+                      03
+                    </span>
+                  </div>
+
+                  <p style={{ fontSize: "13px", lineHeight: 1.6, color: "rgba(255,255,255,0.9)", margin: 0 }}>
+                    Telusuri beragam lowongan pekerjaan yang sesuai dengan minat dan keterampilan Anda.
+                  </p>
+                </div>
+              </AnimatedCard>
+
+              {/* Card 04 - Tes & Interview */}
+              <AnimatedCard delay={400}>
+                <div style={{
+                  background: "linear-gradient(135deg, #1E293B 0%, #334155 100%)",
+                  borderRadius: "24px",
+                  padding: "40px 24px 28px 28px",
+                  color: "#FFFFFF",
+                  position: "relative",
+                  boxShadow: "0 16px 36px rgba(30,41,59,0.25)",
+                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                  height: "100%",
+                  minHeight: "220px",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  marginTop: "30px"
+                }}
+                className="staggered-card-4"
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translateY(-8px)";
+                  e.currentTarget.style.boxShadow = "0 24px 48px rgba(30,41,59,0.35)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = "0 16px 36px rgba(30,41,59,0.25)";
+                }}>
+                  {/* Floating Illustrated Badge */}
+                  <div style={{
+                    position: "absolute",
+                    top: "-20px",
+                    left: "-14px",
+                    width: "60px",
+                    height: "60px",
+                    background: "#FFFFFF",
+                    borderRadius: "18px",
+                    boxShadow: "0 10px 24px rgba(0,0,0,0.14)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center"
+                  }}>
+                    <svg width="36" height="36" viewBox="0 0 64 64" fill="none">
+                      <circle cx="24" cy="24" r="8" fill="#FDBA74" />
+                      <path d="M14 46C14 38 18 35 24 35C30 35 34 38 34 46" fill="#00205B" />
+                      <path d="M22 35L24 40L26 35H22Z" fill="#FF5E00" />
+                      <rect x="34" y="14" width="18" height="12" rx="4" fill="#38BDF8" />
+                      <path d="M38 26L35 30V26H38Z" fill="#38BDF8" />
+                      <circle cx="39" cy="20" r="1.5" fill="#FFFFFF" />
+                      <circle cx="43" cy="20" r="1.5" fill="#FFFFFF" />
+                      <circle cx="47" cy="20" r="1.5" fill="#FFFFFF" />
+                      <circle cx="44" cy="38" r="8" fill="#10B981" />
+                      <path d="M40 38L43 41L48 35" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
+                    <h3 style={{ fontSize: "18px", fontWeight: 700, margin: 0, paddingRight: "10px", lineHeight: 1.3, color: "#FFFFFF" }}>
+                      Tes Online &<br />Interview
+                    </h3>
+                    <span style={{ fontSize: "44px", fontWeight: 900, lineHeight: 0.9, opacity: 0.95, color: "#FFFFFF", letterSpacing: "-0.04em" }}>
+                      04
+                    </span>
+                  </div>
+
+                  <p style={{ fontSize: "13px", lineHeight: 1.6, color: "rgba(255,255,255,0.9)", margin: 0 }}>
+                    Ikuti tes kompetensi online dan tahapan wawancara bersama tim rekrutmen profesional.
+                  </p>
+                </div>
+              </AnimatedCard>
+
+              {/* Card 05 - Offering & Bergabung (Full Width Span) */}
+              <div style={{ gridColumn: "1 / -1", marginTop: "10px" }} className="card-5-wrapper">
+                <AnimatedCard delay={500}>
+                  <div style={{
+                    background: "linear-gradient(135deg, #FF5E00 0%, #FF8A3D 100%)",
+                    borderRadius: "24px",
+                    padding: "36px 32px 32px 36px",
+                    color: "#FFFFFF",
+                    position: "relative",
+                    boxShadow: "0 20px 44px rgba(255,94,0,0.3)",
+                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    gap: "20px"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-8px)";
+                    e.currentTarget.style.boxShadow = "0 28px 56px rgba(255,94,0,0.4)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "translateY(0)";
+                    e.currentTarget.style.boxShadow = "0 20px 44px rgba(255,94,0,0.3)";
+                  }}>
+                    {/* Floating Illustrated Badge */}
+                    <div style={{
+                      position: "absolute",
+                      top: "-20px",
+                      left: "-14px",
+                      width: "60px",
+                      height: "60px",
+                      background: "#FFFFFF",
+                      borderRadius: "18px",
+                      boxShadow: "0 10px 24px rgba(0,0,0,0.14)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center"
+                    }}>
+                      <svg width="36" height="36" viewBox="0 0 64 64" fill="none">
+                        <path d="M22 14H42V26C42 32 37 36 32 36C27 36 22 32 22 26V14Z" fill="#FBBF24" stroke="#D97706" strokeWidth="2" />
+                        <path d="M22 18H16C16 26 22 26 22 26V18Z" fill="#FDE68A" stroke="#D97706" strokeWidth="1.5" />
+                        <path d="M42 18H48C48 26 42 26 42 26V18Z" fill="#FDE68A" stroke="#D97706" strokeWidth="1.5" />
+                        <rect x="28" y="36" width="8" height="8" fill="#D97706" />
+                        <rect x="20" y="44" width="24" height="6" rx="2" fill="#FF5E00" />
+                        <path d="M32 20L33.5 23.5L37 24L34.5 26.5L35 30L32 28L29 30L29.5 26.5L27 24L30.5 23.5L32 20Z" fill="#FFFFFF" />
+                      </svg>
+                    </div>
+
+                    <div style={{ paddingLeft: "40px", flex: 1, minWidth: "220px" }}>
+                      <div style={{ display: "inline-block", background: "rgba(255,255,255,0.25)", padding: "4px 12px", borderRadius: "12px", fontSize: "12px", fontWeight: 700, marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                        Tahap Akhir
+                      </div>
+                      <h3 style={{ fontSize: "22px", fontWeight: 800, margin: "0 0 6px 0", color: "#FFFFFF", lineHeight: 1.3 }}>
+                        Offering & Onboarding KAI Services
+                      </h3>
+                      <p style={{ fontSize: "13px", lineHeight: 1.6, color: "rgba(255,255,255,0.95)", margin: 0 }}>
+                        Terima surat penawaran resmi (offering letter), penandatanganan kontrak, dan selamat bergabung bersama keluarga besar KAI Services!
+                      </p>
+                    </div>
+
+                    <div style={{ fontSize: "56px", fontWeight: 900, lineHeight: 1, opacity: 0.95, color: "#FFFFFF", letterSpacing: "-0.04em", paddingRight: "16px" }}>
+                      05
+                    </div>
+                  </div>
+                </AnimatedCard>
+              </div>
+
+            </div>
+
           </div>
         </div>
       </section>
@@ -789,20 +1141,22 @@ export default function HomePage() {
           }
         }
 
-        /* Steps mobile */
-        @media (max-width: 768px) {
-          .steps-container {
-            flex-direction: column !important;
-            align-items: center !important;
-          }
-          .step-connector {
-            display: none !important;
+        /* How to Apply Section (Pelni Style) */
+        @media (max-width: 1024px) {
+          .how-to-apply-grid {
+            grid-template-columns: 1fr !important;
+            gap: 48px !important;
           }
         }
 
-        /* Add class to step connectors */
-        .step-connector {
-          display: flex;
+        @media (max-width: 640px) {
+          .how-to-apply-cards {
+            grid-template-columns: 1fr !important;
+            gap: 36px !important;
+          }
+          .staggered-card-2, .staggered-card-4 {
+            margin-top: 0 !important;
+          }
         }
 
         /* About section mobile */

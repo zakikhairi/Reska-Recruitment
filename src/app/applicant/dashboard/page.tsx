@@ -531,6 +531,82 @@ export default function ApplicantDashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Reminder Modal (Desktop) */}
+      {showReminder && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0,0,0,0.6)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
+          padding: "20px"
+        }}>
+          <div style={{
+            background: "#FFFFFF",
+            borderRadius: "20px",
+            padding: "32px",
+            maxWidth: "420px",
+            width: "100%",
+            textAlign: "center",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.2)"
+          }}>
+            <div style={{
+              width: "64px",
+              height: "64px",
+              background: "#FEF3C7",
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 16px"
+            }}>
+              <AlertCircle size={32} color="#D97706" />
+            </div>
+            <h2 style={{ fontSize: "20px", fontWeight: 800, color: "#00205B", margin: "0 0 8px 0" }}>Lengkapi Profil Anda</h2>
+            <p style={{ fontSize: "14px", color: "#64748B", margin: "0 0 24px 0", lineHeight: 1.6 }}>
+              Untuk mempermudah proses verifikasi dan melamar lowongan kerja di KAI Services, silakan lengkapi data profil Anda.
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              <Link href="/applicant/profile" style={{ textDecoration: "none" }}>
+                <button style={{
+                  width: "100%",
+                  padding: "14px",
+                  background: "#FF5E00",
+                  color: "#FFFFFF",
+                  border: "none",
+                  borderRadius: "12px",
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  cursor: "pointer"
+                }}>
+                  Lengkapi Profil Sekarang →
+                </button>
+              </Link>
+              <button
+                onClick={() => {
+                  setShowReminder(false);
+                  if (user?.id) localStorage.setItem(`profile_reminder_dismissed_${user.id}`, "true");
+                }}
+                style={{
+                  width: "100%",
+                  padding: "10px",
+                  background: "transparent",
+                  border: "none",
+                  fontSize: "13px",
+                  color: "#94A3B8",
+                  cursor: "pointer",
+                  fontWeight: 600
+                }}
+              >
+                Nanti Saja
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

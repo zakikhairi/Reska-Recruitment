@@ -103,6 +103,44 @@ export async function sendRegistrationEmail(email: string, fullName: string): Pr
 }
 
 // ============================================
+// Welcome Email (for email verification)
+// ============================================
+interface WelcomeEmailParams {
+  to: string;
+  name: string;
+  email: string;
+  password?: string;
+}
+
+export async function sendWelcomeEmail(params: WelcomeEmailParams): Promise<{ success: boolean; error?: string }> {
+  const { to, name, email, password } = params;
+  const subject = "Email Terverifikasi - Selamat Datang di KAI Recruitment";
+  const html = getEmailTemplate(`
+    <h2 style="color: #111111; margin: 0 0 20px; font-size: 22px;">✅ Email Berhasil Diverifikasi!</h2>
+    <p style="color: #666666; margin: 0 0 20px; font-size: 15px; line-height: 1.6;">
+      Selamat <strong>${name}</strong>! Email Anda telah berhasil diverifikasi.
+    </p>
+    <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0;">
+      <p style="margin: 0 0 10px; color: #666666; font-size: 14px;">Detail Akun:</p>
+      <p style="margin: 0; color: #00205B; font-size: 15px;">
+        <strong>Email:</strong> ${email}<br>
+        <strong>Nama:</strong> ${name}
+      </p>
+      ${password ? `<p style="margin: 10px 0 0; color: #00205B; font-size: 15px;"><strong>Password:</strong> ${password}</p>` : ''}
+    </div>
+    <p style="color: #666666; margin: 20px 0; font-size: 15px; line-height: 1.6;">
+      Sekarang Anda bisa login dan melamar posisi yang tersedia di KAI Recruitment.
+    </p>
+    <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/auth/login"
+       style="display: inline-block; background: #FF5E00; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; margin: 10px 0;">
+      Login Sekarang →
+    </a>
+  `);
+
+  return sendEmail(to, subject, html);
+}
+
+// ============================================
 // NOT-002: Email Notifikasi Status Lamaran
 // ============================================
 export async function sendStatusChangeEmail(

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import * as XLSX from "xlsx";
 import {
   Search,
   Download,
@@ -117,37 +118,28 @@ export default function ApplicantsPage() {
       return;
     }
 
-    // Create CSV header
+    // Create CSV header (matching Excel format)
     const headers = [
       "No",
       "Nama Lengkap",
+      "Posisi",
       "Email",
-      "NIK",
       "No. Telepon",
-      "Pendidikan",
-      "Lowongan",
-      "Divisi",
-      "Status",
-      "Tanggal Daftar"
+      "Status"
     ];
 
     // Create CSV rows
     const rows = filteredApplicants.map((app, index) => {
       const latestApp = app.applications[0];
       const status = latestApp ? getStatusConfig(latestApp.status).label : "Belum Lamar";
-      const divisionLabel = latestApp?.division?.replace(/_/g, " ") || "-";
 
       return [
         index + 1,
         app.fullName,
-        app.email,
-        app.nik,
-        app.phone,
-        app.education,
         latestApp?.jobTitle || "-",
-        divisionLabel,
-        status,
-        new Date(app.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })
+        app.email,
+        app.phone || "-",
+        status
       ];
     });
 
@@ -162,7 +154,8 @@ export default function ApplicantsPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `Data_Pelamar_${new Date().toISOString().split("T")[0]}.csv`);
+    const dateStr = new Date().toISOString().split("T")[0];
+    link.setAttribute("download", `Data_Pelamar_${dateStr}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -171,65 +164,128 @@ export default function ApplicantsPage() {
     alert(`Berhasil export ${filteredApplicants.length} data pelamar ke CSV!`);
   };
 
-  // Export to Excel format (same as CSV but with .xlsx extension)
+  // Export to Excel with professional formatting (like screenshot)
   const exportToExcel = () => {
     if (filteredApplicants.length === 0) {
       alert("Tidak ada data untuk di-export");
       return;
     }
 
-    // Create CSV content
-    const headers = [
-      "No",
-      "Nama Lengkap",
-      "Email",
-      "NIK",
-      "No. Telepon",
-      "Pendidikan",
-      "Lowongan",
-      "Divisi",
-      "Status",
-      "Tanggal Daftar"
-    ];
+    // Create workbook
+    const wb = XLSX.utils.book_new();
 
-    const rows = filteredApplicants.map((app, index) => {
-      const latestApp = app.applications[0];
-      const status = latestApp ? getStatusConfig(latestApp.status).label : "Belum Lamar";
-      const divisionLabel = latestApp?.division?.replace(/_/g, " ") || "-";
+    // Build worksheet manually to ensure styles work
+    const ws: any = {};
 
-      return [
-        index + 1,
-        app.fullName,
-        app.email,
-        app.nik,
-        app.phone,
-        app.education,
-        latestApp?.jobTitle || "-",
-        divisionLabel,
-        status,
-        new Date(app.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })
-      ];
+    // Headers
+    const headers = ["No", "Nama Lengkap", "Posisi", "Email", "No. Telepon", "Status"];
+    headers.forEach((header, colIdx) => {
+      const cellRef = XLSX.utils.encode_cell({ r: 0, c: colIdx });
+      ws[cellRef] = {
+        t: "s",
+        v: header,
+        s: {
+          font: { bold: true, color: { rgb: "FFFFFFFF" }, sz: 11 },
+          fill: { fgColor: { rgb: "FF00205B" } },
+          alignment: { horizontal: "center", vertical: "center" },
+          border: {
+            top: { style: "thin", color: { rgb: "FF00205B" } },
+            bottom: { style: "thin", color: { rgb: "FF00205B" } },
+            left: { style: "thin", color: { rgb: "FF00205B" } },
+            right: { style: "thin", color: { rgb: "FF00205B" } },
+          },
+        },
+      };
     });
 
-    // Create worksheet data
-    const wsData = [headers, ...rows];
+    // Data rows
+    filteredApplicants.forEach((app, rowIdx) => {
+      const latestApp = app.applications[0];
+      const status = latestApp ? getStatusConfig(latestApp.status).label : "Belum Lamar";
+      const jobTitle = latestApp?.jobTitle || "-";
+      const phone = app.phone || "-";
 
-    // Build xlsx file manually (simple format)
-    // Using CSV with BOM for Excel compatibility
-    const csvContent = [
-      headers.join(";"),
-      ...rows.map(row => row.map(cell => String(cell).replace(/;/g, ",")).join(";"))
-    ].join("\n");
+      const rowNum = rowIdx + 1;
+      const isEvenRow = rowNum % 2 === 0;
+      const rowBgColor = isEvenRow ? "FFE8F4FC" : "FFFFFFFF";
 
-    const blob = new Blob(["﻿" + csvContent], { type: "application/vnd.ms-excel;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Data_Pelamar_${new Date().toISOString().split("T")[0]}.xls`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+      const rowData = [
+        { v: rowIdx + 1, t: "n", isEmpty: false },
+        { v: app.fullName, t: "s", isEmpty: false },
+        { v: jobTitle, t: "s", isEmpty: jobTitle === "-" },
+        { v: app.email, t: "s", isEmpty: false },
+        { v: phone, t: "s", isEmpty: phone === "-" },
+        { v: status, t: "s", isEmpty: false },
+      ];
+
+      rowData.forEach((cell, colIdx) => {
+        const cellRef = XLSX.utils.encode_cell({ r: rowNum, c: colIdx });
+
+        if (cell.isEmpty) {
+          // Empty: red background, red bold text
+          ws[cellRef] = {
+            t: cell.t,
+            v: cell.v,
+            s: {
+              font: { sz: 10, bold: true, color: { rgb: "FFDC2626" } },
+              alignment: { horizontal: colIdx === 0 ? "center" : "left", vertical: "center" },
+              border: {
+                top: { style: "thin", color: { rgb: "FFEF4444" } },
+                bottom: { style: "thin", color: { rgb: "FFEF4444" } },
+                left: { style: "thin", color: { rgb: "FFEF4444" } },
+                right: { style: "thin", color: { rgb: "FFEF4444" } },
+              },
+              fill: { fgColor: { rgb: "FFFEE2E2" } },
+            },
+          };
+        } else {
+          // Normal: alternating row colors
+          ws[cellRef] = {
+            t: cell.t,
+            v: cell.v,
+            s: {
+              font: { sz: 10 },
+              alignment: { horizontal: colIdx === 0 ? "center" : "left", vertical: "center" },
+              border: {
+                top: { style: "thin", color: { rgb: "FFDDDDDD" } },
+                bottom: { style: "thin", color: { rgb: "FFDDDDDD" } },
+                left: { style: "thin", color: { rgb: "FFDDDDDD" } },
+                right: { style: "thin", color: { rgb: "FFDDDDDD" } },
+              },
+              fill: { fgColor: { rgb: rowBgColor } },
+            },
+          };
+        }
+      });
+    });
+
+    // Set worksheet range
+    const totalRows = filteredApplicants.length + 1;
+    ws['!ref'] = `A1:F${totalRows}`;
+
+    // Set column widths
+    ws['!cols'] = [
+      { wch: 5 },
+      { wch: 30 },
+      { wch: 25 },
+      { wch: 35 },
+      { wch: 15 },
+      { wch: 15 },
+    ];
+
+    // Set header row height
+    ws['!rows'] = [{ hpt: 25 }];
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, "Data Pelamar");
+
+    // Generate filename with date
+    const date = new Date();
+    const dateStr = `${date.getDate()}-${String(date.getMonth() + 1).padStart(2, '0')}-${date.getFullYear()}`;
+    const filename = `Data_Pelamar_${dateStr}.xlsx`;
+
+    // Download
+    XLSX.writeFile(wb, filename);
 
     alert(`Berhasil export ${filteredApplicants.length} data pelamar ke Excel!`);
   };
