@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/stores/auth";
 import { useSidebarStore } from "@/stores/sidebar";
 import { useRouter } from "next/navigation";
+import { Home, User, Briefcase, FileText, Calendar, Users, Clipboard, Settings, BarChart2, MessageSquare, LogOut, ChevronLeft, ChevronRight, HelpCircle, X } from "lucide-react";
 
 interface SidebarProps {
   userName?: string;
@@ -13,7 +14,7 @@ interface SidebarProps {
 }
 
 const applicantNavItems = [
-  { label: "Dashboard", href: "/applicant/dashboard", icon: "dashboard" },
+  { label: "Dashboard", href: "/applicant/dashboard", icon: "home" },
   { label: "Lowongan Kerja", href: "/applicant/jobs", icon: "briefcase" },
   { label: "Lamaran Saya", href: "/applicant/applications", icon: "file" },
   { label: "Jadwal Seleksi", href: "/applicant/schedule", icon: "calendar" },
@@ -21,7 +22,7 @@ const applicantNavItems = [
 ];
 
 const adminNavItems = [
-  { label: "Dashboard", href: "/admin/dashboard", icon: "dashboard" },
+  { label: "Dashboard", href: "/admin/dashboard", icon: "home" },
   { label: "Pelamar", href: "/admin/applicants", icon: "users" },
   { label: "Lowongan", href: "/admin/jobs", icon: "briefcase" },
   { label: "Bank Soal", href: "/admin/questions", icon: "clipboard" },
@@ -32,21 +33,21 @@ const adminNavItems = [
 ];
 
 const icons: Record<string, React.ReactElement> = {
-  dashboard: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>,
-  briefcase: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>,
-  file: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>,
-  user: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
-  users: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>,
-  clipboard: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>,
-  settings: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>,
-  chart: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
-  calendar: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
-  message: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>,
-  logout: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
-  chevronLeft: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>,
-  chevronRight: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>,
-  help: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
-  arrowRight: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  home: <Home className="w-5 h-5" />,
+  dashboard: <Home className="w-5 h-5" />,
+  briefcase: <Briefcase className="w-5 h-5" />,
+  file: <FileText className="w-5 h-5" />,
+  user: <User className="w-5 h-5" />,
+  users: <Users className="w-5 h-5" />,
+  clipboard: <Clipboard className="w-5 h-5" />,
+  settings: <Settings className="w-5 h-5" />,
+  chart: <BarChart2 className="w-5 h-5" />,
+  calendar: <Calendar className="w-5 h-5" />,
+  message: <MessageSquare className="w-5 h-5" />,
+  logout: <LogOut className="w-5 h-5" />,
+  chevronLeft: <ChevronLeft className="w-5 h-5" />,
+  chevronRight: <ChevronRight className="w-5 h-5" />,
+  help: <HelpCircle className="w-5 h-5" />,
 };
 
 export function Sidebar({ userName = "User", userRole = "APPLICANT" }: SidebarProps) {
@@ -56,6 +57,23 @@ export function Sidebar({ userName = "User", userRole = "APPLICANT" }: SidebarPr
   const { isCollapsed, toggleSidebar } = useSidebarStore();
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [showKaiPopup, setShowKaiPopup] = useState(false);
+  const popupRef = useRef<HTMLDivElement>(null);
+
+  // Close popup when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (popupRef.current && !popupRef.current.contains(event.target as Node)) {
+        setShowKaiPopup(false);
+      }
+    };
+    if (showKaiPopup) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showKaiPopup]);
 
   const handleLogout = () => {
     setIsLoggingOut(true);
@@ -63,10 +81,8 @@ export function Sidebar({ userName = "User", userRole = "APPLICANT" }: SidebarPr
     router.push("/auth/login");
   };
 
-  // Fetch unread message count for admin
   const [unreadMessages, setUnreadMessages] = useState(0);
 
-  // Fetch unread count - re-fetch when pathname changes (triggers when visiting contacts)
   useEffect(() => {
     if (userRole === "HR_ADMIN") {
       fetch("/api/admin/contacts")
@@ -82,7 +98,6 @@ export function Sidebar({ userName = "User", userRole = "APPLICANT" }: SidebarPr
   }, [userRole, pathname]);
 
   const width = isCollapsed ? "80px" : "260px";
-  const sidebarWidth = isCollapsed ? 80 : 260;
 
   return (
     <div style={{
@@ -100,16 +115,29 @@ export function Sidebar({ userName = "User", userRole = "APPLICANT" }: SidebarPr
       transition: "width 0.3s ease",
       overflow: "hidden"
     }}>
-      {/* Header with Toggle */}
-      <div style={{ padding: isCollapsed ? "20px 12px" : "24px", borderBottom: "1px solid #eeeeee", display: "flex", alignItems: "center", justifyContent: isCollapsed ? "center" : "space-between" }}>
+      {/* Header */}
+      <div style={{ padding: isCollapsed ? "20px 12px" : "24px", borderBottom: "1px solid #eeeeee", display: "flex", alignItems: "center", justifyContent: isCollapsed ? "center" : "space-between", position: "relative" }}>
         {!isCollapsed && (
-          <Link href="/" style={{ display: "flex", alignItems: "center", gap: "14px", textDecoration: "none" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "14px", textDecoration: "none" }}>
             <img src="/_logo_kais.png" alt="KAI Services" style={{ width: "56px", height: "56px", objectFit: "contain" }} />
             <div>
-              <div style={{ fontSize: "18px", fontWeight: 800, color: "#00205B", lineHeight: 1.2 }}>KAI Services</div>
-              <div style={{ fontSize: "12px", color: "#888888" }}>{userRole === "APPLICANT" ? "Portal Pelamar" : "HR Admin"}</div>
+              <button
+                onClick={() => setShowKaiPopup(!showKaiPopup)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 0,
+                  textAlign: "left",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
+                <div style={{ fontSize: "18px", fontWeight: 800, color: "#00205B", lineHeight: 1.2 }}>KAI Services</div>
+                <div style={{ fontSize: "12px", color: "#888888" }}>{userRole === "APPLICANT" ? "Portal Pelamar" : "HR Admin"}</div>
+              </button>
             </div>
-          </Link>
+          </div>
         )}
         <button
           onClick={toggleSidebar}
@@ -131,10 +159,125 @@ export function Sidebar({ userName = "User", userRole = "APPLICANT" }: SidebarPr
         </button>
       </div>
 
-      {/* Logo when collapsed */}
+      {/* KAI Services Popup */}
+      {showKaiPopup && !isCollapsed && (
+        <div
+          ref={popupRef}
+          style={{
+            position: "absolute",
+            top: "100%",
+            left: "0",
+            right: "0",
+            background: "#ffffff",
+            borderBottom: "2px solid #FF5E00",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+            padding: "20px 24px",
+            zIndex: 50,
+            animation: "fadeIn 0.2s ease",
+          }}
+        >
+          <style>{`
+            @keyframes fadeIn {
+              from { opacity: 0; transform: translateY(-10px); }
+              to { opacity: 1; transform: translateY(0); }
+            }
+          `}</style>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "12px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <img src="/_logo_kais.png" alt="KAI Services" style={{ width: "48px", height: "48px", objectFit: "contain" }} />
+              <div>
+                <div style={{ fontSize: "16px", fontWeight: 700, color: "#00205B" }}>KAI Services</div>
+                <div style={{ fontSize: "12px", color: "#888888" }}>Sistem Rekrutmen KAI</div>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowKaiPopup(false)}
+              style={{
+                background: "#f1f5f9",
+                border: "none",
+                borderRadius: "8px",
+                padding: "6px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#666666",
+              }}
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div style={{
+            background: "#fff3e0",
+            border: "1px solid #FFE0B2",
+            borderRadius: "10px",
+            padding: "16px",
+            textAlign: "center",
+          }}>
+            <div style={{ fontSize: "14px", fontWeight: 600, color: "#E65100", marginBottom: "4px" }}>
+              🚧 Fitur ini sedang dalam pengembangan
+            </div>
+            <div style={{ fontSize: "12px", color: "#666666" }}>
+              Menu dan fitur lengkap akan segera hadir
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Logo collapsed */}
       {isCollapsed && (
-        <div style={{ padding: "16px 12px", borderBottom: "1px solid #eeeeee", display: "flex", justifyContent: "center" }}>
-          <img src="/_logo_kais.png" alt="KAI Services" style={{ width: "56px", height: "56px", objectFit: "contain" }} />
+        <div style={{ padding: "16px 12px", borderBottom: "1px solid #eeeeee", display: "flex", justifyContent: "center", position: "relative" }}>
+          <button
+            onClick={() => setShowKaiPopup(!showKaiPopup)}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            title="KAI Services"
+          >
+            <img src="/_logo_kais.png" alt="KAI Services" style={{ width: "56px", height: "56px", objectFit: "contain" }} />
+          </button>
+        </div>
+      )}
+
+      {/* KAI Services Popup for Collapsed Mode */}
+      {showKaiPopup && isCollapsed && (
+        <div
+          ref={popupRef}
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "100%",
+            background: "#ffffff",
+            border: "1px solid #e0e0e0",
+            borderRadius: "12px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+            padding: "16px",
+            zIndex: 100,
+            minWidth: "200px",
+            animation: "fadeIn 0.2s ease",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
+            <img src="/_logo_kais.png" alt="KAI Services" style={{ width: "36px", height: "36px", objectFit: "contain" }} />
+            <div style={{ fontSize: "14px", fontWeight: 700, color: "#00205B" }}>KAI Services</div>
+          </div>
+          <div style={{
+            background: "#fff3e0",
+            border: "1px solid #FFE0B2",
+            borderRadius: "8px",
+            padding: "12px",
+            textAlign: "center",
+          }}>
+            <div style={{ fontSize: "12px", fontWeight: 600, color: "#E65100" }}>
+              🚧 Fitur ini sedang dalam pengembangan
+            </div>
+          </div>
         </div>
       )}
 
@@ -195,7 +338,6 @@ export function Sidebar({ userName = "User", userRole = "APPLICANT" }: SidebarPr
 
       {/* Bottom */}
       <div style={{ padding: isCollapsed ? "12px 8px" : "16px", borderTop: "1px solid #eeeeee" }}>
-        {/* Help Link */}
         <Link href="/help" title={isCollapsed ? "Pusat Bantuan" : undefined} style={{
           display: isCollapsed ? "flex" : "flex",
           alignItems: "center",
@@ -245,36 +387,5 @@ export function Sidebar({ userName = "User", userRole = "APPLICANT" }: SidebarPr
 }
 
 export function CollapsibleSidebar(props: SidebarProps) {
-  const pathname = usePathname();
-  const { isCollapsed } = useSidebarStore();
-
-  return (
-    <>
-      {/* Desktop */}
-      <div style={{ display: "block" }} className="desktop-sidebar">
-        <Sidebar {...props} />
-      </div>
-
-      {/* Mobile Bottom Nav */}
-      <div style={{ display: "none" }} className="mobile-nav">
-        <nav style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#ffffff", borderTop: "1px solid #eeeeee", zIndex: 40, padding: "8px 0" }}>
-          <div style={{ display: "flex", justifyContent: "space-around" }}>
-            {(props.userRole === "APPLICANT" ? applicantNavItems : adminNavItems).slice(0, 5).map((item) => (
-              <Link key={item.href} href={item.href} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", padding: "8px 16px", textDecoration: "none", color: pathname === item.href ? "#00205B" : "#888888" }}>
-                <span>{icons[item.icon]}</span>
-                <span style={{ fontSize: "11px", fontWeight: 600 }}>{item.label.split(" ")[0]}</span>
-              </Link>
-            ))}
-          </div>
-        </nav>
-      </div>
-
-      <style>{`
-        @media (max-width: 1024px) {
-          .desktop-sidebar { display: none !important; }
-          .mobile-nav { display: block !important; }
-        }
-      `}</style>
-    </>
-  );
+  return <Sidebar {...props} />;
 }

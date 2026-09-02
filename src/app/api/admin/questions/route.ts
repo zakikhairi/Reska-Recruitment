@@ -1,106 +1,230 @@
-import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { NextResponse } from "next/server";
+import prisma from "@/lib/db";
 
-const prisma = new PrismaClient();
-
-export async function GET(request: NextRequest) {
+// GET: Get all questions for admin question bank
+export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const category = searchParams.get("category");
-    const division = searchParams.get("division");
     const difficulty = searchParams.get("difficulty");
-    const isActive = searchParams.get("isActive");
+    const division = searchParams.get("division") || searchParams.get("jobDivision");
+    const status = searchParams.get("status") || searchParams.get("isActive");
     const search = searchParams.get("search");
 
-    const where: any = {};
+    // Build where clause
+    const where: Record<string, unknown> = {};
 
-    if (category) where.category = category;
-    if (division) where.jobDivision = division;
-    if (difficulty) where.difficulty = difficulty;
-    if (isActive === "true") where.isActive = true;
-    if (isActive === "false") where.isActive = false;
-    if (search) where.stem = { contains: search, mode: "insensitive" };
+    if (category && category !== "all") {
+      where.category = category;
+    }
+
+    if (difficulty && difficulty !== "all") {
+      where.difficulty = difficulty;
+    }
+
+    if (division && division !== "all") {
+      where.jobDivision = division;
+    }
+
+    if (status === "active" || status === "true") {
+      where.isActive = true;
+    } else if (status === "inactive" || status === "false") {
+      where.isActive = false;
+    }
+
+    if (search) {
+      where.OR = [
+        { stem: { contains: search, mode: "insensitive" } },
+        { optionA: { contains: search, mode: "insensitive" } },
+        { optionB: { contains: search, mode: "insensitive" } },
+        { optionC: { contains: search, mode: "insensitive" } },
+        { optionD: { contains: search, mode: "insensitive" } },
+      ];
+    }
 
     const questions = await prisma.question.findMany({
       where,
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json(questions);
+    // Get category stats
+    const categoryStats = await prisma.question.groupBy({
+      by: ["category"],
+      _count: { category: true },
+    });
+
+    return NextResponse.json({
+      success: true,
+      questions: questions.map((q) => ({
+        id: q.id,
+        stem: q.stem,
+        category: q.category,
+        difficulty: q.difficulty,
+        division: q.jobDivision,
+        jobDivision: q.jobDivision,
+        isActive: q.isActive,
+        optionA: q.optionA,
+        optionB: q.optionB,
+        optionC: q.optionC,
+        optionD: q.optionD,
+        options: {
+          A: q.optionA,
+          B: q.optionB,
+          C: q.optionC,
+          D: q.optionD,
+        },
+        correct: q.correctAnswer,
+        correctAnswer: q.correctAnswer,
+        points: q.points,
+        explanation: q.explanation,
+        createdAt: q.createdAt,
+      })),
+      stats: categoryStats.map((stat) => ({
+        category: stat.category,
+        count: stat._count.category,
+      })),
+      total: questions.length,
+    });
   } catch (error) {
-    console.error("Error fetching questions:", error);
-    return NextResponse.json({ error: "Failed to fetch questions" }, { status: 500 });
+    console.error("Get questions error:", error);
+    return NextResponse.json(
+      { error: "Terjadi kesalahan server" },
+      { status: 500 }
+    );
   }
 }
 
-export async function POST(request: NextRequest) {
+// POST: Create new question
+export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { stem, category, jobDivision, difficulty, optionA, optionB, optionC, optionD, correctAnswer, explanation, points } = body;
+    const {
+      stem,
+      category,
+      difficulty,
+      division,
+      jobDivision,
+      optionA,
+      optionB,
+      optionC,
+      optionD,
+      correctAnswer,
+      correct,
+      explanation,
+      points,
+    } = body;
 
-    if (!stem || !category || !optionA || !optionB || !optionC || !optionD || !correctAnswer) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    const answer = (correctAnswer || correct || "").toUpperCase();
+
+    // Validation
+    if (!stem || !category || !optionA || !optionB || !optionC || !optionD || !answer) {
+      return NextResponse.json(
+        { error: "Semua field wajib diisi" },
+        { status: 400 }
+      );
     }
 
     const question = await prisma.question.create({
       data: {
         stem,
         category,
-        jobDivision: jobDivision || null,
         difficulty: difficulty || "MEDIUM",
+        jobDivision: division || jobDivision || null,
         optionA,
         optionB,
         optionC,
         optionD,
-        correctAnswer: correctAnswer.toUpperCase(),
+        correctAnswer: answer,
         explanation: explanation || null,
         points: points || 1,
         isActive: true,
       },
     });
 
-    return NextResponse.json(question);
+    return NextResponse.json({
+      success: true,
+      message: "Soal berhasil dibuat",
+      question: {
+        id: question.id,
+        stem: question.stem,
+        category: question.category,
+        difficulty: question.difficulty,
+        jobDivision: question.jobDivision,
+        optionA: question.optionA,
+        optionB: question.optionB,
+        optionC: question.optionC,
+        optionD: question.optionD,
+        correctAnswer: question.correctAnswer,
+      },
+    });
   } catch (error) {
-    console.error("Error creating question:", error);
-    return NextResponse.json({ error: "Failed to create question" }, { status: 500 });
+    console.error("Create question error:", error);
+    return NextResponse.json(
+      { error: "Terjadi kesalahan server" },
+      { status: 500 }
+    );
   }
 }
 
-export async function PUT(request: NextRequest) {
+// PUT: Update question
+export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { id, stem, category, jobDivision, difficulty, optionA, optionB, optionC, optionD, correctAnswer, explanation, points, isActive } = body;
+    const {
+      id,
+      stem,
+      category,
+      jobDivision,
+      division,
+      difficulty,
+      optionA,
+      optionB,
+      optionC,
+      optionD,
+      correctAnswer,
+      correct,
+      explanation,
+      points,
+      isActive,
+    } = body;
 
     if (!id) {
       return NextResponse.json({ error: "Question ID is required" }, { status: 400 });
     }
+
+    const answer = (correctAnswer || correct || "").toUpperCase();
 
     const question = await prisma.question.update({
       where: { id },
       data: {
         stem,
         category,
-        jobDivision: jobDivision || null,
+        jobDivision: jobDivision || division || null,
         difficulty,
         optionA,
         optionB,
         optionC,
         optionD,
-        correctAnswer: correctAnswer?.toUpperCase(),
+        correctAnswer: answer || undefined,
         explanation: explanation || null,
         points: points || 1,
-        isActive: isActive ?? true,
+        isActive: isActive !== undefined ? isActive : true,
       },
     });
 
-    return NextResponse.json(question);
+    return NextResponse.json({
+      success: true,
+      message: "Soal berhasil diperbarui",
+      question,
+    });
   } catch (error) {
     console.error("Error updating question:", error);
     return NextResponse.json({ error: "Failed to update question" }, { status: 500 });
   }
 }
 
-export async function DELETE(request: NextRequest) {
+// DELETE: Delete question by id query param
+export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");

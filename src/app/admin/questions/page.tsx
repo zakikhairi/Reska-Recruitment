@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Search,
   Plus,
@@ -23,6 +23,7 @@ interface Question {
   stem: string;
   category: string;
   jobDivision: string | null;
+  division?: string | null;
   difficulty: string;
   optionA: string;
   optionB: string;
@@ -32,7 +33,12 @@ interface Question {
   explanation: string | null;
   points: number;
   isActive: boolean;
-  usageCount?: number;
+  createdAt?: string;
+}
+
+interface CategoryStat {
+  category: string;
+  count: number;
 }
 
 const categories = [
@@ -44,7 +50,7 @@ const categories = [
 ];
 
 const divisions = [
-  { id: "", name: "Semua Divisi" },
+  { id: "all", name: "Semua Divisi" },
   { id: "ON_TRAIN_SERVICE", name: "Layanan di Kereta" },
   { id: "RES_CLEAN", name: "Cleaning Service" },
   { id: "RES_PARKING", name: "Parking" },
@@ -60,17 +66,19 @@ const difficulties = [
 ];
 
 const getDifficultyConfig = (difficulty: string) => {
-  return difficulties.find(d => d.id === difficulty) || { id: difficulty, name: difficulty, bg: "#f1f5f9", text: "#64748b" };
+  return difficulties.find((d) => d.id === difficulty) || { id: difficulty, name: difficulty, bg: "#f1f5f9", text: "#64748b" };
 };
 
 const getCategoryConfig = (category: string) => {
-  const cat = categories.find(c => c.id === category);
+  const cat = categories.find((c) => c.id === category);
   return cat ? { bg: `${cat.color}15`, text: cat.color } : { bg: "#f1f5f9", text: "#64748b" };
 };
 
 export default function QuestionsPage() {
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [categoryStats, setCategoryStats] = useState<CategoryStat[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [difficultyFilter, setDifficultyFilter] = useState("all");
@@ -79,7 +87,6 @@ export default function QuestionsPage() {
 
   const [showModal, setShowModal] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
-  const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
@@ -93,39 +100,38 @@ export default function QuestionsPage() {
     optionD: "",
     correctAnswer: "A",
     explanation: "",
+    points: 1,
   });
 
-  useEffect(() => {
-    fetchQuestions();
-  }, []);
-
-  const fetchQuestions = async () => {
+  const fetchQuestions = useCallback(async () => {
+    setLoading(true);
     try {
-      const res = await fetch("/api/admin/questions");
-      const data = await res.json();
-      setQuestions(data);
+      const params = new URLSearchParams();
+      if (categoryFilter !== "all") params.set("category", categoryFilter);
+      if (difficultyFilter !== "all") params.set("difficulty", difficultyFilter);
+      if (divisionFilter !== "all") params.set("division", divisionFilter);
+      if (statusFilter !== "all") params.set("status", statusFilter);
+      if (searchQuery) params.set("search", searchQuery);
+
+      const response = await fetch(`/api/admin/questions?${params.toString()}`);
+      const data = await response.json();
+
+      if (data.success && data.questions) {
+        setQuestions(data.questions);
+        if (data.stats) setCategoryStats(data.stats);
+      } else if (Array.isArray(data)) {
+        setQuestions(data);
+      }
     } catch (error) {
       console.error("Failed to fetch questions:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [categoryFilter, difficultyFilter, divisionFilter, statusFilter, searchQuery]);
 
-  const filteredQuestions = questions.filter((q) => {
-    const matchSearch = q.stem.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchCategory = categoryFilter === "all" || q.category === categoryFilter;
-    const matchDifficulty = difficultyFilter === "all" || q.difficulty === difficultyFilter;
-    const matchDivision = divisionFilter === "all" || q.jobDivision === divisionFilter;
-    const matchStatus = statusFilter === "all" || (statusFilter === "active" && q.isActive) || (statusFilter === "inactive" && !q.isActive);
-    return matchSearch && matchCategory && matchDifficulty && matchDivision && matchStatus;
-  });
-
-  const getCategoryStats = () => {
-    return categories.map((cat) => ({
-      ...cat,
-      count: questions.filter((q) => q.category === cat.id).length,
-    }));
-  };
+  useEffect(() => {
+    fetchQuestions();
+  }, [fetchQuestions]);
 
   const openAddModal = () => {
     setEditingQuestion(null);
@@ -140,6 +146,7 @@ export default function QuestionsPage() {
       optionD: "",
       correctAnswer: "A",
       explanation: "",
+      points: 1,
     });
     setShowModal(true);
   };
@@ -149,45 +156,60 @@ export default function QuestionsPage() {
     setFormData({
       stem: question.stem,
       category: question.category,
-      jobDivision: question.jobDivision || "",
+      jobDivision: question.jobDivision || question.division || "",
       difficulty: question.difficulty,
-      optionA: question.optionA,
-      optionB: question.optionB,
-      optionC: question.optionC,
-      optionD: question.optionD,
-      correctAnswer: question.correctAnswer,
+      optionA: question.optionA || (question as any).options?.A || "",
+      optionB: question.optionB || (question as any).options?.B || "",
+      optionC: question.optionC || (question as any).options?.C || "",
+      optionD: question.optionD || (question as any).options?.D || "",
+      correctAnswer: question.correctAnswer || (question as any).correct || "A",
       explanation: question.explanation || "",
+      points: question.points || 1,
     });
     setShowModal(true);
   };
 
   const handleSave = async () => {
-    if (!formData.stem || !formData.optionA || !formData.optionB || !formData.optionC || !formData.optionD) {
-      alert("Mohon isi semua field yang diperlukan");
+    if (!formData.stem || !formData.category || !formData.optionA || !formData.optionB || !formData.optionC || !formData.optionD || !formData.correctAnswer) {
+      alert("Mohon lengkapi semua field wajib!");
       return;
     }
 
     setSaving(true);
     try {
-      const url = editingQuestion ? "/api/admin/questions" : "/api/admin/questions";
-      const method = editingQuestion ? "PUT" : "POST";
-      const body = editingQuestion ? { ...formData, id: editingQuestion.id } : formData;
-
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      if (res.ok) {
-        await fetchQuestions();
-        setShowModal(false);
+      if (editingQuestion) {
+        const response = await fetch(`/api/admin/questions/${editingQuestion.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...formData,
+            id: editingQuestion.id,
+          }),
+        });
+        const data = await response.json();
+        if (data.success) {
+          setShowModal(false);
+          fetchQuestions();
+        } else {
+          alert(data.error || "Gagal memperbarui soal");
+        }
       } else {
-        alert("Gagal menyimpan soal");
+        const response = await fetch("/api/admin/questions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData),
+        });
+        const data = await response.json();
+        if (data.success) {
+          setShowModal(false);
+          fetchQuestions();
+        } else {
+          alert(data.error || "Gagal membuat soal");
+        }
       }
     } catch (error) {
-      console.error("Error saving question:", error);
-      alert("Terjadi kesalahan");
+      console.error("Failed to save question:", error);
+      alert("Terjadi kesalahan server");
     } finally {
       setSaving(false);
     }
@@ -195,30 +217,40 @@ export default function QuestionsPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      const res = await fetch(`/api/admin/questions?id=${id}`, {
+      const response = await fetch(`/api/admin/questions/${id}`, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" }
       });
-      const data = await res.json();
+      const data = await response.json();
       if (data.success) {
-        await fetchQuestions();
         setDeleteConfirm(null);
+        fetchQuestions();
       } else {
         alert(data.error || "Gagal menghapus soal");
       }
     } catch (error) {
-      console.error("Error deleting question:", error);
-      alert("Terjadi kesalahan saat menghapus soal");
+      console.error("Failed to delete question:", error);
+      alert("Terjadi kesalahan server");
     }
   };
 
-  if (loading) {
-    return (
-      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}>
-        <Loader2 className="w-8 h-8 animate-spin" style={{ color: "#FF5E00" }} />
-      </div>
-    );
-  }
+  const filteredQuestions = questions.filter((q) => {
+    const matchSearch = q.stem.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchCategory = categoryFilter === "all" || q.category === categoryFilter;
+    const matchDifficulty = difficultyFilter === "all" || q.difficulty === difficultyFilter;
+    const divVal = q.jobDivision || q.division;
+    const matchDivision = divisionFilter === "all" || divVal === divisionFilter;
+    const matchStatus = statusFilter === "all" || (statusFilter === "active" && q.isActive) || (statusFilter === "inactive" && !q.isActive);
+    return matchSearch && matchCategory && matchDifficulty && matchDivision && matchStatus;
+  });
+
+  const getCategoryStatsData = () => {
+    return categories.map((cat) => {
+      const count = questions.filter((q) => q.category === cat.id).length;
+      return { ...cat, count };
+    });
+  };
+
+  const stats = getCategoryStatsData();
 
   return (
     <div style={{ fontFamily: "Inter, system-ui, -apple-system, sans-serif", minHeight: "100vh", background: "#f8f9fa", color: "#111111", margin: 0, padding: 0 }}>
@@ -229,61 +261,67 @@ export default function QuestionsPage() {
             <h1 style={{ fontSize: "28px", fontWeight: 800, color: "#00205B", marginBottom: "4px", letterSpacing: "-0.02em" }}>Bank Soal</h1>
             <p style={{ fontSize: "15px", color: "#666666" }}>Kelola soal tes kompetensi</p>
           </div>
-          <Button onClick={openAddModal} size="sm" className="bg-[#FF5E00] hover:bg-[#e65100] border-0">
-            <Plus className="w-4 h-4 mr-2" />
+          <Button onClick={openAddModal} size="sm" className="bg-[#FF5E00] hover:bg-[#e65100] border-0 text-white font-semibold flex items-center gap-2 px-4 py-2 rounded-xl">
+            <Plus className="w-4 h-4" />
             Tambah Soal
           </Button>
         </div>
       </header>
 
-      <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "0 32px 60px" }}>
-        {/* Stats Cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "24px" }}>
-          {getCategoryStats().map((cat) => (
-            <div key={cat.id} style={{ background: "#ffffff", borderRadius: "16px", padding: "20px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: "16px" }}>
-              <div style={{ width: "48px", height: "48px", background: `${cat.color}15`, borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", color: cat.color }}>
-                {cat.icon}
+      <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "0 32px 64px" }}>
+        {/* Category Stats */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "32px" }}>
+          {stats.map((stat) => (
+            <div
+              key={stat.id}
+              onClick={() => setCategoryFilter(categoryFilter === stat.id ? "all" : stat.id)}
+              style={{
+                background: categoryFilter === stat.id ? `${stat.color}10` : "#ffffff",
+                border: `2px solid ${categoryFilter === stat.id ? stat.color : "#eeeeee"}`,
+                borderRadius: "16px",
+                padding: "20px",
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                <div style={{ color: stat.color }}>{stat.icon}</div>
+                <span style={{ fontSize: "24px", fontWeight: 800, color: stat.color }}>{stat.count}</span>
               </div>
-              <div>
-                <p style={{ fontSize: "24px", fontWeight: 800, color: "#111111" }}>{cat.count}</p>
-                <p style={{ fontSize: "13px", color: "#888888" }}>{cat.name}</p>
-              </div>
+              <h3 style={{ fontSize: "15px", fontWeight: 700, color: "#111111", margin: 0 }}>{stat.name}</h3>
             </div>
           ))}
         </div>
 
         {/* Filters */}
-        <div style={{ background: "#ffffff", borderRadius: "16px", padding: "24px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", marginBottom: "24px" }}>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", alignItems: "center" }}>
-            {/* Search */}
-            <div style={{ position: "relative", flex: "1", minWidth: "280px" }}>
+        <div style={{ background: "#ffffff", borderRadius: "16px", padding: "20px", marginBottom: "24px", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
+          <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "center" }}>
+            <div style={{ flex: 1, minWidth: "260px", position: "relative" }}>
               <Search className="w-4 h-4" style={{ position: "absolute", left: "16px", top: "50%", transform: "translateY(-50%)", color: "#888888" }} />
               <input
                 type="text"
-                placeholder="Cari soal..."
+                placeholder="Cari pertanyaan..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                style={{ width: "100%", padding: "12px 16px 12px 48px", border: "2px solid #eeeeee", borderRadius: "12px", fontSize: "14px", outline: "none" }}
+                style={{ width: "100%", padding: "10px 16px 10px 42px", border: "1px solid #e5e7eb", borderRadius: "9999px", fontSize: "14px", outline: "none" }}
               />
             </div>
 
-            {/* Category Filter */}
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              style={{ padding: "10px 44px 10px 16px", border: "1px solid #e5e7e9", borderRadius: "9999px", fontSize: "13px", outline: "none", background: "#ffffff", cursor: "pointer", appearance: "none", color: "#374151", fontWeight: 500, backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 14px center", backgroundSize: "14px", transition: "all 0.2s" }}
+              style={{ padding: "10px 16px", border: "1px solid #e5e7eb", borderRadius: "9999px", fontSize: "13px", outline: "none", background: "#ffffff", cursor: "pointer" }}
             >
               <option value="all">Semua Kategori</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
 
-            {/* Difficulty Filter */}
             <select
               value={difficultyFilter}
               onChange={(e) => setDifficultyFilter(e.target.value)}
-              style={{ padding: "10px 44px 10px 16px", border: "1px solid #e5e7e9", borderRadius: "9999px", fontSize: "13px", outline: "none", background: "#ffffff", cursor: "pointer", appearance: "none", color: "#374151", fontWeight: 500, backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 14px center", backgroundSize: "14px", transition: "all 0.2s" }}
+              style={{ padding: "10px 16px", border: "1px solid #e5e7eb", borderRadius: "9999px", fontSize: "13px", outline: "none", background: "#ffffff", cursor: "pointer" }}
             >
               <option value="all">Semua Tingkat</option>
               {difficulties.map((d) => (
@@ -291,22 +329,20 @@ export default function QuestionsPage() {
               ))}
             </select>
 
-            {/* Division Filter */}
             <select
               value={divisionFilter}
               onChange={(e) => setDivisionFilter(e.target.value)}
-              style={{ padding: "10px 44px 10px 16px", border: "1px solid #e5e7e9", borderRadius: "9999px", fontSize: "13px", outline: "none", background: "#ffffff", cursor: "pointer", appearance: "none", color: "#374151", fontWeight: 500, backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 14px center", backgroundSize: "14px", transition: "all 0.2s" }}
+              style={{ padding: "10px 16px", border: "1px solid #e5e7eb", borderRadius: "9999px", fontSize: "13px", outline: "none", background: "#ffffff", cursor: "pointer" }}
             >
               {divisions.map((div) => (
                 <option key={div.id} value={div.id}>{div.name}</option>
               ))}
             </select>
 
-            {/* Status Filter */}
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              style={{ padding: "10px 44px 10px 16px", border: "1px solid #e5e7e9", borderRadius: "9999px", fontSize: "13px", outline: "none", background: "#ffffff", cursor: "pointer", appearance: "none", color: "#374151", fontWeight: 500, backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 14px center", backgroundSize: "14px", transition: "all 0.2s" }}
+              style={{ padding: "10px 16px", border: "1px solid #e5e7eb", borderRadius: "9999px", fontSize: "13px", outline: "none", background: "#ffffff", cursor: "pointer" }}
             >
               <option value="all">Semua Status</option>
               <option value="active">Aktif</option>
@@ -330,135 +366,143 @@ export default function QuestionsPage() {
           )}
         </div>
 
-        {/* Questions List */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          {filteredQuestions.map((q) => {
-            const difficulty = getDifficultyConfig(q.difficulty);
-            const category = getCategoryConfig(q.category);
-            return (
-              <div key={q.id} style={{ background: "#ffffff", borderRadius: "16px", padding: "24px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
-                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "6px 12px", background: category.bg, color: category.text, borderRadius: "20px", fontSize: "12px", fontWeight: 600 }}>
-                      {q.category}
-                    </span>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "6px 12px", background: difficulty.bg, color: difficulty.text, borderRadius: "20px", fontSize: "12px", fontWeight: 600 }}>
-                      {difficulty.name}
-                    </span>
-                    {q.jobDivision && (
-                      <span style={{ display: "inline-flex", padding: "6px 12px", background: "#f0f4ff", color: "#00205B", borderRadius: "20px", fontSize: "12px", fontWeight: 600 }}>
-                        {q.jobDivision.replace(/_/g, " ")}
+        {/* Loading State */}
+        {loading ? (
+          <div style={{ textAlign: "center", padding: "60px 40px", background: "#ffffff", borderRadius: "16px" }}>
+            <Loader2 className="w-10 h-10 animate-spin mx-auto" style={{ color: "#FF5E00" }} />
+            <p style={{ marginTop: "16px", color: "#888888" }}>Memuat soal...</p>
+          </div>
+        ) : (
+          /* Questions List */
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            {filteredQuestions.map((q) => {
+              const difficulty = getDifficultyConfig(q.difficulty);
+              const category = getCategoryConfig(q.category);
+              const divVal = q.jobDivision || q.division;
+              return (
+                <div key={q.id} style={{ background: "#ffffff", borderRadius: "16px", padding: "24px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
+                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "6px 12px", background: category.bg, color: category.text, borderRadius: "20px", fontSize: "12px", fontWeight: 600 }}>
+                        {q.category}
                       </span>
-                    )}
-                    {!q.isActive && (
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "6px 12px", background: "#fee2e2", color: "#dc2626", borderRadius: "20px", fontSize: "12px", fontWeight: 600 }}>
-                        <XCircle className="w-3 h-3" />
-                        Nonaktif
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "6px 12px", background: difficulty.bg, color: difficulty.text, borderRadius: "20px", fontSize: "12px", fontWeight: 600 }}>
+                        {difficulty.name}
                       </span>
-                    )}
+                      {divVal && (
+                        <span style={{ display: "inline-flex", padding: "6px 12px", background: "#f0f4ff", color: "#00205B", borderRadius: "20px", fontSize: "12px", fontWeight: 600 }}>
+                          {divVal.replace(/_/g, " ")}
+                        </span>
+                      )}
+                      {!q.isActive && (
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "6px 12px", background: "#fee2e2", color: "#dc2626", borderRadius: "20px", fontSize: "12px", fontWeight: 600 }}>
+                          <XCircle className="w-3 h-3" />
+                          Nonaktif
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <button onClick={() => openEditModal(q)} style={{ padding: "8px", background: "#f0f4ff", border: "none", borderRadius: "8px", cursor: "pointer", color: "#00205B" }}>
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => setDeleteConfirm(q.id)} style={{ padding: "8px", background: "#fee2e2", border: "none", borderRadius: "8px", cursor: "pointer", color: "#dc2626" }}>
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                  <div style={{ display: "flex", gap: "4px" }}>
-                    <button onClick={() => openEditModal(q)} style={{ padding: "8px", background: "#f0f4ff", border: "none", borderRadius: "8px", cursor: "pointer", color: "#00205B" }}>
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => setDeleteConfirm(q.id)} style={{ padding: "8px", background: "#fee2e2", border: "none", borderRadius: "8px", cursor: "pointer", color: "#dc2626" }}>
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
 
-                <p style={{ fontSize: "16px", fontWeight: 500, color: "#111111", lineHeight: 1.6, marginBottom: "20px" }}>
-                  {q.stem}
-                </p>
+                  <p style={{ fontSize: "16px", fontWeight: 500, color: "#111111", lineHeight: 1.6, marginBottom: "20px" }}>
+                    {q.stem}
+                  </p>
 
-                {/* Answer Options */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "16px" }}>
-                  {(["A", "B", "C", "D"] as const).map((opt) => {
-                    const isCorrect = q.correctAnswer === opt;
-                    const optionText = q[`option${opt}` as keyof Question];
-                    return (
-                      <div key={opt} style={{
-                        position: "relative",
-                        padding: "16px 20px",
-                        paddingLeft: "68px",
-                        background: isCorrect ? "#f0fdf4" : "#ffffff",
-                        border: "1px solid #e5e7eb",
-                        borderLeft: `4px solid ${isCorrect ? "#16a34a" : "#d1d5db"}`,
-                        borderRadius: "12px",
-                        transition: "all 0.2s ease",
-                        cursor: "pointer",
-                        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
-                      }}>
-                        <div style={{
-                          position: "absolute",
-                          left: "12px",
-                          top: "50%",
-                          transform: "translateY(-50%)",
-                          width: "40px",
-                          height: "40px",
-                          background: isCorrect ? "#16a34a" : "#f3f4f6",
-                          color: isCorrect ? "#ffffff" : "#6b7280",
-                          borderRadius: "50%",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: "15px",
-                          fontWeight: 700,
+                  {/* Answer Options */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "16px" }}>
+                    {(["A", "B", "C", "D"] as const).map((opt) => {
+                      const isCorrect = (q.correctAnswer || (q as any).correct) === opt;
+                      const optionText = q[`option${opt}` as keyof Question] || (q as any).options?.[opt] || "";
+                      return (
+                        <div key={opt} style={{
+                          position: "relative",
+                          padding: "16px 20px",
+                          paddingLeft: "68px",
+                          background: isCorrect ? "#f0fdf4" : "#ffffff",
+                          border: "1px solid #e5e7eb",
+                          borderLeft: `4px solid ${isCorrect ? "#16a34a" : "#d1d5db"}`,
+                          borderRadius: "12px",
+                          transition: "all 0.2s ease",
+                          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
                         }}>
-                          {opt}
-                        </div>
-                        <p style={{
-                          fontSize: "14px",
-                          color: isCorrect ? "#166534" : "#374151",
-                          fontWeight: isCorrect ? 600 : 500,
-                          lineHeight: 1.6,
-                          margin: 0,
-                        }}>
-                          {optionText}
-                        </p>
-                        {isCorrect && (
                           <div style={{
                             position: "absolute",
-                            right: "16px",
+                            left: "12px",
                             top: "50%",
                             transform: "translateY(-50%)",
-                            width: "28px",
-                            height: "28px",
-                            background: "#16a34a",
+                            width: "40px",
+                            height: "40px",
+                            background: isCorrect ? "#16a34a" : "#f3f4f6",
+                            color: isCorrect ? "#ffffff" : "#6b7280",
                             borderRadius: "50%",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
+                            fontSize: "15px",
+                            fontWeight: 700,
                           }}>
-                            <CheckCircle className="w-4 h-4" style={{ color: "#ffffff" }} />
+                            {opt}
                           </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                          <p style={{
+                            fontSize: "14px",
+                            color: isCorrect ? "#166534" : "#374151",
+                            fontWeight: isCorrect ? 600 : 500,
+                            lineHeight: 1.6,
+                            margin: 0,
+                          }}>
+                            {optionText as string}
+                          </p>
+                          {isCorrect && (
+                            <div style={{
+                              position: "absolute",
+                              right: "16px",
+                              top: "50%",
+                              transform: "translateY(-50%)",
+                              width: "28px",
+                              height: "28px",
+                              background: "#16a34a",
+                              borderRadius: "50%",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}>
+                              <CheckCircle className="w-4 h-4" style={{ color: "#ffffff" }} />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
 
-                {/* Footer */}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "16px", borderTop: "1px solid #eeeeee" }}>
-                  <span style={{ fontSize: "13px", color: "#888888" }}>
-                    Poin: {q.points}
-                  </span>
-                  <span style={{ fontSize: "13px", color: "#888888" }}>
-                    ID: #{q.id.slice(0, 8)}
-                  </span>
+                  {/* Footer */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "16px", borderTop: "1px solid #eeeeee" }}>
+                    <span style={{ fontSize: "13px", color: "#888888" }}>
+                      Poin: {q.points || 1}
+                    </span>
+                    <span style={{ fontSize: "13px", color: "#888888" }}>
+                      ID: #{q.id.slice(0, 8)}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Empty State */}
-        {filteredQuestions.length === 0 && (
+        {!loading && filteredQuestions.length === 0 && (
           <div style={{ textAlign: "center", padding: "80px 40px", background: "#ffffff", borderRadius: "16px" }}>
             <BookOpen className="w-16 h-16" style={{ margin: "0 auto 20px", color: "#cccccc" }} />
             <h3 style={{ fontSize: "20px", fontWeight: 700, color: "#111111", marginBottom: "8px" }}>Tidak ada soal ditemukan</h3>
             <p style={{ fontSize: "14px", color: "#888888", marginBottom: "24px" }}>Coba ubah filter atau tambah soal baru</p>
-            <Button onClick={openAddModal} size="sm" className="bg-[#FF5E00] hover:bg-[#e65100] border-0">
+            <Button onClick={openAddModal} size="sm" className="bg-[#FF5E00] hover:bg-[#e65100] border-0 text-white font-semibold">
               <Plus className="w-4 h-4 mr-2" />
               Tambah Soal
             </Button>
@@ -555,7 +599,7 @@ export default function QuestionsPage() {
                   style={{ width: "100%", padding: "12px", border: "2px solid #e5e7eb", borderRadius: "12px", fontSize: "14px", outline: "none" }}
                 >
                   <option value="">Semua Divisi</option>
-                  {divisions.filter(d => d.id).map((div) => (
+                  {divisions.filter((d) => d.id !== "all").map((div) => (
                     <option key={div.id} value={div.id}>{div.name}</option>
                   ))}
                 </select>
@@ -567,7 +611,7 @@ export default function QuestionsPage() {
                   Pilihan Jawaban *
                 </label>
                 <div style={{ display: "grid", gap: "12px" }}>
-                  {["A", "B", "C", "D"].map((opt) => (
+                  {(["A", "B", "C", "D"] as const).map((opt) => (
                     <div key={opt} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                       <span style={{ width: "32px", height: "32px", background: formData.correctAnswer === opt ? "#16a34a" : "#f3f4f6", color: formData.correctAnswer === opt ? "#ffffff" : "#6b7280", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: "14px" }}>
                         {opt}
@@ -584,7 +628,7 @@ export default function QuestionsPage() {
                         name="correctAnswer"
                         checked={formData.correctAnswer === opt}
                         onChange={() => setFormData({ ...formData, correctAnswer: opt })}
-                        style={{ width: "20px", height: "20px", accentColor: "#16a34a" }}
+                        style={{ width: "20px", height: "20px", accentColor: "#16a34a", cursor: "pointer" }}
                       />
                     </div>
                   ))}

@@ -1,39 +1,33 @@
 "use client";
 
-import { Sidebar, CollapsibleSidebar } from "@/components/layout";
+import { Sidebar } from "@/components/layout";
+import { MobileLayout } from "@/components/layout/MobileComponents";
 import { useAuthStore } from "@/stores/auth";
-import { useSidebarStore } from "@/stores/sidebar";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { Plus } from "lucide-react";
 
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, _hasHydrated } = useAuthStore();
-  const { isCollapsed } = useSidebarStore();
   const router = useRouter();
   const [isReady, setIsReady] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    // Wait for Zustand to rehydrate from localStorage
-    if (!_hasHydrated) {
-      setIsReady(false);
-      return;
-    }
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
+  useEffect(() => {
+    if (!_hasHydrated) { setIsReady(false); return; }
     setIsReady(true);
+    if (!isAuthenticated || !user) router.push("/auth/login");
+    else if (user.role === "APPLICANT") router.push("/applicant/dashboard");
+  }, [_hasHydrated, isAuthenticated, user, router]);
 
-    // Check auth after hydration
-    if (!isAuthenticated || !user) {
-      router.push("/auth/login");
-    } else if (user.role === "APPLICANT") {
-      router.push("/applicant/dashboard");
-    }
-  }, [_hasHydrated, isAuthenticated, user, router, isReady]);
-
-  // Show loading state while rehydrating from localStorage
   if (!_hasHydrated || !isReady) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
@@ -49,9 +43,7 @@ export default function AdminLayout({
     );
   }
 
-  // Additional check after ready - redirect if not authorized
   if (!isAuthenticated || !user || user.role === "APPLICANT") {
-    // The useEffect will handle the redirect
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
         <div className="text-center">
@@ -66,18 +58,43 @@ export default function AdminLayout({
     );
   }
 
+  // MOBILE Layout
+  if (isMobile) {
+    return (
+      <MobileLayout userName={user.fullName || "Admin"} userRole={user.role}>
+        <div style={{ marginBottom: "12px" }}>
+          <Link href="/admin/jobs/create" style={{ textDecoration: "none" }}>
+            <button style={{
+              width: "100%",
+              padding: "12px 16px",
+              background: "#FF5E00",
+              color: "#FFFFFF",
+              border: "none",
+              borderRadius: "10px",
+              fontSize: "13px",
+              fontWeight: 700,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "6px"
+            }}>
+              <Plus size={16} />
+              Buat Lowongan
+            </button>
+          </Link>
+        </div>
+        {children}
+      </MobileLayout>
+    );
+  }
+
+  // DESKTOP Layout
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div style={{ minHeight: "100vh", background: "#F8FAFC" }}>
       <Sidebar userName={user.fullName || "Admin"} userRole={user.role} />
-      <CollapsibleSidebar userName={user.fullName || "Admin"} userRole={user.role} />
-      <main
-        className="pb-20 lg:pb-0 transition-all duration-300"
-        style={{
-          paddingLeft: isCollapsed ? "80px" : "260px",
-          transition: "padding-left 0.3s ease"
-        }}
-      >
-        <div className="min-h-screen">{children}</div>
+      <main style={{ marginLeft: "260px", minHeight: "100vh" }}>
+        {children}
       </main>
     </div>
   );
