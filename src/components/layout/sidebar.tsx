@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/stores/auth";
 import { useSidebarStore } from "@/stores/sidebar";
 import { useRouter } from "next/navigation";
-import { Home, User, Briefcase, FileText, Calendar, Users, Clipboard, Settings, BarChart2, MessageSquare, LogOut, ChevronLeft, ChevronRight, HelpCircle } from "lucide-react";
+import { Home, User, Briefcase, FileText, Calendar, Users, Clipboard, Settings, BarChart2, MessageSquare, LogOut, ChevronLeft, ChevronRight, HelpCircle, X } from "lucide-react";
 
 interface SidebarProps {
   userName?: string;
@@ -57,6 +57,23 @@ export function Sidebar({ userName = "User", userRole = "APPLICANT" }: SidebarPr
   const { isCollapsed, toggleSidebar } = useSidebarStore();
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [showKaiPopup, setShowKaiPopup] = useState(false);
+  const popupRef = useRef<HTMLDivElement>(null);
+
+  // Close popup when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (popupRef.current && !popupRef.current.contains(event.target as Node)) {
+        setShowKaiPopup(false);
+      }
+    };
+    if (showKaiPopup) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showKaiPopup]);
 
   const handleLogout = () => {
     setIsLoggingOut(true);
@@ -99,15 +116,28 @@ export function Sidebar({ userName = "User", userRole = "APPLICANT" }: SidebarPr
       overflow: "hidden"
     }}>
       {/* Header */}
-      <div style={{ padding: isCollapsed ? "20px 12px" : "24px", borderBottom: "1px solid #eeeeee", display: "flex", alignItems: "center", justifyContent: isCollapsed ? "center" : "space-between" }}>
+      <div style={{ padding: isCollapsed ? "20px 12px" : "24px", borderBottom: "1px solid #eeeeee", display: "flex", alignItems: "center", justifyContent: isCollapsed ? "center" : "space-between", position: "relative" }}>
         {!isCollapsed && (
-          <Link href="/" style={{ display: "flex", alignItems: "center", gap: "14px", textDecoration: "none" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "14px", textDecoration: "none" }}>
             <img src="/_logo_kais.png" alt="KAI Services" style={{ width: "56px", height: "56px", objectFit: "contain" }} />
             <div>
-              <div style={{ fontSize: "18px", fontWeight: 800, color: "#00205B", lineHeight: 1.2 }}>KAI Services</div>
-              <div style={{ fontSize: "12px", color: "#888888" }}>{userRole === "APPLICANT" ? "Portal Pelamar" : "HR Admin"}</div>
+              <button
+                onClick={() => setShowKaiPopup(!showKaiPopup)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 0,
+                  textAlign: "left",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
+                <div style={{ fontSize: "18px", fontWeight: 800, color: "#00205B", lineHeight: 1.2 }}>KAI Services</div>
+                <div style={{ fontSize: "12px", color: "#888888" }}>{userRole === "APPLICANT" ? "Portal Pelamar" : "HR Admin"}</div>
+              </button>
             </div>
-          </Link>
+          </div>
         )}
         <button
           onClick={toggleSidebar}
@@ -129,10 +159,125 @@ export function Sidebar({ userName = "User", userRole = "APPLICANT" }: SidebarPr
         </button>
       </div>
 
+      {/* KAI Services Popup */}
+      {showKaiPopup && !isCollapsed && (
+        <div
+          ref={popupRef}
+          style={{
+            position: "absolute",
+            top: "100%",
+            left: "0",
+            right: "0",
+            background: "#ffffff",
+            borderBottom: "2px solid #FF5E00",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+            padding: "20px 24px",
+            zIndex: 50,
+            animation: "fadeIn 0.2s ease",
+          }}
+        >
+          <style>{`
+            @keyframes fadeIn {
+              from { opacity: 0; transform: translateY(-10px); }
+              to { opacity: 1; transform: translateY(0); }
+            }
+          `}</style>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "12px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <img src="/_logo_kais.png" alt="KAI Services" style={{ width: "48px", height: "48px", objectFit: "contain" }} />
+              <div>
+                <div style={{ fontSize: "16px", fontWeight: 700, color: "#00205B" }}>KAI Services</div>
+                <div style={{ fontSize: "12px", color: "#888888" }}>Sistem Rekrutmen KAI</div>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowKaiPopup(false)}
+              style={{
+                background: "#f1f5f9",
+                border: "none",
+                borderRadius: "8px",
+                padding: "6px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#666666",
+              }}
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div style={{
+            background: "#fff3e0",
+            border: "1px solid #FFE0B2",
+            borderRadius: "10px",
+            padding: "16px",
+            textAlign: "center",
+          }}>
+            <div style={{ fontSize: "14px", fontWeight: 600, color: "#E65100", marginBottom: "4px" }}>
+              🚧 Fitur ini sedang dalam pengembangan
+            </div>
+            <div style={{ fontSize: "12px", color: "#666666" }}>
+              Menu dan fitur lengkap akan segera hadir
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Logo collapsed */}
       {isCollapsed && (
-        <div style={{ padding: "16px 12px", borderBottom: "1px solid #eeeeee", display: "flex", justifyContent: "center" }}>
-          <img src="/_logo_kais.png" alt="KAI Services" style={{ width: "56px", height: "56px", objectFit: "contain" }} />
+        <div style={{ padding: "16px 12px", borderBottom: "1px solid #eeeeee", display: "flex", justifyContent: "center", position: "relative" }}>
+          <button
+            onClick={() => setShowKaiPopup(!showKaiPopup)}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            title="KAI Services"
+          >
+            <img src="/_logo_kais.png" alt="KAI Services" style={{ width: "56px", height: "56px", objectFit: "contain" }} />
+          </button>
+        </div>
+      )}
+
+      {/* KAI Services Popup for Collapsed Mode */}
+      {showKaiPopup && isCollapsed && (
+        <div
+          ref={popupRef}
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "100%",
+            background: "#ffffff",
+            border: "1px solid #e0e0e0",
+            borderRadius: "12px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+            padding: "16px",
+            zIndex: 100,
+            minWidth: "200px",
+            animation: "fadeIn 0.2s ease",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
+            <img src="/_logo_kais.png" alt="KAI Services" style={{ width: "36px", height: "36px", objectFit: "contain" }} />
+            <div style={{ fontSize: "14px", fontWeight: 700, color: "#00205B" }}>KAI Services</div>
+          </div>
+          <div style={{
+            background: "#fff3e0",
+            border: "1px solid #FFE0B2",
+            borderRadius: "8px",
+            padding: "12px",
+            textAlign: "center",
+          }}>
+            <div style={{ fontSize: "12px", fontWeight: 600, color: "#E65100" }}>
+              🚧 Fitur ini sedang dalam pengembangan
+            </div>
+          </div>
         </div>
       )}
 
