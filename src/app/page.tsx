@@ -180,8 +180,8 @@ export default function HomePage() {
       <section style={{ paddingTop: "72px", position: "relative", color: "#ffffff", minHeight: "700px" }}>
         {/* Background Image */}
         <img
-          src="/home-photo.jpg"
-          alt="KAI Recruitment"
+          src="/kais-hero.jpg"
+          alt="KAI Services"
           style={{
             position: "absolute",
             top: 0,
@@ -440,25 +440,43 @@ export default function HomePage() {
       </section>
 
       {/* About */}
-      <section id="tentang" style={{ padding: "80px 32px", background: "linear-gradient(135deg, #00205B 0%, #0C2340 100%)", color: "#ffffff" }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "80px", alignItems: "center" }} className="about-grid-container">
-          <AnimatedSection>
-            <h2 style={{ fontSize: "36px", fontWeight: 700, marginBottom: "24px", letterSpacing: "-0.02em" }}>Tentang KAI Services</h2>
-            <p style={{ color: "rgba(255,255,255,0.7)", lineHeight: 1.8, marginBottom: "20px", fontSize: "16px" }}>
-              PT Reska Multi Usaha (KAI Services) adalah anak perusahaan dari PT Kereta Api Indonesia (Persero) yang didirikan pada tahun 2003. Kami menyediakan jasa pendukung operasional kereta api.
-            </p>
-            <p style={{ color: "rgba(255,255,255,0.7)", lineHeight: 1.8, marginBottom: "40px", fontSize: "16px" }}>
-              Dengan pengalaman lebih dari 20 tahun, kami berkomitmen memberikan layanan berkualitas bagi lebih dari 5.000 karyawan di seluruh Indonesia.
-            </p>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "32px" }}>
-              <div><div style={{ fontSize: "36px", fontWeight: 800, color: "#FF5E00", marginBottom: "8px" }}>20+</div><div style={{ fontSize: "14px", color: "rgba(255,255,255,0.6)", fontWeight: 500 }}>Tahun Pengalaman</div></div>
-              <div><div style={{ fontSize: "36px", fontWeight: 800, color: "#FF5E00", marginBottom: "8px" }}>5,000+</div><div style={{ fontSize: "14px", color: "rgba(255,255,255,0.6)", fontWeight: 500 }}>Karyawan</div></div>
-              <div><div style={{ fontSize: "36px", fontWeight: 800, color: "#FF5E00", marginBottom: "8px" }}>18</div><div style={{ fontSize: "14px", color: "rgba(255,255,255,0.6)", fontWeight: 500 }}>Kota Branch</div></div>
-            </div>
-          </AnimatedSection>
+      <section id="tentang" style={{ padding: "80px 32px", background: "#ffffff", color: "#111111" }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "80px", alignItems: "center" }} className="about-grid-container">
+            <AnimatedSection>
+              {/* About Image */}
+              <div style={{ borderRadius: "20px", overflow: "hidden", boxShadow: "0 12px 40px rgba(0,32,91,0.15)" }}>
+                <img
+                  src="/kais-about.jpg"
+                  alt="Tentang KAI Services"
+                  style={{
+                    width: "100%",
+                    height: "auto",
+                    display: "block",
+                  }}
+                />
+              </div>
+            </AnimatedSection>
 
-          <AnimatedSection delay={200}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "20px", alignItems: "stretch" }} className="about-grid">
+            <AnimatedSection delay={200}>
+              <h2 style={{ fontSize: "36px", fontWeight: 700, color: "#00205B", marginBottom: "24px", letterSpacing: "-0.02em" }}>Tentang KAI Services</h2>
+              <p style={{ color: "#666666", lineHeight: 1.8, marginBottom: "20px", fontSize: "16px" }}>
+                PT Reska Multi Usaha (KAI Services) adalah anak perusahaan dari PT Kereta Api Indonesia (Persero) yang didirikan pada tahun 2003. Kami menyediakan jasa pendukung operasional kereta api.
+              </p>
+              <p style={{ color: "#666666", lineHeight: 1.8, marginBottom: "40px", fontSize: "16px" }}>
+                Dengan pengalaman lebih dari 20 tahun, kami berkomitmen memberikan layanan berkualitas bagi lebih dari 5.000 karyawan di seluruh Indonesia.
+              </p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "32px" }}>
+                <div><div style={{ fontSize: "36px", fontWeight: 800, color: "#FF5E00", marginBottom: "8px" }}>20+</div><div style={{ fontSize: "14px", color: "#888888", fontWeight: 500 }}>Tahun Pengalaman</div></div>
+                <div><div style={{ fontSize: "36px", fontWeight: 800, color: "#FF5E00", marginBottom: "8px" }}>5,000+</div><div style={{ fontSize: "14px", color: "#888888", fontWeight: 500 }}>Karyawan</div></div>
+                <div><div style={{ fontSize: "36px", fontWeight: 800, color: "#FF5E00", marginBottom: "8px" }}>18</div><div style={{ fontSize: "14px", color: "#888888", fontWeight: 500 }}>Kota Branch</div></div>
+              </div>
+            </AnimatedSection>
+          </div>
+
+          {/* Features Grid */}
+          <AnimatedSection>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "20px", alignItems: "stretch", marginTop: "60px" }} className="about-grid">
               {[
                 { title: "BUMN Terpercaya", desc: "Bagian dari KAI Indonesia", icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FF5E00" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4 8 4v14"/><path d="M9 21v-6h6v6"/></svg> },
                 { title: "Pelatihan Berkala", desc: "Pengembangan kompetensi", icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FF5E00" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg> },
@@ -466,10 +484,12 @@ export default function HomePage() {
                 { title: "Inovasi Digital", desc: "Sistem modern", icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FF5E00" strokeWidth="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> },
               ].map((item, i) => (
                 <AnimatedCard key={i} delay={i * 100}>
-                  <div style={{ background: "rgba(255,255,255,0.08)", padding: "28px", borderRadius: "16px", backdropFilter: "blur(10px)", display: "flex", flexDirection: "column", height: "100%", minHeight: "200px" }}>
+                  <div style={{ background: "#f8f9fa", padding: "28px", borderRadius: "16px", border: "1px solid #eeeeee", display: "flex", flexDirection: "column", height: "100%", minHeight: "200px", transition: "transform 0.3s, box-shadow 0.3s" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-8px)"; e.currentTarget.style.boxShadow = "0 12px 24px rgba(0,0,0,0.1)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "none"; }}>
                     <div style={{ marginBottom: "14px", flexShrink: 0 }}>{item.icon}</div>
-                    <div style={{ fontSize: "16px", fontWeight: 700, marginBottom: "8px" }}>{item.title}</div>
-                    <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.6)" }}>{item.desc}</div>
+                    <div style={{ fontSize: "16px", fontWeight: 700, marginBottom: "8px", color: "#111111" }}>{item.title}</div>
+                    <div style={{ fontSize: "13px", color: "#666666" }}>{item.desc}</div>
                   </div>
                 </AnimatedCard>
               ))}
