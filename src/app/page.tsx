@@ -31,7 +31,7 @@ const filters = ["Semua", "Layanan Kereta", "IT Staff", "Logistik", "ResClean", 
 
 const heroSlides = [
   {
-    image: "https://minimax-algeng-chat-tts-us.oss-us-east-1.aliyuncs.com/ccv2%2F2026-09-03%2FMiniMax-M2.7%2F2044203945915593601%2Fdff023d67b5e2324fe49a16f4ef8cde9de85382c081cf6b514bf67b66abf1049..png?Expires=1788504959&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=hCR1%2BUhJEbvFuqTrsVTZsfod%2FNk%3D",
+    image: "/images/hero-1.png",
     badge: "PT Reska Multi Usaha - Anak Perusahaan KAI",
     titleLine1: "Bergabung dengan",
     titleHighlight: "Keluarga Besar",
@@ -39,7 +39,7 @@ const heroSlides = [
     description: "Jadilah bagian dari perusahaan railway terbesar di Indonesia. Kami mencari talenta terbaik untuk memberikan layanan kereta api terbaik.",
   },
   {
-    image: "https://minimax-algeng-chat-tts-us.oss-us-east-1.aliyuncs.com/ccv2%2F2026-09-02%2FMiniMax-M2.7%2F2044203945915593601%2Fa65df92393b0235ca19459c7aaf2da12d99b19a13d93cd80e4a1ffd0c9fdc191..jpeg?Expires=1788417434&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=GLG%2FrnX2u2tx9QTy6kh%2B6bvJ7qc%3D",
+    image: "/images/hero-2.jpg",
     badge: "Layanan Kebersihan & Fasilitas - RESClean",
     titleLine1: "Wujudkan Standar",
     titleHighlight: "Kebersihan & Kenyamanan",
@@ -47,7 +47,7 @@ const heroSlides = [
     description: "Bergabunglah bersama tim profesional RESClean dalam menjaga standar kebersihan, higienitas, dan kenyamanan seluruh armada serta stasiun kereta api di Indonesia.",
   },
   {
-    image: "https://minimax-algeng-chat-tts-us.oss-us-east-1.aliyuncs.com/ccv2%2F2026-09-02%2FMiniMax-M2.7%2F2044203945915593601%2F3d10e71c3bdf15a8e462af0b213ce3d3ea840a81179089d926a2619f98f5d803..jpeg?Expires=1788417651&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=T2JTBX35oQMIX72z6BK21rL9LpE%3D",
+    image: "/images/hero-3.jpg",
     badge: "Kuliner & Restorasi Kereta Api - On Train Culinary",
     titleLine1: "Sajikan Cita Rasa",
     titleHighlight: "Kuliner Nusantara",
@@ -55,7 +55,7 @@ const heroSlides = [
     description: "Kembangkan keahlian kuliner Anda bersama tim Chef dan Katering KAI Services untuk menghadirkan pengalaman hidangan lezat berstandar tinggi bagi jutaan penumpang.",
   },
   {
-    image: "https://minimax-algeng-chat-tts-us.oss-us-east-1.aliyuncs.com/ccv2%2F2026-09-02%2FMiniMax-M2.7%2F2044203945915593601%2F43a42117a8e14751936ba094bca1166b76464a7f28d87a344f35431071d967b4..jpeg?Expires=1788417888&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=aYyzDaLPuLIHQSh36aumVWlk9Bk%3D",
+    image: "/images/hero-4.jpg",
     badge: "Manajemen Kawasan Stasiun - ResParking",
     titleLine1: "Kelola Layanan Parkir",
     titleHighlight: "Modern & Terintegrasi",
@@ -63,7 +63,7 @@ const heroSlides = [
     description: "Tingkatkan efisiensi mobilitas masyarakat dengan bergabung di divisi manajemen parkir dan pelayanan terdepan kawasan stasiun kereta api modern.",
   },
   {
-    image: "https://minimax-algeng-chat-tts-us.oss-us-east-1.aliyuncs.com/ccv2%2F2026-09-02%2FMiniMax-M2.7%2F2044203945915593601%2F9cc5e689ea6479808284ecec29179f56190ff9f19e3a7485ce570884d1baa46d..jpeg?Expires=1788417894&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=Mo%2B5omAx5HOhgyPBjM5M%2BnQALzU%3D",
+    image: "/images/hero-5.jpg",
     badge: "Hospitality & Barista - Loko Coffee Shop",
     titleLine1: "Karier Kreatif di",
     titleHighlight: "Loko Coffee Shop",
@@ -71,7 +71,7 @@ const heroSlides = [
     description: "Salurkan passion barista dan hospitality Anda di jaringan coffee shop ternama KAI Services yang selalu menemani momen perjalanan dan kehangatan pelanggan.",
   },
   {
-    image: "https://minimax-algeng-chat-tts-us.oss-us-east-1.aliyuncs.com/ccv2%2F2026-09-02%2FMiniMax-M2.7%2F2044203945915593601%2F4a74bc40598186edb9d3085a65c28f75c06c036e2dff47581585cef9739afafe..jpeg?Expires=1788417897&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=okmexeL8kmtm%2B%2BWy21t8egPCAR8%3D",
+    image: "/images/hero-6.jpg",
     badge: "Keamanan & Pelayanan - Security & Customer Care",
     titleLine1: "Berikan Rasa Aman &",
     titleHighlight: "Pelayanan Sepenuh Hati",
