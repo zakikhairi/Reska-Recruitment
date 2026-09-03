@@ -31,7 +31,7 @@ const filters = ["Semua", "Layanan Kereta", "IT Staff", "Logistik", "ResClean", 
 
 const heroSlides = [
   {
-    image: "https://minimax-algeng-chat-tts-us.oss-us-east-1.aliyuncs.com/ccv2%2F2026-09-02%2FMiniMax-M2.7%2F2044203945915593601%2F1ecd505471cf2240985edcde02ee2f7c3bc2a9adb9efd42131f915173ca939aa..png?Expires=1788405702&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=KBjA35kV0ebhl%2BFxid%2FdDo5lqEE%3D",
+    image: "https://minimax-algeng-chat-tts-us.oss-us-east-1.aliyuncs.com/ccv2%2F2026-09-03%2FMiniMax-M2.7%2F2044203945915593601%2Fdff023d67b5e2324fe49a16f4ef8cde9de85382c081cf6b514bf67b66abf1049..png?Expires=1788504959&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=hCR1%2BUhJEbvFuqTrsVTZsfod%2FNk%3D",
     badge: "PT Reska Multi Usaha - Anak Perusahaan KAI",
     titleLine1: "Bergabung dengan",
     titleHighlight: "Keluarga Besar",
@@ -144,6 +144,8 @@ function AnimatedCard({ children, delay = 0 }: { children: React.ReactNode; dela
 // Rolling Wheel / Odometer Digit Counter
 function RollingDigit({ digit, delay = 0, isRolling }: { digit: string; delay?: number; isRolling: boolean }) {
   const isNumber = !isNaN(parseInt(digit, 10)) && digit.trim() !== "";
+
+  // For non-numeric characters (letters, spaces, symbols), just display them without animation
   if (!isNumber) {
     return (
       <span style={{ display: "inline-block", height: "1.15em", lineHeight: "1.15em", verticalAlign: "top" }}>
@@ -225,6 +227,33 @@ export default function HomePage() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isStatsRolling, setIsStatsRolling] = useState(false);
   const [showAnnouncement, setShowAnnouncement] = useState(true);
+  const [imagesLoaded, setImagesLoaded] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  // Track scroll position to show/hide scroll to top button
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 500);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Preload all hero images before showing slideshow
+  useEffect(() => {
+    const imagePromises = heroSlides.map((slide) => {
+      return new Promise<void>((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve();
+        img.onerror = () => resolve(); // Continue even if one fails
+        img.src = slide.image;
+      });
+    });
+
+    Promise.all(imagePromises).then(() => {
+      setImagesLoaded(true);
+    });
+  }, []);
 
   // Trigger stats rolling wheel animation on initial mount / page load
   useEffect(() => {
@@ -234,13 +263,15 @@ export default function HomePage() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Auto-advance background slideshow
+  // Auto-advance background slideshow - only start when images are loaded
   useEffect(() => {
+    if (!imagesLoaded) return;
+
     const interval = setInterval(() => {
       setCurrentSlide(prev => (prev + 1) % heroSlides.length);
     }, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [imagesLoaded]);
 
   useEffect(() => {
     fetch('/api/jobs')
@@ -530,10 +561,12 @@ export default function HomePage() {
             </div>
           </Link>
 
-          <nav style={{ display: "flex", gap: "40px" }} className="desktop-nav">
-            <a href="#lowongan" style={{ fontSize: "15px", color: "#555555", textDecoration: "none", fontWeight: 500 }}>Lowongan</a>
-            <a href="#tentang" style={{ fontSize: "15px", color: "#555555", textDecoration: "none", fontWeight: 500 }}>Tentang</a>
-            <a href="#kontak" style={{ fontSize: "15px", color: "#555555", textDecoration: "none", fontWeight: 500 }}>Kontak</a>
+          <nav style={{ display: "flex", gap: "32px" }} className="desktop-nav">
+            <a href="#mengapa" style={{ fontSize: "14px", color: "#555555", textDecoration: "none", fontWeight: 500 }}>Mengapa Bergabung?</a>
+            <a href="#cara-melamar" style={{ fontSize: "14px", color: "#555555", textDecoration: "none", fontWeight: 500 }}>Cara Melamar</a>
+            <a href="#lowongan" style={{ fontSize: "14px", color: "#555555", textDecoration: "none", fontWeight: 500 }}>Lowongan</a>
+            <a href="#tentang" style={{ fontSize: "14px", color: "#555555", textDecoration: "none", fontWeight: 500 }}>Tentang</a>
+            <a href="#kontak" style={{ fontSize: "14px", color: "#555555", textDecoration: "none", fontWeight: 500 }}>Kontak</a>
           </nav>
 
           <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
@@ -564,31 +597,35 @@ export default function HomePage() {
       </div>
 
       {/* Hero */}
-      <section style={{ paddingTop: "72px", position: "relative", color: "#ffffff", minHeight: "700px" }}>
-        {/* Background Image Slideshow */}
+      <section style={{ paddingTop: "72px", position: "relative", color: "#ffffff", height: "calc(100vh - 72px)", minHeight: "600px", maxHeight: "900px", overflow: "hidden" }}>
+        {/* Background Image Slideshow with fixed height */}
         <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", zIndex: 0 }}>
+          {/* Placeholder background while loading */}
+          {!imagesLoaded && (
+            <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "linear-gradient(135deg, #00205B 0%, #003380 100%)", zIndex: 0 }} />
+          )}
+
           {heroSlides.map((slide, index) => (
-            <img
+            <div
               key={index}
-              src={slide.image}
-              alt={slide.badge}
               style={{
                 position: "absolute",
                 top: 0,
                 left: 0,
                 width: "100%",
                 height: "100%",
-                objectFit: "cover",
-                objectPosition: "center top",
                 opacity: currentSlide === index ? 1 : 0,
-                transition: "opacity 1s ease-in-out"
+                transition: "opacity 0.5s ease-in-out",
+                backgroundImage: `url(${slide.image})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center center",
               }}
             />
           ))}
         </div>
 
-        {/* Dark Overlay */}
-        <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "linear-gradient(135deg, rgba(0,32,91,0.85) 0%, rgba(12,35,64,0.75) 100%)", zIndex: 1 }} />
+        {/* Light Overlay for better image visibility */}
+        <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "linear-gradient(135deg, rgba(0,32,91,0.45) 0%, rgba(12,35,64,0.35) 100%)", zIndex: 1 }} />
 
         {/* Navigation Arrows */}
         <button
@@ -698,7 +735,24 @@ export default function HomePage() {
 
         <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "100px 32px", display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "80px", alignItems: "center", position: "relative", zIndex: 2 }} className="hero-content">
           <div style={{ minHeight: "360px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-            <div key={currentSlide} style={{ animation: "heroSlideFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards" }}>
+            <div
+              key={currentSlide}
+              style={{
+                animation: `heroSlideFadeIn-${currentSlide} 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards`
+              }}
+            >
+              <style>{`
+                @keyframes heroSlideFadeIn-${currentSlide} {
+                  from {
+                    opacity: 0;
+                    transform: translateY(16px);
+                  }
+                  to {
+                    opacity: 1;
+                    transform: translateY(0);
+                  }
+                }
+              `}</style>
               <div style={{ display: "inline-block", padding: "8px 16px", background: "rgba(255,255,255,0.12)", backdropFilter: "blur(6px)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: "24px", fontSize: "14px", fontWeight: 500, marginBottom: "24px" }}>
                 {heroSlides[currentSlide]?.badge}
               </div>
@@ -732,10 +786,10 @@ export default function HomePage() {
             <div style={{ background: "rgba(255,255,255,0.08)", borderRadius: "20px", padding: "32px", backdropFilter: "blur(10px)" }}>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "32px" }}>
                 {[
-                  { v: "12,500+", l: "Total Pelamar" },
+                  { v: "12,000+", l: "Total Pelamar" },
                   { v: "24", l: "Posisi Terbuka" },
-                  { v: "1,200+", l: "Terserap 2025" },
-                  { v: "18 Kota", l: "Cabang" }
+                  { v: "1,200", l: "Terserap 2025" },
+                  { v: "18", l: "Kota" }
                 ].map((s, i) => (
                   <div key={i} style={{ textAlign: "center" }}>
                     <div style={{ fontSize: "36px", fontWeight: 800, color: "#FF5E00", lineHeight: 1.1, marginBottom: "6px" }}>
@@ -751,8 +805,8 @@ export default function HomePage() {
       </section>
 
       {/* Benefits */}
-      <section style={{ padding: "100px 32px", background: "#f8f9fa" }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+      <section id="mengapa" style={{ minHeight: "100vh", padding: "80px 32px", background: "#f8f9fa", display: "flex", alignItems: "center" }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto", width: "100%" }}>
           <AnimatedSection>
             <div style={{ textAlign: "center", marginBottom: "56px" }}>
               <h2 style={{ fontSize: "36px", fontWeight: 700, color: "#00205B", marginBottom: "14px", letterSpacing: "-0.02em" }}>Mengapa Bergabung?</h2>
@@ -760,7 +814,7 @@ export default function HomePage() {
             </div>
           </AnimatedSection>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "20px", alignItems: "stretch" }} className="benefits-grid">
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "24px", alignItems: "stretch" }} className="benefits-grid">
             {[
               { title: "Asuransi Kesehatan", desc: "BPJS & Asuransi Tambahan", icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00205B" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" strokeLinecap="round" strokeLinejoin="round"/></svg> },
               { title: "Cuti & Tunjangan", desc: "THR, cuti tahunan & hari besar", icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00205B" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> },
@@ -768,10 +822,10 @@ export default function HomePage() {
               { title: "Lingkungan Kerja", desc: "Profesional & suportif", icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00205B" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> },
             ].map((b, i) => (
               <AnimatedCard key={i} delay={i * 100}>
-                <div style={{ background: "#ffffff", padding: "24px", borderRadius: "16px", textAlign: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", transition: "transform 0.3s, box-shadow 0.3s", display: "flex", flexDirection: "column", height: "100%", minHeight: "220px", justifyContent: "center" }}
+                <div style={{ background: "#ffffff", padding: "32px", borderRadius: "20px", textAlign: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", transition: "transform 0.3s, box-shadow 0.3s", display: "flex", flexDirection: "column", height: "100%", minHeight: "280px", justifyContent: "center" }}
                   onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-8px)"; e.currentTarget.style.boxShadow = "0 12px 24px rgba(0,0,0,0.12)"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.06)"; }}>
-                  <div style={{ width: "52px", height: "52px", background: "#f0f4ff", borderRadius: "14px", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", flexShrink: 0 }}>{b.icon}</div>
+                  <div style={{ width: "64px", height: "64px", background: "#f0f4ff", borderRadius: "16px", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", flexShrink: 0 }}>{b.icon}</div>
                   <h3 style={{ fontSize: "16px", fontWeight: 700, marginBottom: "8px", color: "#111111" }}>{b.title}</h3>
                   <p style={{ fontSize: "13px", color: "#666666", lineHeight: 1.5, margin: 0 }}>{b.desc}</p>
                 </div>
@@ -783,10 +837,10 @@ export default function HomePage() {
 
       {/* Steps (Pelni-style 5 Steps adapted for KAI Services) */}
       <section id="cara-melamar" style={{ padding: "100px 32px", background: "#ffffff", position: "relative", overflow: "hidden" }}>
-        <div style={{ maxWidth: "1240px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
           <div style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1.35fr",
+            gridTemplateColumns: "1fr 1fr",
             gap: "60px",
             alignItems: "center"
           }} className="how-to-apply-grid">
@@ -854,7 +908,7 @@ export default function HomePage() {
             <div style={{
               display: "grid",
               gridTemplateColumns: "repeat(2, 1fr)",
-              gap: "28px",
+              gap: "20px",
               position: "relative"
             }} className="how-to-apply-cards">
 
@@ -862,64 +916,50 @@ export default function HomePage() {
               <AnimatedCard delay={100}>
                 <div style={{
                   background: "linear-gradient(135deg, #00205B 0%, #003380 100%)",
-                  borderRadius: "24px",
-                  padding: "40px 24px 28px 28px",
+                  borderRadius: "20px",
+                  padding: "32px 24px 24px 24px",
                   color: "#FFFFFF",
                   position: "relative",
-                  boxShadow: "0 16px 36px rgba(0,32,91,0.2)",
+                  boxShadow: "0 12px 28px rgba(0,32,91,0.2)",
                   transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                   height: "100%",
-                  minHeight: "220px",
+                  minHeight: "180px",
                   display: "flex",
                   flexDirection: "column",
-                  justifyContent: "space-between"
+                  justifyContent: "flex-start"
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = "translateY(-8px)";
-                  e.currentTarget.style.boxShadow = "0 24px 48px rgba(0,32,91,0.3)";
+                  e.currentTarget.style.transform = "translateY(-6px)";
+                  e.currentTarget.style.boxShadow = "0 20px 40px rgba(0,32,91,0.3)";
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = "translateY(0)";
-                  e.currentTarget.style.boxShadow = "0 16px 36px rgba(0,32,91,0.2)";
+                  e.currentTarget.style.boxShadow = "0 12px 28px rgba(0,32,91,0.2)";
                 }}>
-                  {/* Floating Illustrated Badge */}
+                  {/* Step Number Badge at top right */}
                   <div style={{
                     position: "absolute",
-                    top: "-20px",
-                    left: "-14px",
-                    width: "60px",
-                    height: "60px",
-                    background: "#FFFFFF",
-                    borderRadius: "18px",
-                    boxShadow: "0 10px 24px rgba(0,0,0,0.14)",
+                    top: "16px",
+                    right: "16px",
+                    width: "36px",
+                    height: "36px",
+                    background: "rgba(255,255,255,0.2)",
+                    borderRadius: "10px",
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center"
+                    justifyContent: "center",
+                    fontSize: "16px",
+                    fontWeight: 800,
+                    color: "#FFFFFF",
                   }}>
-                    <svg width="36" height="36" viewBox="0 0 64 64" fill="none">
-                      <rect x="14" y="10" width="36" height="44" rx="8" fill="#F8FAFC" stroke="#CBD5E1" strokeWidth="2" />
-                      <rect x="22" y="6" width="20" height="8" rx="4" fill="#FF5E00" />
-                      <circle cx="28" cy="10" r="2" fill="#FFFFFF" />
-                      <circle cx="36" cy="10" r="2" fill="#FFFFFF" />
-                      <rect x="20" y="22" width="16" height="3" rx="1.5" fill="#00205B" />
-                      <rect x="20" y="30" width="22" height="3" rx="1.5" fill="#94A3B8" />
-                      <rect x="20" y="38" width="18" height="3" rx="1.5" fill="#94A3B8" />
-                      <circle cx="44" cy="23" r="3" fill="#10B981" />
-                      <path d="M46 40L36 50L32 51L33 47L43 37L46 40Z" fill="#38BDF8" />
-                      <path d="M43 37L46 40L49 37L46 34L43 37Z" fill="#FF5E00" />
-                    </svg>
+                    01
                   </div>
 
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
-                    <h3 style={{ fontSize: "18px", fontWeight: 700, margin: 0, paddingRight: "10px", lineHeight: 1.3, color: "#FFFFFF" }}>
-                      Registrasikan<br />Akun Anda
-                    </h3>
-                    <span style={{ fontSize: "44px", fontWeight: 900, lineHeight: 0.9, opacity: 0.95, color: "#FFFFFF", letterSpacing: "-0.04em" }}>
-                      01
-                    </span>
-                  </div>
+                  <h3 style={{ fontSize: "18px", fontWeight: 700, margin: "0 0 12px 0", lineHeight: 1.3, color: "#FFFFFF", paddingRight: "40px" }}>
+                    Registrasikan<br />Akun Anda
+                  </h3>
 
-                  <p style={{ fontSize: "13px", lineHeight: 1.6, color: "rgba(255,255,255,0.85)", margin: 0 }}>
+                  <p style={{ fontSize: "13px", lineHeight: 1.5, color: "rgba(255,255,255,0.85)", margin: 0 }}>
                     Daftarkan diri Anda untuk membuat akun pribadi di platform rekrutmen kami.
                   </p>
                 </div>
@@ -929,64 +969,50 @@ export default function HomePage() {
               <AnimatedCard delay={200}>
                 <div style={{
                   background: "linear-gradient(135deg, #0284C7 0%, #38BDF8 100%)",
-                  borderRadius: "24px",
-                  padding: "40px 24px 28px 28px",
+                  borderRadius: "20px",
+                  padding: "28px 20px 20px 24px",
                   color: "#FFFFFF",
                   position: "relative",
-                  boxShadow: "0 16px 36px rgba(2,132,199,0.25)",
+                  boxShadow: "0 12px 28px rgba(2,132,199,0.25)",
                   transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                   height: "100%",
-                  minHeight: "220px",
+                  minHeight: "180px",
                   display: "flex",
                   flexDirection: "column",
-                  justifyContent: "space-between",
-                  marginTop: "30px"
+                  justifyContent: "flex-start"
                 }}
-                className="staggered-card-2"
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = "translateY(-8px)";
-                  e.currentTarget.style.boxShadow = "0 24px 48px rgba(2,132,199,0.35)";
+                  e.currentTarget.style.transform = "translateY(-6px)";
+                  e.currentTarget.style.boxShadow = "0 20px 40px rgba(2,132,199,0.35)";
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = "translateY(0)";
-                  e.currentTarget.style.boxShadow = "0 16px 36px rgba(2,132,199,0.25)";
+                  e.currentTarget.style.boxShadow = "0 12px 28px rgba(2,132,199,0.25)";
                 }}>
-                  {/* Floating Illustrated Badge */}
+                  {/* Step Number Badge at top right */}
                   <div style={{
                     position: "absolute",
-                    top: "-20px",
-                    left: "-14px",
-                    width: "60px",
-                    height: "60px",
-                    background: "#FFFFFF",
-                    borderRadius: "18px",
-                    boxShadow: "0 10px 24px rgba(0,0,0,0.14)",
+                    top: "16px",
+                    right: "16px",
+                    width: "36px",
+                    height: "36px",
+                    background: "rgba(255,255,255,0.2)",
+                    borderRadius: "10px",
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center"
+                    justifyContent: "center",
+                    fontSize: "16px",
+                    fontWeight: 800,
+                    color: "#FFFFFF",
                   }}>
-                    <svg width="36" height="36" viewBox="0 0 64 64" fill="none">
-                      <rect x="14" y="8" width="36" height="48" rx="6" fill="#FFFFFF" stroke="#CBD5E1" strokeWidth="2" />
-                      <path d="M36 22L40 19L44 22V8H36V22Z" fill="#FF5E00" />
-                      <rect x="20" y="16" width="12" height="12" rx="3" fill="#0284C7" />
-                      <circle cx="26" cy="20" r="3" fill="#FFFFFF" />
-                      <path d="M22 27C22 25 24 24 26 24C28 24 30 25 30 27" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" />
-                      <rect x="20" y="34" width="24" height="3" rx="1.5" fill="#00205B" />
-                      <rect x="20" y="41" width="18" height="3" rx="1.5" fill="#94A3B8" />
-                      <rect x="20" y="47" width="22" height="3" rx="1.5" fill="#94A3B8" />
-                    </svg>
+                    02
                   </div>
 
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
-                    <h3 style={{ fontSize: "18px", fontWeight: 700, margin: 0, paddingRight: "10px", lineHeight: 1.3, color: "#FFFFFF" }}>
-                      Lengkapi Data<br />Diri Anda
-                    </h3>
-                    <span style={{ fontSize: "44px", fontWeight: 900, lineHeight: 0.9, opacity: 0.95, color: "#FFFFFF", letterSpacing: "-0.04em" }}>
-                      02
-                    </span>
-                  </div>
+                  <h3 style={{ fontSize: "18px", fontWeight: 700, margin: "0 0 12px 0", lineHeight: 1.3, color: "#FFFFFF", paddingRight: "40px" }}>
+                    Lengkapi Data<br />Diri Anda
+                  </h3>
 
-                  <p style={{ fontSize: "13px", lineHeight: 1.6, color: "rgba(255,255,255,0.9)", margin: 0 }}>
+                  <p style={{ fontSize: "13px", lineHeight: 1.5, color: "rgba(255,255,255,0.9)", margin: 0 }}>
                     Sampaikan informasi tentang diri Anda dengan mengunggah CV atau Resume Anda ke dalam akun Anda.
                   </p>
                 </div>
@@ -996,62 +1022,50 @@ export default function HomePage() {
               <AnimatedCard delay={300}>
                 <div style={{
                   background: "linear-gradient(135deg, #1D4ED8 0%, #3B82F6 100%)",
-                  borderRadius: "24px",
-                  padding: "40px 24px 28px 28px",
+                  borderRadius: "20px",
+                  padding: "32px 24px 24px 24px",
                   color: "#FFFFFF",
                   position: "relative",
-                  boxShadow: "0 16px 36px rgba(29,78,216,0.25)",
+                  boxShadow: "0 12px 28px rgba(29,78,216,0.25)",
                   transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                   height: "100%",
-                  minHeight: "220px",
+                  minHeight: "180px",
                   display: "flex",
                   flexDirection: "column",
-                  justifyContent: "space-between"
+                  justifyContent: "flex-start"
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = "translateY(-8px)";
-                  e.currentTarget.style.boxShadow = "0 24px 48px rgba(29,78,216,0.35)";
+                  e.currentTarget.style.transform = "translateY(-6px)";
+                  e.currentTarget.style.boxShadow = "0 20px 40px rgba(29,78,216,0.35)";
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = "translateY(0)";
-                  e.currentTarget.style.boxShadow = "0 16px 36px rgba(29,78,216,0.25)";
+                  e.currentTarget.style.boxShadow = "0 12px 28px rgba(29,78,216,0.25)";
                 }}>
-                  {/* Floating Illustrated Badge */}
+                  {/* Step Number Badge at top right */}
                   <div style={{
                     position: "absolute",
-                    top: "-20px",
-                    left: "-14px",
-                    width: "60px",
-                    height: "60px",
-                    background: "#FFFFFF",
-                    borderRadius: "18px",
-                    boxShadow: "0 10px 24px rgba(0,0,0,0.14)",
+                    top: "16px",
+                    right: "16px",
+                    width: "36px",
+                    height: "36px",
+                    background: "rgba(255,255,255,0.2)",
+                    borderRadius: "10px",
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center"
+                    justifyContent: "center",
+                    fontSize: "16px",
+                    fontWeight: 800,
+                    color: "#FFFFFF",
                   }}>
-                    <svg width="36" height="36" viewBox="0 0 64 64" fill="none">
-                      <rect x="12" y="10" width="34" height="44" rx="6" fill="#FFFFFF" stroke="#CBD5E1" strokeWidth="2" />
-                      <rect x="18" y="18" width="16" height="4" rx="2" fill="#00205B" />
-                      <rect x="18" y="26" width="22" height="3" rx="1.5" fill="#0284C7" />
-                      <rect x="18" y="33" width="18" height="3" rx="1.5" fill="#94A3B8" />
-                      <rect x="18" y="40" width="20" height="3" rx="1.5" fill="#94A3B8" />
-                      <circle cx="42" cy="38" r="10" fill="#E0F2FE" stroke="#0284C7" strokeWidth="3" />
-                      <path d="M49 45L56 52" stroke="#FF5E00" strokeWidth="4" strokeLinecap="round" />
-                      <circle cx="40" cy="36" r="3" fill="#0284C7" opacity="0.4" />
-                    </svg>
+                    03
                   </div>
 
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
-                    <h3 style={{ fontSize: "18px", fontWeight: 700, margin: 0, paddingRight: "10px", lineHeight: 1.3, color: "#FFFFFF" }}>
-                      Pilih Karir<br />Impian Anda
-                    </h3>
-                    <span style={{ fontSize: "44px", fontWeight: 900, lineHeight: 0.9, opacity: 0.95, color: "#FFFFFF", letterSpacing: "-0.04em" }}>
-                      03
-                    </span>
-                  </div>
+                  <h3 style={{ fontSize: "18px", fontWeight: 700, margin: "0 0 12px 0", lineHeight: 1.3, color: "#FFFFFF", paddingRight: "40px" }}>
+                    Pilih Karir<br />Impian Anda
+                  </h3>
 
-                  <p style={{ fontSize: "13px", lineHeight: 1.6, color: "rgba(255,255,255,0.9)", margin: 0 }}>
+                  <p style={{ fontSize: "13px", lineHeight: 1.5, color: "rgba(255,255,255,0.9)", margin: 0 }}>
                     Telusuri beragam lowongan pekerjaan yang sesuai dengan minat dan keterampilan Anda.
                   </p>
                 </div>
@@ -1061,134 +1075,106 @@ export default function HomePage() {
               <AnimatedCard delay={400}>
                 <div style={{
                   background: "linear-gradient(135deg, #1E293B 0%, #334155 100%)",
-                  borderRadius: "24px",
-                  padding: "40px 24px 28px 28px",
+                  borderRadius: "20px",
+                  padding: "28px 20px 20px 24px",
                   color: "#FFFFFF",
                   position: "relative",
-                  boxShadow: "0 16px 36px rgba(30,41,59,0.25)",
+                  boxShadow: "0 12px 28px rgba(30,41,59,0.25)",
                   transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                   height: "100%",
-                  minHeight: "220px",
+                  minHeight: "180px",
                   display: "flex",
                   flexDirection: "column",
-                  justifyContent: "space-between",
-                  marginTop: "30px"
+                  justifyContent: "flex-start"
                 }}
-                className="staggered-card-4"
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = "translateY(-8px)";
-                  e.currentTarget.style.boxShadow = "0 24px 48px rgba(30,41,59,0.35)";
+                  e.currentTarget.style.transform = "translateY(-6px)";
+                  e.currentTarget.style.boxShadow = "0 20px 40px rgba(30,41,59,0.35)";
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = "translateY(0)";
-                  e.currentTarget.style.boxShadow = "0 16px 36px rgba(30,41,59,0.25)";
+                  e.currentTarget.style.boxShadow = "0 12px 28px rgba(30,41,59,0.25)";
                 }}>
-                  {/* Floating Illustrated Badge */}
+                  {/* Step Number Badge at top right */}
                   <div style={{
                     position: "absolute",
-                    top: "-20px",
-                    left: "-14px",
-                    width: "60px",
-                    height: "60px",
-                    background: "#FFFFFF",
-                    borderRadius: "18px",
-                    boxShadow: "0 10px 24px rgba(0,0,0,0.14)",
+                    top: "16px",
+                    right: "16px",
+                    width: "36px",
+                    height: "36px",
+                    background: "rgba(255,255,255,0.2)",
+                    borderRadius: "10px",
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center"
+                    justifyContent: "center",
+                    fontSize: "16px",
+                    fontWeight: 800,
+                    color: "#FFFFFF",
                   }}>
-                    <svg width="36" height="36" viewBox="0 0 64 64" fill="none">
-                      <circle cx="24" cy="24" r="8" fill="#FDBA74" />
-                      <path d="M14 46C14 38 18 35 24 35C30 35 34 38 34 46" fill="#00205B" />
-                      <path d="M22 35L24 40L26 35H22Z" fill="#FF5E00" />
-                      <rect x="34" y="14" width="18" height="12" rx="4" fill="#38BDF8" />
-                      <path d="M38 26L35 30V26H38Z" fill="#38BDF8" />
-                      <circle cx="39" cy="20" r="1.5" fill="#FFFFFF" />
-                      <circle cx="43" cy="20" r="1.5" fill="#FFFFFF" />
-                      <circle cx="47" cy="20" r="1.5" fill="#FFFFFF" />
-                      <circle cx="44" cy="38" r="8" fill="#10B981" />
-                      <path d="M40 38L43 41L48 35" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
+                    04
                   </div>
 
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
-                    <h3 style={{ fontSize: "18px", fontWeight: 700, margin: 0, paddingRight: "10px", lineHeight: 1.3, color: "#FFFFFF" }}>
-                      Tes Online &<br />Interview
-                    </h3>
-                    <span style={{ fontSize: "44px", fontWeight: 900, lineHeight: 0.9, opacity: 0.95, color: "#FFFFFF", letterSpacing: "-0.04em" }}>
-                      04
-                    </span>
-                  </div>
+                  <h3 style={{ fontSize: "18px", fontWeight: 700, margin: "0 0 12px 0", lineHeight: 1.3, color: "#FFFFFF", paddingRight: "40px" }}>
+                    Tes Online &<br />Interview
+                  </h3>
 
-                  <p style={{ fontSize: "13px", lineHeight: 1.6, color: "rgba(255,255,255,0.9)", margin: 0 }}>
+                  <p style={{ fontSize: "13px", lineHeight: 1.5, color: "rgba(255,255,255,0.9)", margin: 0 }}>
                     Ikuti tes kompetensi online dan tahapan wawancara bersama tim rekrutmen profesional.
                   </p>
                 </div>
               </AnimatedCard>
 
               {/* Card 05 - Offering & Bergabung (Full Width Span) */}
-              <div style={{ gridColumn: "1 / -1", marginTop: "10px" }} className="card-5-wrapper">
+              <div style={{ gridColumn: "1 / -1" }} className="card-5-wrapper">
                 <AnimatedCard delay={500}>
                   <div style={{
                     background: "linear-gradient(135deg, #FF5E00 0%, #FF8A3D 100%)",
-                    borderRadius: "24px",
-                    padding: "36px 32px 32px 36px",
+                    borderRadius: "20px",
+                    padding: "32px 24px 28px 24px",
                     color: "#FFFFFF",
                     position: "relative",
-                    boxShadow: "0 20px 44px rgba(255,94,0,0.3)",
+                    boxShadow: "0 16px 36px rgba(255,94,0,0.3)",
                     transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                     display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    flexWrap: "wrap",
-                    gap: "20px"
+                    alignItems: "flex-start",
+                    gap: "24px",
+                    flexWrap: "wrap"
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateY(-8px)";
-                    e.currentTarget.style.boxShadow = "0 28px 56px rgba(255,94,0,0.4)";
+                    e.currentTarget.style.transform = "translateY(-6px)";
+                    e.currentTarget.style.boxShadow = "0 24px 48px rgba(255,94,0,0.4)";
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow = "0 20px 44px rgba(255,94,0,0.3)";
+                    e.currentTarget.style.boxShadow = "0 16px 36px rgba(255,94,0,0.3)";
                   }}>
-                    {/* Floating Illustrated Badge */}
+                    {/* Step Number Badge */}
                     <div style={{
-                      position: "absolute",
-                      top: "-20px",
-                      left: "-14px",
-                      width: "60px",
-                      height: "60px",
-                      background: "#FFFFFF",
-                      borderRadius: "18px",
-                      boxShadow: "0 10px 24px rgba(0,0,0,0.14)",
+                      width: "48px",
+                      height: "48px",
+                      background: "rgba(255,255,255,0.2)",
+                      borderRadius: "12px",
                       display: "flex",
                       alignItems: "center",
-                      justifyContent: "center"
+                      justifyContent: "center",
+                      fontSize: "20px",
+                      fontWeight: 800,
+                      color: "#FFFFFF",
+                      flexShrink: 0
                     }}>
-                      <svg width="36" height="36" viewBox="0 0 64 64" fill="none">
-                        <path d="M22 14H42V26C42 32 37 36 32 36C27 36 22 32 22 26V14Z" fill="#FBBF24" stroke="#D97706" strokeWidth="2" />
-                        <path d="M22 18H16C16 26 22 26 22 26V18Z" fill="#FDE68A" stroke="#D97706" strokeWidth="1.5" />
-                        <path d="M42 18H48C48 26 42 26 42 26V18Z" fill="#FDE68A" stroke="#D97706" strokeWidth="1.5" />
-                        <rect x="28" y="36" width="8" height="8" fill="#D97706" />
-                        <rect x="20" y="44" width="24" height="6" rx="2" fill="#FF5E00" />
-                        <path d="M32 20L33.5 23.5L37 24L34.5 26.5L35 30L32 28L29 30L29.5 26.5L27 24L30.5 23.5L32 20Z" fill="#FFFFFF" />
-                      </svg>
+                      05
                     </div>
 
-                    <div style={{ paddingLeft: "40px", flex: 1, minWidth: "220px" }}>
-                      <div style={{ display: "inline-block", background: "rgba(255,255,255,0.25)", padding: "4px 12px", borderRadius: "12px", fontSize: "12px", fontWeight: 700, marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                    <div style={{ flex: 1, minWidth: "200px" }}>
+                      <div style={{ display: "inline-block", background: "rgba(255,255,255,0.25)", padding: "4px 10px", borderRadius: "10px", fontSize: "11px", fontWeight: 700, marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                         Tahap Akhir
                       </div>
-                      <h3 style={{ fontSize: "22px", fontWeight: 800, margin: "0 0 6px 0", color: "#FFFFFF", lineHeight: 1.3 }}>
+                      <h3 style={{ fontSize: "20px", fontWeight: 800, margin: "0 0 8px 0", color: "#FFFFFF", lineHeight: 1.3 }}>
                         Offering & Onboarding KAI Services
                       </h3>
-                      <p style={{ fontSize: "13px", lineHeight: 1.6, color: "rgba(255,255,255,0.95)", margin: 0 }}>
+                      <p style={{ fontSize: "14px", lineHeight: 1.5, color: "rgba(255,255,255,0.95)", margin: 0 }}>
                         Terima surat penawaran resmi (offering letter), penandatanganan kontrak, dan selamat bergabung bersama keluarga besar KAI Services!
                       </p>
-                    </div>
-
-                    <div style={{ fontSize: "56px", fontWeight: 900, lineHeight: 1, opacity: 0.95, color: "#FFFFFF", letterSpacing: "-0.04em", paddingRight: "16px" }}>
-                      05
                     </div>
                   </div>
                 </AnimatedCard>
@@ -1201,7 +1187,7 @@ export default function HomePage() {
       </section>
 
       {/* Jobs */}
-      <section id="lowongan" style={{ padding: "80px 32px", background: "#f8f9fa" }}>
+      <section id="lowongan" style={{ padding: "100px 32px", background: "#f8f9fa" }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
           <AnimatedSection>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "40px", flexWrap: "wrap", gap: "20px" }}>
@@ -1250,7 +1236,7 @@ export default function HomePage() {
 
                 return (
                 <AnimatedCard key={job.id} delay={i * 100}>
-                  <div style={{ background: "#ffffff", padding: "28px", borderRadius: "16px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", transition: "transform 0.3s, box-shadow 0.3s" }}
+                  <div style={{ background: "#ffffff", padding: "28px", borderRadius: "16px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", transition: "transform 0.3s, box-shadow 0.3s", minHeight: "280px", display: "flex", flexDirection: "column" }}
                     onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-8px)"; e.currentTarget.style.boxShadow = "0 12px 24px rgba(0,0,0,0.12)"; }}
                     onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.06)"; }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
@@ -1279,14 +1265,14 @@ export default function HomePage() {
                     </div>
                     {isOpen ? (
                       <Link href={`/auth/register?job=${job.id}`}>
-                        <button style={{ width: "100%", padding: "14px", background: "#FF5E00", color: "#ffffff", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 700, cursor: "pointer" }}>Lamar Posisi Ini</button>
+                        <button style={{ width: "100%", padding: "14px", background: "#FF5E00", color: "#ffffff", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 700, cursor: "pointer", marginTop: "auto" }}>Lamar Posisi Ini</button>
                       </Link>
                     ) : isUpcoming ? (
-                      <div style={{ width: "100%", padding: "14px", background: "#f1f5f9", color: "#666666", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 600, textAlign: "center" }}>
+                      <div style={{ width: "100%", padding: "14px", background: "#f1f5f9", color: "#666666", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 600, textAlign: "center", marginTop: "auto" }}>
                         Pendaftaran akan dibuka {new Date(job.startDate).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
                       </div>
                     ) : (
-                      <div style={{ width: "100%", padding: "14px", background: "#f1f5f9", color: "#999999", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 600, textAlign: "center" }}>
+                      <div style={{ width: "100%", padding: "14px", background: "#f1f5f9", color: "#999999", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 600, textAlign: "center", marginTop: "auto" }}>
                         Pendaftaran sudah ditutup
                       </div>
                     )}
@@ -1300,7 +1286,7 @@ export default function HomePage() {
       </section>
 
       {/* About */}
-      <section id="tentang" style={{ padding: "80px 32px", background: "#ffffff", color: "#111111" }}>
+      <section id="tentang" style={{ padding: "100px 32px", background: "#ffffff", color: "#111111" }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "80px", alignItems: "center" }} className="about-grid-container">
             <AnimatedSection>
@@ -1359,7 +1345,7 @@ export default function HomePage() {
       </section>
 
       {/* CTA */}
-      <section style={{ padding: "80px 32px", background: "#FF5E00", textAlign: "center", color: "#ffffff" }}>
+      <section style={{ padding: "100px 32px", background: "#FF5E00", textAlign: "center", color: "#ffffff" }}>
         <AnimatedSection>
           <div style={{ maxWidth: "600px", margin: "0 auto" }}>
             <h2 style={{ fontSize: "36px", fontWeight: 700, marginBottom: "16px" }}>Siap Memulai?</h2>
@@ -1384,15 +1370,139 @@ export default function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer style={{ padding: "32px", background: "#00205B", color: "#ffffff" }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "20px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <img src="/_logo_kais.png" alt="KAI Services" style={{ width: "32px", height: "32px", objectFit: "contain" }} />
-            <span style={{ fontWeight: 700, fontSize: "15px" }}>KAI Services</span>
+      <footer style={{ padding: "60px 32px 40px", background: "#00205B", color: "#ffffff" }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr 1fr", gap: "48px", marginBottom: "48px" }} className="footer-grid">
+
+            {/* Company Info */}
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
+                <img src="/_logo_kais.png" alt="KAI Services" style={{ width: "40px", height: "40px", objectFit: "contain" }} />
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: "18px" }}>KAI Services</div>
+                  <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)" }}>PT Reska Multi Usaha</div>
+                </div>
+              </div>
+              <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.7)", lineHeight: 1.7, marginBottom: "20px" }}>
+                Anak perusahaan PT Kereta Api Indonesia (KAI) yang bergerak di bidang jasa pendukung operasional kereta api sejak 2003.
+              </p>
+              {/* Social Links */}
+              <div style={{ display: "flex", gap: "12px" }}>
+                <a href="#" style={{ width: "36px", height: "36px", background: "rgba(255,255,255,0.1)", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", color: "#ffffff", textDecoration: "none", transition: "all 0.2s" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "#FF5E00"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.1)"; }}>
+                  <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/></svg>
+                </a>
+                <a href="#" style={{ width: "36px", height: "36px", background: "rgba(255,255,255,0.1)", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", color: "#ffffff", textDecoration: "none", transition: "all 0.2s" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "#FF5E00"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.1)"; }}>
+                  <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                </a>
+                <a href="#" style={{ width: "36px", height: "36px", background: "rgba(255,255,255,0.1)", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", color: "#ffffff", textDecoration: "none", transition: "all 0.2s" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "#FF5E00"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.1)"; }}>
+                  <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+                </a>
+              </div>
+            </div>
+
+            {/* Quick Links */}
+            <div>
+              <h4 style={{ fontSize: "15px", fontWeight: 700, marginBottom: "20px", color: "#ffffff" }}>Menu</h4>
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <a href="#mengapa" style={{ fontSize: "14px", color: "rgba(255,255,255,0.7)", textDecoration: "none", transition: "color 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.color = "#FF5E00"; }} onMouseLeave={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.7)"; }}>Mengapa Bergabung?</a>
+                <a href="#cara-melamar" style={{ fontSize: "14px", color: "rgba(255,255,255,0.7)", textDecoration: "none", transition: "color 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.color = "#FF5E00"; }} onMouseLeave={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.7)"; }}>Cara Melamar</a>
+                <a href="#lowongan" style={{ fontSize: "14px", color: "rgba(255,255,255,0.7)", textDecoration: "none", transition: "color 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.color = "#FF5E00"; }} onMouseLeave={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.7)"; }}>Lowongan</a>
+                <a href="#tentang" style={{ fontSize: "14px", color: "rgba(255,255,255,0.7)", textDecoration: "none", transition: "color 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.color = "#FF5E00"; }} onMouseLeave={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.7)"; }}>Tentang Kami</a>
+                <a href="#kontak" style={{ fontSize: "14px", color: "rgba(255,255,255,0.7)", textDecoration: "none", transition: "color 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.color = "#FF5E00"; }} onMouseLeave={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.7)"; }}>Hubungi Kami</a>
+              </div>
+            </div>
+
+            {/* Contact Info */}
+            <div>
+              <h4 style={{ fontSize: "15px", fontWeight: 700, marginBottom: "20px", color: "#ffffff" }}>Kontak</h4>
+              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
+                  <svg width="18" height="18" fill="none" stroke="#FF5E00" strokeWidth="2" viewBox="0 0 24 24" style={{ flexShrink: 0, marginTop: "2px" }}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                  <span style={{ fontSize: "14px", color: "rgba(255,255,255,0.7)" }}>Jl. Perintis Kemerdekaan No. 1, Jakarta 10310</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <svg width="18" height="18" fill="none" stroke="#FF5E00" strokeWidth="2" viewBox="0 0 24 24" style={{ flexShrink: 0 }}><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+                  <span style={{ fontSize: "14px", color: "rgba(255,255,255,0.7)" }}>(021) 1234-5678</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <svg width="18" height="18" fill="none" stroke="#FF5E00" strokeWidth="2" viewBox="0 0 24 24" style={{ flexShrink: 0 }}><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                  <span style={{ fontSize: "14px", color: "rgba(255,255,255,0.7)" }}>hrd@kai-services.co.id</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Working Hours */}
+            <div>
+              <h4 style={{ fontSize: "15px", fontWeight: 700, marginBottom: "20px", color: "#ffffff" }}>Jam Operasional</h4>
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                <div style={{ fontSize: "14px", color: "rgba(255,255,255,0.7)" }}>
+                  <span style={{ fontWeight: 600, color: "#ffffff" }}>Senin - Jumat</span><br/>
+                  08.00 - 16.00 WIB
+                </div>
+                <div style={{ fontSize: "14px", color: "rgba(255,255,255,0.7)" }}>
+                  <span style={{ fontWeight: 600, color: "#ffffff" }}>Sabtu - Minggu</span><br/>
+                  Tutup
+                </div>
+              </div>
+            </div>
+
           </div>
-          <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.4)" }}>2026 PT Reska Multi Usaha. Bagian dari PT Kereta Api Indonesia.</div>
+
+          {/* Bottom Bar */}
+          <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "24px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
+            <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.4)" }}>
+              © 2026 PT Reska Multi Usaha. Bagian dari PT Kereta Api Indonesia.
+            </div>
+            <div style={{ display: "flex", gap: "24px" }}>
+              <a href="#" style={{ fontSize: "13px", color: "rgba(255,255,255,0.4)", textDecoration: "none", transition: "color 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.color = "#ffffff"; }} onMouseLeave={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.4)"; }}>Kebijakan Privasi</a>
+              <a href="#" style={{ fontSize: "13px", color: "rgba(255,255,255,0.4)", textDecoration: "none", transition: "color 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.color = "#ffffff"; }} onMouseLeave={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.4)"; }}>Syarat & Ketentuan</a>
+            </div>
+          </div>
         </div>
       </footer>
+
+      {/* Scroll to Top Button */}
+      {showScrollTop && (
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          style={{
+            position: 'fixed',
+            bottom: '32px',
+            right: '32px',
+            width: '56px',
+            height: '56px',
+            background: 'linear-gradient(135deg, #FF5E00 0%, #FF8A3D 100%)',
+            border: 'none',
+            borderRadius: '16px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 8px 24px rgba(255, 94, 0, 0.4)',
+            zIndex: 99,
+            transition: 'all 0.3s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-4px) scale(1.05)';
+            e.currentTarget.style.boxShadow = '0 12px 32px rgba(255, 94, 0, 0.5)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0) scale(1)';
+            e.currentTarget.style.boxShadow = '0 8px 24px rgba(255, 94, 0, 0.4)';
+          }}
+          aria-label="Scroll to top"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 19V5M5 12l7-7 7 7"/>
+          </svg>
+        </button>
+      )}
 
       <style>{`
         @keyframes modalFadeIn {
@@ -1461,6 +1571,14 @@ export default function HomePage() {
           .jobs-grid { grid-template-columns: repeat(2, 1fr) !important; }
         }
 
+        /* Mengapa section full height responsive */
+        @media (max-width: 768px) {
+          #mengapa {
+            min-height: auto !important;
+            padding: 60px 20px !important;
+          }
+        }
+
         /* Extra small screens */
         @media (max-width: 480px) {
           .benefits-grid { grid-template-columns: 1fr !important; }
@@ -1498,9 +1616,6 @@ export default function HomePage() {
             grid-template-columns: 1fr !important;
             gap: 36px !important;
           }
-          .staggered-card-2, .staggered-card-4 {
-            margin-top: 0 !important;
-          }
         }
 
         /* About section mobile */
@@ -1512,9 +1627,24 @@ export default function HomePage() {
         }
 
         /* Footer mobile */
+        @media (max-width: 768px) {
+          .footer-grid {
+            grid-template-columns: 1fr 1fr !important;
+          }
+        }
+
         @media (max-width: 480px) {
-          footer > div {
+          .footer-grid {
+            grid-template-columns: 1fr !important;
+            gap: 32px !important;
+          }
+          footer > div > div:first-child {
             flex-direction: column !important;
+            text-align: center !important;
+          }
+          footer > div > div:last-child {
+            flex-direction: column !important;
+            align-items: center !important;
             text-align: center !important;
           }
         }
