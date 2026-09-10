@@ -309,6 +309,7 @@ export default function FloatingChat() {
       {/* Floating Chat Button */}
       {!isOpen && (
         <button
+          className="floating-chat-btn"
           onClick={() => {
             console.log("[CHAT] Opening chat...");
             setIsOpen(true);
@@ -373,6 +374,7 @@ export default function FloatingChat() {
       {/* Chat Window */}
       {isOpen && (
         <div
+          className={`floating-chat-window ${isMinimized ? "minimized" : ""}`}
           style={{
             position: "fixed",
             bottom: "24px",
@@ -598,6 +600,25 @@ export default function FloatingChat() {
           100% { box-shadow: 0 4px 20px rgba(22, 163, 74, 0.6), 0 0 0 0 rgba(22, 163, 74, 0); }
         }
         input:focus { border-color: #FF5E00 !important; }
+        @media (max-width: 1024px) {
+          .floating-chat-btn {
+            bottom: 76px !important;
+            right: 16px !important;
+          }
+          .floating-chat-window:not(.minimized) {
+            bottom: 76px !important;
+            right: 16px !important;
+            left: 16px !important;
+            width: auto !important;
+            max-width: calc(100vw - 32px) !important;
+            height: calc(100vh - 160px) !important;
+            max-height: 520px !important;
+          }
+          .floating-chat-window.minimized {
+            bottom: 76px !important;
+            right: 16px !important;
+          }
+        }
       `}</style>
     </>
   );

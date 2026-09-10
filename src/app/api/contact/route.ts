@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
       // Create message
       const newMessage = await prisma.contactMessage.create({
         data: {
-          conversationId: conversationIdToUse,
+          conversationId: conversationIdToUse!,
           senderType,
           senderName,
           senderEmail,
@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
 
       // Update conversation lastMessageAt
       await prisma.contactConversation.update({
-        where: { id: conversationIdToUse },
+        where: { id: conversationIdToUse! },
         data: { lastMessageAt: new Date() },
       });
 

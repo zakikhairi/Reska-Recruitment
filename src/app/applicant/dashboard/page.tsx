@@ -23,7 +23,6 @@ import {
   Sparkles,
   BookOpen,
   ShieldCheck,
-  HelpCircle,
   ArrowRight,
   Calendar,
   PlayCircle,
@@ -1425,35 +1424,6 @@ export default function ApplicantDashboardPage() {
                   </ul>
                 </div>
               )}
-            </div>
-
-            {/* HELPDESK & SUPPORT CARD */}
-            <div
-              style={{
-                background: "linear-gradient(135deg, #00205B 0%, #003380 100%)",
-                borderRadius: "20px",
-                padding: "24px",
-                color: "#ffffff",
-                boxShadow: "0 4px 16px rgba(0,32,91,0.15)",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
-                <HelpCircle size={20} color="#FF8800" />
-                <h4 style={{ fontSize: "15px", fontWeight: 800, margin: 0 }}>Butuh Bantuan Kendala?</h4>
-              </div>
-              <p style={{ fontSize: "12.5px", color: "rgba(255,255,255,0.8)", margin: "0 0 16px", lineHeight: 1.5 }}>
-                Hubungi Tim Helpdesk Rekrutmen KAI Services jika mengalami kendala akun atau pelaksanaan ujian CAT.
-              </p>
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "12px" }}>
-                <div style={{ background: "rgba(255,255,255,0.1)", borderRadius: "8px", padding: "8px 12px", display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ color: "rgba(255,255,255,0.7)" }}>Email:</span>
-                  <span style={{ fontWeight: 600 }}>rekrutmen@reska.id</span>
-                </div>
-                <div style={{ background: "rgba(255,255,255,0.1)", borderRadius: "8px", padding: "8px 12px", display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ color: "rgba(255,255,255,0.7)" }}>Jam Layanan:</span>
-                  <span style={{ fontWeight: 600 }}>Senin - Jumat (08:00 - 17:00)</span>
-                </div>
-              </div>
             </div>
           </div>
         </div>

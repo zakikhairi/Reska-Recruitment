@@ -6,6 +6,7 @@ import { useAuthStore } from "@/stores/auth";
 import { useSidebarStore } from "@/stores/sidebar";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import FloatingChat from "@/components/FloatingChat";
 
 export default function ApplicantLayout({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, _hasHydrated } = useAuthStore();
@@ -66,6 +67,7 @@ export default function ApplicantLayout({ children }: { children: React.ReactNod
     return (
       <MobileLayout userName={user.fullName || "Pelamar"} userRole={user.role}>
         {children}
+        <FloatingChat />
       </MobileLayout>
     );
   }
@@ -87,6 +89,7 @@ export default function ApplicantLayout({ children }: { children: React.ReactNod
       >
         {children}
       </main>
+      <FloatingChat />
     </div>
   );
 }
