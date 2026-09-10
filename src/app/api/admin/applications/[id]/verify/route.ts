@@ -34,6 +34,10 @@ export async function GET(
             location: true,
           },
         },
+        interview: true,
+        mcu: true,
+        offering: true,
+        testSession: true,
       },
     });
 
@@ -79,6 +83,19 @@ export async function GET(
           })),
         },
         job: application.jobPosting,
+        interview: application.interview,
+        mcu: application.mcu,
+        offering: application.offering,
+        testSession: application.testSession ? {
+          id: application.testSession.id,
+          status: application.testSession.status,
+          scheduledAt: application.testSession.scheduledAt,
+          endTime: application.testSession.endTime,
+          location: application.testSession.location,
+          adminMessage: application.testSession.adminMessage,
+          totalScore: application.testSession.totalScore,
+          passed: application.testSession.passed,
+        } : null,
       },
     });
   } catch (error) {
@@ -97,11 +114,11 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { action, notes } = body;
+    const { action, notes, testSchedule } = body;
 
-    if (!action || !["approve", "reject"].includes(action)) {
+    if (!action || !["approve", "reject", "schedule_test"].includes(action)) {
       return NextResponse.json(
-        { success: false, error: "Action harus 'approve' atau 'reject'" },
+        { success: false, error: "Action harus 'approve', 'reject', atau 'schedule_test'" },
         { status: 400 }
       );
     }
@@ -132,6 +149,8 @@ export async function PATCH(
     let newStatus = "";
     if (action === "reject") {
       newStatus = "REJECTED";
+    } else if (action === "schedule_test") {
+      newStatus = "TEST_SCHEDULED";
     } else {
       // Approve - determine next status based on current status
       switch (currentApp.status) {
@@ -155,6 +174,30 @@ export async function PATCH(
       }
     }
 
+    // Upsert test session if new status is TEST_SCHEDULED and testSchedule is provided
+    if (newStatus === "TEST_SCHEDULED" && testSchedule) {
+      const scheduledAtDate = testSchedule.scheduledAt ? new Date(testSchedule.scheduledAt) : null;
+      const endTimeDate = testSchedule.endTime ? new Date(testSchedule.endTime) : null;
+
+      await prisma.testSession.upsert({
+        where: { applicationId: id },
+        create: {
+          applicationId: id,
+          scheduledAt: scheduledAtDate,
+          endTime: endTimeDate,
+          location: testSchedule.location || "Online System (Portal CBT KAI Services)",
+          adminMessage: testSchedule.adminMessage || null,
+          status: "NOT_STARTED",
+        },
+        update: {
+          scheduledAt: scheduledAtDate,
+          endTime: endTimeDate,
+          location: testSchedule.location || "Online System (Portal CBT KAI Services)",
+          adminMessage: testSchedule.adminMessage || null,
+        },
+      });
+    }
+
     // Update application
     const application = await prisma.application.update({
       where: { id },
@@ -166,7 +209,7 @@ export async function PATCH(
           create: {
             fromStatus: previousStatus,
             toStatus: newStatus,
-            notes,
+            notes: notes || (action === "schedule_test" ? "Jadwal tes diperbarui oleh admin" : undefined),
           },
         },
       },
@@ -195,12 +238,23 @@ export async function PATCH(
 
       // Determine email notes based on status
       let emailNotes = notes;
-      if (!emailNotes) {
-        if (newStatus === "REJECTED") {
-          emailNotes = "Mohon maaf, setelah mempertimbangkan secara keseluruhan, kami memutuskan untuk tidak melanjutkan proses rekrutmen Anda pada kesempatan kali ini. Terima kasih atas minat Anda dan kami mendoakan yang terbaik untuk perjalanan karir Anda.";
-        } else if (newStatus === "TEST_SCHEDULED") {
-          emailNotes = "Silakan cek jadwal tes di akun Anda dan pastikan mengerjakan tes tepat waktu.";
-        } else if (newStatus === "INTERVIEW") {
+      if (newStatus === "REJECTED") {
+        emailNotes = notes || "Mohon maaf, setelah mempertimbangkan secara keseluruhan, kami memutuskan untuk tidak melanjutkan proses rekrutmen Anda pada kesempatan kali ini. Terima kasih atas minat Anda dan kami mendoakan yang terbaik untuk perjalanan karir Anda.";
+      } else if (newStatus === "TEST_SCHEDULED") {
+        let scheduleInfo = "";
+        if (testSchedule?.scheduledAt) {
+          const formattedStart = new Date(testSchedule.scheduledAt).toLocaleString("id-ID", { dateStyle: "full", timeStyle: "short" });
+          const formattedEnd = testSchedule.endTime ? new Date(testSchedule.endTime).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) : "";
+          scheduleInfo = `\n\nJadwal Tes: ${formattedStart}${formattedEnd ? ' s/d ' + formattedEnd : ''}\nLokasi / Format: ${testSchedule.location || "Online System (Portal CBT KAI Services)"}`;
+          if (testSchedule.adminMessage) {
+            scheduleInfo += `\nInstruksi: ${testSchedule.adminMessage}`;
+          }
+        }
+        emailNotes = notes
+          ? `${notes}${scheduleInfo}`
+          : `Selamat! Berkas lamaran Anda telah diverifikasi dan Anda berhak mengikuti tes kompetensi.${scheduleInfo}\n\nSilakan login ke portal karir KAI Services tepat waktu.`;
+      } else if (!emailNotes) {
+        if (newStatus === "INTERVIEW") {
           emailNotes = "Tim HRD akan menghubungi Anda untuk menjadwalkan wawancara. Pastikan nomor HP dan email Anda aktif.";
         } else if (newStatus === "ACCEPTED") {
           emailNotes = "Selamat! Tim HRD akan menghubungi Anda untuk proses lebih lanjut.";
@@ -234,9 +288,11 @@ export async function PATCH(
         status: application.status,
         previousStatus,
       },
-      message: action === "approve"
-        ? "Lamaran berhasil diverifikasi. Email notifikasi sudah dikirim."
-        : "Lamaran berhasil ditolak. Email notifikasi sudah dikirim.",
+      message: action === "reject"
+        ? "Lamaran berhasil ditolak. Email notifikasi sudah dikirim."
+        : testSchedule?.scheduledAt
+        ? "Berkas diverifikasi & jadwal tes berhasil ditetapkan. Email notifikasi sudah dikirim ke pelamar."
+        : "Lamaran berhasil diverifikasi. Email notifikasi sudah dikirim.",
     });
   } catch (error) {
     console.error("Error verifying application:", error);

@@ -147,6 +147,7 @@ model Application {
   testSession     TestSession?
   interview       Interview?
   mcu             MedicalCheckup?
+  offering        Offering?
   statusHistory   StatusHistory[]
 
   createdAt       DateTime  @default(now())
@@ -166,7 +167,7 @@ model StatusHistory {
 }
 
 // ============================================
-// INTERVIEW & MCU
+// INTERVIEW & MCU & OFFERING
 // ============================================
 
 model Interview {
@@ -199,6 +200,32 @@ model MedicalCheckup {
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+}
+
+model Offering {
+  id               String       @id @default(cuid())
+  applicationId    String       @unique
+  application      Application  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  salary           Int          // Besaran gaji yang disepakati/ditawarkan
+  salaryPeriod     String       @default("MONTHLY") // MONTHLY
+  startDate        DateTime     // Tanggal / jadwal mulai kerja
+  
+  employmentType   String       @default("CONTRACT") // "CONTRACT" (PKWT - Karyawan Kontrak) or "PERMANENT" (PKWTT - Karyawan Tetap)
+  contractDuration Int?         // Durasi masa kontrak dalam bulan (misal: 6, 12, 24) - jika CONTRACT
+  contractEndDate  DateTime?    // Tanggal selesai kontrak - jika CONTRACT
+  probationMonths  Int?         // Masa percobaan dalam bulan (misal: 3) - jika PERMANENT
+
+  workLocation     String?      // Lokasi penempatan kerja
+  positionTitle    String?      // Jabatan yang ditawarkan
+  benefits         String?      // Tunjangan & fasilitas
+  notes            String?      // Catatan tambahan
+
+  status           String       @default("OFFERED") // OFFERED, ACCEPTED, DECLINED
+  acceptedAt       DateTime?
+
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
 }
 
 // ============================================

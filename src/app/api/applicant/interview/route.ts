@@ -37,6 +37,9 @@ export async function GET(request: NextRequest) {
         interviewer: interview.interviewer,
         type: interview.type,
         zoomLink: interview.zoomLink,
+        notes: interview.notes,
+        score: interview.score,
+        result: interview.result,
       },
     });
   } catch (error) {

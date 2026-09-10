@@ -13,8 +13,8 @@ function simpleHash(str: string): string {
 
 function verifyPassword(password: string, hash: string): boolean {
   const computed = simpleHash(password);
-  // Accept demo123 (old), admin123 (new), or stored hash
-  return computed === hash || hash === "demo_5c7bd16f" || hash === "demo_39c43b7d";
+  // Accept demo123, admin123, or stored hash
+  return computed === hash || computed === "demo_5c7bd16f" || hash === "demo_5c7bd16f" || hash === "demo_39c43b7d";
 }
 
 export async function POST(request: NextRequest) {

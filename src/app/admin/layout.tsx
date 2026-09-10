@@ -3,6 +3,7 @@
 import { Sidebar } from "@/components/layout";
 import { MobileLayout } from "@/components/layout/MobileComponents";
 import { useAuthStore } from "@/stores/auth";
+import { useSidebarStore } from "@/stores/sidebar";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -10,9 +11,15 @@ import { Plus } from "lucide-react";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, _hasHydrated } = useAuthStore();
+  const { isCollapsed } = useSidebarStore();
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
   const [isReady, setIsReady] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
@@ -89,11 +96,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
+  const effectiveCollapsed = mounted ? isCollapsed : false;
+
   // DESKTOP Layout
   return (
     <div style={{ minHeight: "100vh", background: "#F8FAFC" }}>
       <Sidebar userName={user.fullName || "Admin"} userRole={user.role} />
-      <main style={{ marginLeft: "260px", minHeight: "100vh" }}>
+      <main
+        style={{
+          marginLeft: effectiveCollapsed ? "80px" : "260px",
+          width: effectiveCollapsed ? "calc(100% - 80px)" : "calc(100% - 260px)",
+          minHeight: "100vh",
+          transition: "margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+          overflowX: "hidden"
+        }}
+      >
         {children}
       </main>
     </div>

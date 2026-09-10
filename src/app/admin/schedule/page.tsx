@@ -22,6 +22,7 @@ import {
   List,
   Grid3X3,
   Video,
+  Award,
 } from "lucide-react";
 import { useJobsStore, Job } from "@/stores/jobs";
 
@@ -885,9 +886,24 @@ export default function SchedulePage() {
                     >
                       <Calendar className="w-4 h-4" /> Ubah Jadwal
                     </button>
-                    <button style={{ padding: "8px 12px", background: "#fff", border: "1px solid #e0e0e0", borderRadius: "6px", fontSize: "12px", fontWeight: 500, color: "#333", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
-                      <FileText className="w-4 h-4" /> Lihat Pelamar
-                    </button>
+                    {selectedSchedule.type === "INTERVIEW" && (
+                      <a
+                        href={`/admin/applicants/${selectedSchedule.applicantId || selectedSchedule.applicationId}`}
+                        style={{ textDecoration: "none", width: "100%" }}
+                      >
+                        <button style={{ width: "100%", padding: "10px 14px", background: "linear-gradient(135deg, #c026d3, #9333ea)", border: "none", borderRadius: "8px", fontSize: "12px", fontWeight: 700, color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", boxShadow: "0 2px 8px rgba(192, 38, 211, 0.3)" }}>
+                          <Award className="w-4 h-4" /> Input Nilai Wawancara
+                        </button>
+                      </a>
+                    )}
+                    <a
+                      href={`/admin/applicants/${selectedSchedule.applicantId || selectedSchedule.applicationId}`}
+                      style={{ textDecoration: "none", width: "100%" }}
+                    >
+                      <button style={{ width: "100%", padding: "8px 12px", background: "#fff", border: "1px solid #e0e0e0", borderRadius: "6px", fontSize: "12px", fontWeight: 500, color: "#333", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+                        <FileText className="w-4 h-4" /> Lihat Detail Pelamar
+                      </button>
+                    </a>
                     <button
                       onClick={() => setDeleteModal({ show: true, schedule: selectedSchedule })}
                       style={{ padding: "8px 12px", background: "#fee2e2", border: "1px solid #fecaca", borderRadius: "6px", fontSize: "12px", fontWeight: 500, color: "#dc2626", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}

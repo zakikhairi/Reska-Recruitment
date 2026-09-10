@@ -18,6 +18,10 @@ import {
   Bell,
   Award,
   XCircle,
+  HeartPulse,
+  Briefcase,
+  CheckCircle2,
+  Send,
 } from "lucide-react";
 
 interface ScheduleItem {
@@ -33,6 +37,8 @@ interface ScheduleItem {
     sessionId?: string;
     message?: string | null;
     submittedAt?: string | null;
+    totalScore?: number | null;
+    passed?: boolean | null;
   };
   interview?: {
     scheduledAt: string;
@@ -41,6 +47,31 @@ interface ScheduleItem {
     interviewer: string;
     type: string;
     zoomLink?: string | null;
+    score?: number | null;
+    result?: string | null;
+    notes?: string | null;
+  };
+  mcu?: {
+    scheduledAt: string;
+    location: string;
+    result?: string | null;
+    notes?: string | null;
+  };
+  offering?: {
+    id: string;
+    salary: number;
+    salaryPeriod: string;
+    startDate: string;
+    employmentType: string;
+    contractDuration?: number | null;
+    contractEndDate?: string | null;
+    probationMonths?: number | null;
+    workLocation?: string | null;
+    positionTitle?: string | null;
+    benefits?: string | null;
+    notes?: string | null;
+    status: string;
+    createdAt: string;
   };
 }
 
@@ -346,6 +377,8 @@ export default function SchedulePage() {
               const timeRemaining = getTimeRemainingSeconds(schedule.test?.scheduledAt);
               const hasTest = !!schedule.test;
               const hasInterview = !!schedule.interview;
+              const hasMcu = !!schedule.mcu;
+              const hasOffering = !!schedule.offering;
               const statusLabel = getTestStatusLabel(schedule);
 
               return (
@@ -373,13 +406,13 @@ export default function SchedulePage() {
                       </div>
                       <span style={{
                         padding: "6px 14px",
-                        background: hasInterview ? "rgba(190,24,93,0.2)" : isPassed ? "rgba(34,197,94,0.2)" : isFailed ? "rgba(220,38,38,0.2)" : "rgba(255,255,255,0.2)",
-                        color: hasInterview ? "#fce7f3" : isPassed ? "#dcfce7" : isFailed ? "#fee2e2" : "#fff",
+                        background: hasOffering ? "rgba(245,158,11,0.25)" : hasMcu ? "rgba(2,132,199,0.25)" : hasInterview ? "rgba(190,24,93,0.2)" : isPassed ? "rgba(34,197,94,0.2)" : isFailed ? "rgba(220,38,38,0.2)" : "rgba(255,255,255,0.2)",
+                        color: hasOffering ? "#fef3c7" : hasMcu ? "#bae6fd" : hasInterview ? "#fce7f3" : isPassed ? "#dcfce7" : isFailed ? "#fee2e2" : "#fff",
                         borderRadius: "20px",
                         fontSize: "12px",
                         fontWeight: 600,
                       }}>
-                        {hasInterview ? "Interview" : statusLabel}
+                        {hasOffering ? "Offering Letter" : hasMcu ? "MCU Balai Yasa" : hasInterview ? "Interview" : statusLabel}
                       </span>
                     </div>
                   </div>
@@ -580,6 +613,28 @@ export default function SchedulePage() {
                             <p style={{ fontSize: "12px", color: "#92400e", margin: 0, lineHeight: 1.5 }}>
                               <strong>Pesan HR:</strong> {schedule.test.message}
                             </p>
+                          </div>
+                        )}
+
+                        {/* CAT Score if available */}
+                        {schedule.test?.totalScore !== null && schedule.test?.totalScore !== undefined && (
+                          <div style={{
+                            padding: "12px 16px",
+                            background: "#f0fdf4",
+                            border: "1px solid #bbf7d0",
+                            borderRadius: "10px",
+                            marginBottom: "16px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                          }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <Award className="w-5 h-5" style={{ color: "#16a34a" }} />
+                              <span style={{ fontSize: "13px", fontWeight: 700, color: "#166534" }}>Nilai CAT Online:</span>
+                            </div>
+                            <span style={{ fontSize: "16px", fontWeight: 800, color: "#15803d" }}>
+                              {schedule.test.totalScore} / 100
+                            </span>
                           </div>
                         )}
 
@@ -828,6 +883,294 @@ export default function SchedulePage() {
                             </button>
                           </a>
                         )}
+
+                        {/* Interview Result & Score if available */}
+                        {(schedule.interview.score !== null && schedule.interview.score !== undefined) && (
+                          <div style={{
+                            marginTop: "14px",
+                            padding: "16px",
+                            background: "#ffffff",
+                            borderRadius: "12px",
+                            border: "1.5px solid #fbcfe8",
+                          }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                              <span style={{ fontSize: "12px", fontWeight: 700, color: "#be185d", textTransform: "uppercase" }}>Hasil Evaluasi Wawancara:</span>
+                              <span style={{
+                                padding: "4px 10px",
+                                borderRadius: "12px",
+                                fontSize: "11px",
+                                fontWeight: 700,
+                                background: schedule.interview.result === "PASSED" ? "#dcfce7" : schedule.interview.result === "FAILED" ? "#fee2e2" : "#fef3c7",
+                                color: schedule.interview.result === "PASSED" ? "#16a34a" : schedule.interview.result === "FAILED" ? "#dc2626" : "#d97706",
+                              }}>
+                                {schedule.interview.result === "PASSED" ? "✓ Lolos Wawancara" : schedule.interview.result === "FAILED" ? "Belum Lolos" : "Dievaluasi"}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: "22px", fontWeight: 800, color: "#9d174d", marginBottom: "6px" }}>
+                              {schedule.interview.score} <span style={{ fontSize: "13px", fontWeight: 600, color: "#6b7280" }}>/ 100</span>
+                            </div>
+                            {schedule.interview.notes && (
+                              <div style={{ background: "#fdf2f8", padding: "10px 12px", borderRadius: "8px", borderLeft: "3px solid #be185d" }}>
+                                <p style={{ fontSize: "11.5px", fontWeight: 700, color: "#be185d", margin: "0 0 2px 0" }}>Catatan Tim Interviewer:</p>
+                                <p style={{ fontSize: "12.5px", color: "#374151", margin: 0, lineHeight: 1.5 }}>
+                                  {schedule.interview.notes}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Medical Check-Up (MCU) Card */}
+                    {hasMcu && schedule.mcu && (
+                      <div style={{
+                        background: "#f0f9ff",
+                        borderRadius: "16px",
+                        padding: "20px",
+                        border: "1px solid #bae6fd",
+                        marginTop: (hasTest || hasInterview) ? "16px" : 0,
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
+                          <div style={{
+                            width: "44px",
+                            height: "44px",
+                            background: "#0284c7",
+                            borderRadius: "12px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}>
+                            <HeartPulse className="w-6 h-6" style={{ color: "#fff" }} />
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <h4 style={{ fontSize: "15px", fontWeight: 600, color: "#111", margin: "0 0 2px 0" }}>
+                              Medical Check-Up (MCU) Offline
+                            </h4>
+                            <p style={{ fontSize: "12px", color: "#0369a1", margin: 0 }}>
+                              Kantor Balai Yasa PT KAI (Reska Multi Usaha)
+                            </p>
+                          </div>
+                          <span style={{
+                            padding: "6px 12px",
+                            background: schedule.mcu.result === "FIT" ? "#dcfce7" : schedule.mcu.result === "UNFIT" ? "#fee2e2" : "#e0f2fe",
+                            color: schedule.mcu.result === "FIT" ? "#16a34a" : schedule.mcu.result === "UNFIT" ? "#dc2626" : "#0284c7",
+                            borderRadius: "20px",
+                            fontSize: "11px",
+                            fontWeight: 700,
+                          }}>
+                            {schedule.mcu.result === "FIT" ? "FIT (Lolos MCU)" : schedule.mcu.result === "UNFIT" ? "UNFIT" : "Pemeriksaan Offline"}
+                          </span>
+                        </div>
+
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
+                          <div style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            padding: "10px 14px",
+                            background: "#fff",
+                            borderRadius: "10px",
+                          }}>
+                            <Calendar className="w-4 h-4" style={{ color: "#0284c7" }} />
+                            <span style={{ fontSize: "13px", color: "#111" }}>
+                              {formatDate(schedule.mcu.scheduledAt)}
+                            </span>
+                          </div>
+                          <div style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            padding: "10px 14px",
+                            background: "#fff",
+                            borderRadius: "10px",
+                          }}>
+                            <Clock className="w-4 h-4" style={{ color: "#0284c7" }} />
+                            <span style={{ fontSize: "13px", color: "#111" }}>
+                              {formatTime(schedule.mcu.scheduledAt)} WIB
+                            </span>
+                          </div>
+                        </div>
+
+                        <div style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          padding: "12px 14px",
+                          background: "#fff",
+                          borderRadius: "10px",
+                          marginBottom: schedule.mcu.notes ? "12px" : 0,
+                        }}>
+                          <MapPin className="w-4 h-4" style={{ color: "#0284c7" }} />
+                          <span style={{ fontSize: "13px", color: "#111" }}>
+                            {schedule.mcu.location || "Kantor Balai Yasa PT KAI (Reska Multi Usaha)"}
+                          </span>
+                        </div>
+
+                        {schedule.mcu.notes && (
+                          <div style={{
+                            padding: "14px",
+                            background: "#fffbeb",
+                            borderRadius: "10px",
+                            borderLeft: "4px solid #f59e0b",
+                          }}>
+                            <p style={{ fontSize: "12px", color: "#92400e", fontWeight: 700, margin: "0 0 4px 0" }}>
+                              Ketentuan & Instruksi Pemeriksaan MCU di Balai Yasa:
+                            </p>
+                            <p style={{ fontSize: "12.5px", color: "#78350f", margin: 0, lineHeight: 1.6, whiteSpace: "pre-line" }}>
+                              {schedule.mcu.notes}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Hasil Medis MCU jika sudah dievaluasi */}
+                        {schedule.mcu.result && (
+                          <div style={{
+                            marginTop: "12px",
+                            padding: "14px 16px",
+                            background: "#ffffff",
+                            borderRadius: "12px",
+                            border: schedule.mcu.result === "FIT" ? "1.5px solid #86efac" : "1.5px solid #fca5a5",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                          }}>
+                            <div>
+                              <p style={{ fontSize: "11px", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", margin: "0 0 2px 0" }}>Hasil Evaluasi Medis Dokter Balai Yasa</p>
+                              <p style={{ fontSize: "14px", fontWeight: 800, color: schedule.mcu.result === "FIT" ? "#16a34a" : "#dc2626", margin: 0 }}>
+                                {schedule.mcu.result === "FIT" ? "✓ FIT (Memenuhi Syarat Kesehatan)" : schedule.mcu.result === "UNFIT" ? "✗ UNFIT (Tidak Memenuhi Syarat)" : "CONDITIONAL (Pemeriksaan Lanjutan)"}
+                              </p>
+                            </div>
+                            <span style={{
+                              padding: "4px 12px",
+                              borderRadius: "20px",
+                              fontSize: "12px",
+                              fontWeight: 700,
+                              background: schedule.mcu.result === "FIT" ? "#dcfce7" : "#fee2e2",
+                              color: schedule.mcu.result === "FIT" ? "#16a34a" : "#dc2626",
+                            }}>
+                              {schedule.mcu.result}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Offering Letter Card */}
+                    {hasOffering && schedule.offering && (
+                      <div style={{
+                        background: "linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)",
+                        borderRadius: "16px",
+                        padding: "20px",
+                        border: "1.5px solid #fde68a",
+                        marginTop: (hasTest || hasInterview || hasMcu) ? "16px" : 0,
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
+                          <div style={{
+                            width: "44px",
+                            height: "44px",
+                            background: "linear-gradient(135deg, #f59e0b, #d97706)",
+                            borderRadius: "12px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            boxShadow: "0 4px 12px rgba(245, 158, 11, 0.3)",
+                          }}>
+                            <Briefcase className="w-6 h-6" style={{ color: "#fff" }} />
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <h4 style={{ fontSize: "15px", fontWeight: 700, color: "#92400e", margin: "0 0 2px 0" }}>
+                              Offering Letter (Penawaran Kerja Resmi)
+                            </h4>
+                            <p style={{ fontSize: "12px", color: "#b45309", margin: 0 }}>
+                              PT Reska Multi Usaha (KAI Services)
+                            </p>
+                          </div>
+                          <span style={{
+                            padding: "6px 14px",
+                            background: schedule.offering.status === "ACCEPTED" ? "#dcfce7" : "#fef3c7",
+                            color: schedule.offering.status === "ACCEPTED" ? "#16a34a" : "#b45309",
+                            borderRadius: "20px",
+                            fontSize: "11px",
+                            fontWeight: 700,
+                            border: "1px solid #fde68a",
+                          }}>
+                            {schedule.offering.status === "ACCEPTED" ? "✓ Penawaran Disetujui" : "Menunggu Tanggapan"}
+                          </span>
+                        </div>
+
+                        {/* Offering Content Box */}
+                        <div style={{
+                          background: "#ffffff",
+                          borderRadius: "12px",
+                          padding: "16px",
+                          border: "1px solid #fef08a",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "12px",
+                        }}>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                            <div>
+                              <span style={{ fontSize: "11px", color: "#6b7280", fontWeight: 700, textTransform: "uppercase" }}>Gaji yang Ditawarkan</span>
+                              <p style={{ fontSize: "17px", fontWeight: 800, color: "#16a34a", margin: "2px 0 0 0" }}>
+                                Rp {schedule.offering.salary ? Number(schedule.offering.salary).toLocaleString("id-ID") : "-"}
+                                <span style={{ fontSize: "12px", fontWeight: 600, color: "#4b5563" }}> / bulan</span>
+                              </p>
+                            </div>
+                            <div>
+                              <span style={{ fontSize: "11px", color: "#6b7280", fontWeight: 700, textTransform: "uppercase" }}>Status Ketenagakerjaan</span>
+                              <p style={{ fontSize: "14px", fontWeight: 700, color: "#111827", margin: "2px 0 0 0" }}>
+                                {schedule.offering.employmentType === "PERMANENT" ? "PKWTT (Karyawan Tetap)" : "PKWT (Karyawan Kontrak)"}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", borderTop: "1px solid #f3f4f6", paddingTop: "10px" }}>
+                            <div>
+                              <span style={{ fontSize: "11px", color: "#6b7280", fontWeight: 700, textTransform: "uppercase" }}>Mulai Masuk Kerja</span>
+                              <p style={{ fontSize: "13.5px", fontWeight: 600, color: "#111827", margin: "2px 0 0 0" }}>
+                                {schedule.offering.startDate ? formatDate(schedule.offering.startDate) : "-"}
+                              </p>
+                            </div>
+                            <div>
+                              <span style={{ fontSize: "11px", color: "#6b7280", fontWeight: 700, textTransform: "uppercase" }}>
+                                {schedule.offering.employmentType === "PERMANENT" ? "Masa Percobaan" : "Durasi Masa Kontrak"}
+                              </span>
+                              <p style={{ fontSize: "13.5px", fontWeight: 600, color: "#111827", margin: "2px 0 0 0" }}>
+                                {schedule.offering.employmentType === "PERMANENT"
+                                  ? `${schedule.offering.probationMonths || 3} Bulan (Probation)`
+                                  : `${schedule.offering.contractDuration || 12} Bulan`}
+                              </p>
+                            </div>
+                          </div>
+
+                          {schedule.offering.workLocation && (
+                            <div style={{ borderTop: "1px solid #f3f4f6", paddingTop: "10px" }}>
+                              <span style={{ fontSize: "11px", color: "#6b7280", fontWeight: 700, textTransform: "uppercase" }}>Lokasi Penempatan Kerja</span>
+                              <p style={{ fontSize: "13px", fontWeight: 600, color: "#1f2937", margin: "2px 0 0 0" }}>
+                                {schedule.offering.workLocation}
+                              </p>
+                            </div>
+                          )}
+
+                          {schedule.offering.benefits && (
+                            <div style={{ borderTop: "1px solid #f3f4f6", paddingTop: "10px" }}>
+                              <span style={{ fontSize: "11px", color: "#166534", fontWeight: 700, textTransform: "uppercase" }}>Fasilitas & Tunjangan</span>
+                              <p style={{ fontSize: "13px", color: "#15803d", margin: "2px 0 0 0", lineHeight: 1.5 }}>
+                                {schedule.offering.benefits}
+                              </p>
+                            </div>
+                          )}
+
+                          {schedule.offering.notes && (
+                            <div style={{ borderTop: "1px solid #f3f4f6", paddingTop: "10px" }}>
+                              <span style={{ fontSize: "11px", color: "#92400e", fontWeight: 700, textTransform: "uppercase" }}>Catatan Tambahan HR</span>
+                              <p style={{ fontSize: "13px", color: "#78350f", margin: "2px 0 0 0", lineHeight: 1.5 }}>
+                                {schedule.offering.notes}
+                              </p>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>

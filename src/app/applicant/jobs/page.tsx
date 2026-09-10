@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useJobsStore, Job } from "@/stores/jobs";
+import JobQuickViewModal, { JobDetail } from "@/components/recruitment/JobQuickViewModal";
+import { Bookmark, Eye } from "lucide-react";
 
 const filters = ["Semua", "ON_TRAIN_SERVICE", "IT_STAFF", "LOGISTICS", "RES_CLEAN", "ADMIN", "RES_PARKING"];
 
@@ -20,11 +22,33 @@ export default function JobsPage() {
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("Semua");
   const [mounted, setMounted] = useState(false);
+  const [savedJobIds, setSavedJobIds] = useState<string[]>([]);
+  const [selectedJob, setSelectedJob] = useState<JobDetail | null>(null);
+  const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     fetchJobs(); // Fetch jobs from API
+    try {
+      const stored = localStorage.getItem("kai_saved_jobs");
+      if (stored) setSavedJobIds(JSON.parse(stored));
+    } catch (e) {}
   }, []);
+
+  const toggleBookmark = (jobId: string) => {
+    setSavedJobIds((prev) => {
+      let updated: string[];
+      if (prev.includes(jobId)) {
+        updated = prev.filter((id) => id !== jobId);
+      } else {
+        updated = [...prev, jobId];
+      }
+      try {
+        localStorage.setItem("kai_saved_jobs", JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+  };
 
   // Wait for hydration
   if (!mounted || !_hasHydrated) {
@@ -49,6 +73,9 @@ export default function JobsPage() {
 
   const filteredJobs = activeJobs.filter(job => {
     if (!job) return false;
+    if (activeFilter === "Tersimpan") {
+      return savedJobIds.includes(job.id);
+    }
     const matchFilter = activeFilter === "Semua" || job.division === activeFilter;
     const matchSearch = (job.title || "").toLowerCase().includes(search.toLowerCase()) ||
                        (job.location || "").toLowerCase().includes(search.toLowerCase());
@@ -78,13 +105,34 @@ export default function JobsPage() {
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
             {filters.map((f) => (
               <button key={f} onClick={() => setActiveFilter(f)} style={{
                 padding: "10px 20px", borderRadius: "24px", fontSize: "14px", fontWeight: 600, border: "none", cursor: "pointer",
                 background: activeFilter === f ? "#00205B" : "#f1f5f9", color: activeFilter === f ? "#ffffff" : "#666666", transition: "all 0.2s"
               }}>{divisionNames[f] || f}</button>
             ))}
+            <button
+              onClick={() => setActiveFilter(activeFilter === "Tersimpan" ? "Semua" : "Tersimpan")}
+              style={{
+                padding: "10px 20px",
+                borderRadius: "24px",
+                fontSize: "14px",
+                fontWeight: 700,
+                border: activeFilter === "Tersimpan" ? "2px solid #FF5E00" : "1px solid #e2e8f0",
+                cursor: "pointer",
+                background: activeFilter === "Tersimpan" ? "#fff7ed" : "#ffffff",
+                color: activeFilter === "Tersimpan" ? "#FF5E00" : "#4b5563",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                transition: "all 0.2s",
+              }}
+            >
+              <Bookmark size={15} fill={activeFilter === "Tersimpan" ? "#FF5E00" : "none"} />
+              Tersimpan ({savedJobIds.length})
+            </button>
           </div>
         </div>
 
@@ -98,8 +146,27 @@ export default function JobsPage() {
         {/* Job List */}
         {!isLoading && (
           <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-            {filteredJobs.map((job) => (
-              <div key={job.id} style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", display: "flex", gap: "24px", alignItems: "flex-start" }}>
+            {filteredJobs.map((job) => {
+              const isBookmarked = savedJobIds.includes(job.id);
+              const isOpen = now >= new Date(job.startDate) && now <= new Date(job.deadline);
+              const isUpcoming = now < new Date(job.startDate);
+
+              return (
+              <div
+                key={job.id}
+                className="card-hover-lift"
+                style={{
+                  background: "#ffffff",
+                  borderRadius: "18px",
+                  padding: "28px",
+                  boxShadow: "0 4px 16px rgba(0,0,0,0.06)",
+                  border: "1px solid #f1f5f9",
+                  display: "flex",
+                  gap: "24px",
+                  alignItems: "flex-start",
+                  position: "relative",
+                }}
+              >
                 {/* Icon */}
                 <div style={{ width: "64px", height: "64px", background: "#f0f4ff", borderRadius: "16px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#00205B" strokeWidth="2">
@@ -113,26 +180,72 @@ export default function JobsPage() {
                   <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "12px", flexWrap: "wrap", gap: "12px" }}>
                     <div>
                       <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px", flexWrap: "wrap" }}>
-                        {now >= new Date(job.startDate) && now <= new Date(job.deadline) && (
+                        {isOpen && (
                           <span style={{ padding: "4px 12px", background: "#dcfce7", color: "#16a34a", borderRadius: "20px", fontSize: "12px", fontWeight: 700 }}>Pendaftaran Terbuka</span>
                         )}
-                        {now < new Date(job.startDate) && (
+                        {isUpcoming && (
                           <span style={{ padding: "4px 12px", background: "#fef3c7", color: "#d97706", borderRadius: "20px", fontSize: "12px", fontWeight: 700 }}>Segera Hadir</span>
                         )}
-                        {now > new Date(job.deadline) && (
+                        {!isOpen && !isUpcoming && (
                           <span style={{ padding: "4px 12px", background: "#fee2e2", color: "#dc2626", borderRadius: "20px", fontSize: "12px", fontWeight: 700 }}>Pendaftaran Ditutup</span>
                         )}
                         <span style={{ padding: "4px 12px", background: "#f0f4ff", color: "#00205B", borderRadius: "20px", fontSize: "12px", fontWeight: 600 }}>{divisionNames[job.division] || job.division}</span>
                       </div>
                       <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#111111", marginBottom: "0" }}>{job.title}</h3>
                     </div>
-                    {now >= new Date(job.startDate) && now <= new Date(job.deadline) && (
-                      <Link href={`/applicant/apply/${job.id}`}>
-                        <button style={{ padding: "14px 28px", background: "#FF5E00", color: "#ffffff", border: "none", borderRadius: "12px", fontSize: "14px", fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 16px rgba(255,94,0,0.3)", whiteSpace: "nowrap" }}>
-                          Lamar Sekarang
-                        </button>
-                      </Link>
-                    )}
+
+                    <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                      <button
+                        onClick={() => {
+                          setSelectedJob(job as any);
+                          setIsQuickViewOpen(true);
+                        }}
+                        style={{
+                          padding: "12px 18px",
+                          background: "#eff6ff",
+                          color: "#00205B",
+                          border: "1px solid #dbeafe",
+                          borderRadius: "12px",
+                          fontSize: "13px",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "5px",
+                        }}
+                      >
+                        <Eye size={15} />
+                        Detail
+                      </button>
+
+                      {isOpen && (
+                        <Link href={`/applicant/apply/${job.id}`}>
+                          <button style={{ padding: "12px 24px", background: "#FF5E00", color: "#ffffff", border: "none", borderRadius: "12px", fontSize: "13px", fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 16px rgba(255,94,0,0.3)", whiteSpace: "nowrap" }}>
+                            Lamar Sekarang
+                          </button>
+                        </Link>
+                      )}
+
+                      <button
+                        onClick={() => toggleBookmark(job.id)}
+                        title={isBookmarked ? "Hapus dari tersimpan" : "Simpan lowongan"}
+                        style={{
+                          width: "40px",
+                          height: "40px",
+                          borderRadius: "12px",
+                          background: isBookmarked ? "#fff7ed" : "#f1f5f9",
+                          border: isBookmarked ? "1.5px solid #FF5E00" : "1px solid #e2e8f0",
+                          color: isBookmarked ? "#FF5E00" : "#94a3b8",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          cursor: "pointer",
+                          transition: "all 0.2s",
+                        }}
+                      >
+                        <Bookmark size={17} fill={isBookmarked ? "#FF5E00" : "none"} />
+                      </button>
+                    </div>
                   </div>
 
                   <p style={{ fontSize: "15px", color: "#666666", lineHeight: 1.6, marginBottom: "16px" }}>{job.description}</p>
@@ -159,7 +272,8 @@ export default function JobsPage() {
                   </div>
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
         )}
 
@@ -170,10 +284,25 @@ export default function JobsPage() {
               <path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/>
             </svg>
             <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#111111", marginBottom: "8px" }}>Tidak ada lowongan ditemukan</h3>
-            <p style={{ fontSize: "15px", color: "#888888" }}>Coba ubah kriteria pencarian Anda</p>
+            <p style={{ fontSize: "15px", color: "#888888" }}>
+              {activeFilter === "Tersimpan" ? "Anda belum menandai lowongan favorit." : "Coba ubah kriteria pencarian Anda"}
+            </p>
           </div>
         )}
       </div>
+
+      {/* Quick View Modal */}
+      <JobQuickViewModal
+        job={selectedJob}
+        isOpen={isQuickViewOpen}
+        onClose={() => {
+          setIsQuickViewOpen(false);
+          setSelectedJob(null);
+        }}
+        isBookmarked={selectedJob ? savedJobIds.includes(selectedJob.id) : false}
+        onToggleBookmark={toggleBookmark}
+        divisionLabel={selectedJob ? divisionNames[selectedJob.division] || selectedJob.division : ""}
+      />
 
       <style>{`
         input:focus { border-color: #FF5E00 !important; }

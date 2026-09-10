@@ -2,6 +2,14 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import JobQuickViewModal, { JobDetail } from "@/components/recruitment/JobQuickViewModal";
+import CareerMatcherModal from "@/components/recruitment/CareerMatcherModal";
+import InteractiveRoadmap from "@/components/recruitment/InteractiveRoadmap";
+import FAQSection from "@/components/recruitment/FAQSection";
+import BenefitsShowcase from "@/components/recruitment/BenefitsShowcase";
+import FloatingChat from "@/components/FloatingChat";
+import { useAuthStore } from "@/stores/auth";
+import { Bookmark, Sparkles, Eye, Share2, Compass, CheckCircle2, Menu, X, ShieldCheck, Info, ChevronRight, UserCheck } from "lucide-react";
 
 interface Job {
   id: string;
@@ -37,6 +45,7 @@ const heroSlides = [
     titleHighlight: "Keluarga Besar",
     titleLine2: "KAI Services",
     description: "Jadilah bagian dari perusahaan railway terbesar di Indonesia. Kami mencari talenta terbaik untuk memberikan layanan kereta api terbaik.",
+    tag: "KAI Services",
   },
   {
     image: "/images/hero-2.jpg",
@@ -45,6 +54,7 @@ const heroSlides = [
     titleHighlight: "Kebersihan & Kenyamanan",
     titleLine2: "Armada Kereta Api",
     description: "Bergabunglah bersama tim profesional RESClean dalam menjaga standar kebersihan, higienitas, dan kenyamanan seluruh armada serta stasiun kereta api di Indonesia.",
+    tag: "RESClean",
   },
   {
     image: "/images/hero-3.jpg",
@@ -53,6 +63,7 @@ const heroSlides = [
     titleHighlight: "Kuliner Nusantara",
     titleLine2: "Di Atas Rel Kereta",
     description: "Kembangkan keahlian kuliner Anda bersama tim Chef dan Katering KAI Services untuk menghadirkan pengalaman hidangan lezat berstandar tinggi bagi jutaan penumpang.",
+    tag: "Culinary",
   },
   {
     image: "/images/hero-4.jpg",
@@ -61,6 +72,7 @@ const heroSlides = [
     titleHighlight: "Modern & Terintegrasi",
     titleLine2: "Di Seluruh Stasiun",
     description: "Tingkatkan efisiensi mobilitas masyarakat dengan bergabung di divisi manajemen parkir dan pelayanan terdepan kawasan stasiun kereta api modern.",
+    tag: "ResParking",
   },
   {
     image: "/images/hero-5.jpg",
@@ -69,6 +81,7 @@ const heroSlides = [
     titleHighlight: "Loko Coffee Shop",
     titleLine2: "Kafe Ikonik Kereta Api",
     description: "Salurkan passion barista dan hospitality Anda di jaringan coffee shop ternama KAI Services yang selalu menemani momen perjalanan dan kehangatan pelanggan.",
+    tag: "Loko Coffee",
   },
   {
     image: "/images/hero-6.jpg",
@@ -77,6 +90,7 @@ const heroSlides = [
     titleHighlight: "Pelayanan Sepenuh Hati",
     titleLine2: "Untuk Pelanggan KAI",
     description: "Jadilah garda terdepan keamanan dan kenyamanan stasiun, melayani jutaan penumpang kereta api setiap hari dengan integritas dan dedikasi prima.",
+    tag: "Security Care",
   },
 ];
 
@@ -220,23 +234,68 @@ function RollingText({ text, delay = 0, isRolling }: { text: string; delay?: num
 }
 
 export default function HomePage() {
+  const { user, isAuthenticated } = useAuthStore();
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("Semua");
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isSlidePaused, setIsSlidePaused] = useState(false);
   const [isStatsRolling, setIsStatsRolling] = useState(false);
+  // Popup Pemberitahuan Penting muncul setiap membuka web dan me-refresh web
   const [showAnnouncement, setShowAnnouncement] = useState(true);
   const [imagesLoaded, setImagesLoaded] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Track scroll position to show/hide scroll to top button
+  // New states: Bookmark, Quick View Modal, Career Matcher
+  const [savedJobIds, setSavedJobIds] = useState<string[]>([]);
+  const [selectedJob, setSelectedJob] = useState<JobDetail | null>(null);
+  const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
+  const [isCareerMatcherOpen, setIsCareerMatcherOpen] = useState(false);
+
+  // Announcement modal - only opens when user clicks "Info Resmi" button
+  const handleDismissAnnouncement = () => {
+    setShowAnnouncement(false);
+  };
+
+  // Load saved jobs from localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("kai_saved_jobs");
+      if (stored) {
+        setSavedJobIds(JSON.parse(stored));
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, []);
+
+  const toggleBookmark = (jobId: string) => {
+    setSavedJobIds((prev) => {
+      let updated: string[];
+      if (prev.includes(jobId)) {
+        updated = prev.filter((id) => id !== jobId);
+      } else {
+        updated = [...prev, jobId];
+      }
+      try {
+        localStorage.setItem("kai_saved_jobs", JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+  };
+
+  // Track scroll position for header glassmorphism and scroll-to-top button
   useEffect(() => {
     const handleScroll = () => {
-      setShowScrollTop(window.scrollY > 500);
+      setIsScrolled(window.scrollY > 20);
+      setShowScrollTop(window.scrollY > 400);
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   // Preload all hero images before showing slideshow
@@ -263,15 +322,15 @@ export default function HomePage() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Auto-advance background slideshow - only start when images are loaded
+  // Auto-advance background slideshow - pauses on user hover
   useEffect(() => {
-    if (!imagesLoaded) return;
+    if (!imagesLoaded || isSlidePaused) return;
 
     const interval = setInterval(() => {
       setCurrentSlide(prev => (prev + 1) % heroSlides.length);
     }, 5000);
     return () => clearInterval(interval);
-  }, [imagesLoaded]);
+  }, [imagesLoaded, isSlidePaused]);
 
   useEffect(() => {
     fetch('/api/jobs')
@@ -300,6 +359,9 @@ export default function HomePage() {
   const activeJobs = jobs.filter(job => job.status === "ACTIVE");
 
   const filteredJobs = activeJobs.filter(job => {
+    if (activeFilter === "Tersimpan") {
+      return savedJobIds.includes(job.id);
+    }
     const divisionLabel = divisionLabels[job.division] || job.division;
     const matchFilter = activeFilter === "Semua" || divisionLabel === activeFilter;
     const matchSearch = (job.title || "").toLowerCase().includes(search.toLowerCase()) ||
@@ -329,7 +391,7 @@ export default function HomePage() {
             animation: "modalFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards",
           }}
           onClick={(e) => {
-            if (e.target === e.currentTarget) setShowAnnouncement(false);
+            if (e.target === e.currentTarget) handleDismissAnnouncement();
           }}
         >
           <div
@@ -337,8 +399,11 @@ export default function HomePage() {
               background: "#ffffff",
               borderRadius: "24px",
               maxWidth: "520px",
+              maxHeight: "90vh",
               width: "100%",
               overflow: "hidden",
+              display: "flex",
+              flexDirection: "column",
               boxShadow: "0 25px 60px -12px rgba(0, 32, 91, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.15)",
               animation: "modalScaleIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards",
               position: "relative",
@@ -382,7 +447,7 @@ export default function HomePage() {
 
               {/* Close Button */}
               <button
-                onClick={() => setShowAnnouncement(false)}
+                onClick={handleDismissAnnouncement}
                 style={{
                   position: "absolute",
                   top: "16px",
@@ -407,7 +472,7 @@ export default function HomePage() {
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = "rgba(255, 255, 255, 0.15)";
                 }}
-                aria-label="Tutup"
+                aria-label="Tutup Pengumuman"
               >
                 ✕
               </button>
@@ -446,7 +511,7 @@ export default function HomePage() {
             </div>
 
             {/* Body Content */}
-            <div style={{ padding: "28px 28px 24px" }}>
+            <div style={{ padding: "28px 28px 24px", overflowY: "auto", flex: 1 }}>
               <p
                 style={{
                   fontSize: "14.5px",
@@ -515,9 +580,9 @@ export default function HomePage() {
               </div>
 
               {/* Action Button */}
-              <div style={{ textAlign: "center" }}>
+              <div style={{ textAlign: "center", marginTop: "8px" }}>
                 <button
-                  onClick={() => setShowAnnouncement(false)}
+                  onClick={handleDismissAnnouncement}
                   style={{
                     background: "linear-gradient(135deg, #FF5E00 0%, #FF7A00 100%)",
                     color: "#ffffff",
@@ -550,57 +615,267 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Header */}
-      <header style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: "#ffffff", borderBottom: "1px solid #eeeeee" }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "0 32px", height: "72px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <Link href="/" style={{ display: "flex", alignItems: "center", gap: "14px", textDecoration: "none" }}>
-            <img src="/_logo_kais.png" alt="KAI Services" style={{ width: "70px", height: "70px", objectFit: "contain" }} />
+      {/* Floating Glass Island Navbar (Model 1) */}
+      <header
+        className="glass-navbar-wrapper"
+        style={{
+          position: "fixed",
+          top: isScrolled ? "10px" : "16px",
+          left: 0,
+          right: 0,
+          zIndex: 1000,
+          display: "flex",
+          justifyContent: "center",
+          padding: "0 16px",
+          transition: "top 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+          pointerEvents: "none",
+        }}
+      >
+        <div
+          className="glass-navbar-island"
+          style={{
+            pointerEvents: "auto",
+            maxWidth: "1220px",
+            width: "100%",
+            height: "64px",
+            background: isScrolled
+              ? "rgba(255, 255, 255, 0.94)"
+              : "rgba(255, 255, 255, 0.82)",
+            backdropFilter: "blur(20px) saturate(180%)",
+            WebkitBackdropFilter: "blur(20px) saturate(180%)",
+            border: "1px solid rgba(255, 255, 255, 0.65)",
+            borderRadius: "9999px",
+            boxShadow: isScrolled
+              ? "0 14px 36px rgba(0, 32, 91, 0.16), 0 2px 6px rgba(0, 0, 0, 0.04)"
+              : "0 10px 30px rgba(0, 32, 91, 0.10), 0 1px 3px rgba(0, 0, 0, 0.02)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "0 14px 0 20px",
+            transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+          }}
+        >
+          {/* Brand Identity */}
+          <Link href="/" style={{ display: "flex", alignItems: "center", gap: "10px", textDecoration: "none" }}>
+            <img
+              src="/_logo_kais.png"
+              alt="KAI Services"
+              style={{ width: "38px", height: "38px", objectFit: "contain", flexShrink: 0 }}
+            />
             <div>
-              <div style={{ fontWeight: 700, fontSize: "18px", color: "#00205B", lineHeight: 1.2 }}>KAI Services</div>
-              <div style={{ fontSize: "12px", color: "#888888", lineHeight: 1.2 }}>PT Reska Multi Usaha</div>
+              <div style={{ fontWeight: 800, fontSize: "15px", color: "#00205B", lineHeight: 1.15, letterSpacing: "-0.01em" }}>
+                KAI Services
+              </div>
+              <div style={{ fontSize: "10px", color: "#64748B", lineHeight: 1.1, fontWeight: 600 }}>
+                PT Reska Multi Usaha
+              </div>
             </div>
           </Link>
 
-          <nav style={{ display: "flex", gap: "32px" }} className="desktop-nav">
-            <a href="#mengapa" style={{ fontSize: "14px", color: "#555555", textDecoration: "none", fontWeight: 500 }}>Mengapa Bergabung?</a>
-            <a href="#cara-melamar" style={{ fontSize: "14px", color: "#555555", textDecoration: "none", fontWeight: 500 }}>Cara Melamar</a>
-            <a href="#lowongan" style={{ fontSize: "14px", color: "#555555", textDecoration: "none", fontWeight: 500 }}>Lowongan</a>
-            <a href="#tentang" style={{ fontSize: "14px", color: "#555555", textDecoration: "none", fontWeight: 500 }}>Tentang</a>
-            <a href="#kontak" style={{ fontSize: "14px", color: "#555555", textDecoration: "none", fontWeight: 500 }}>Kontak</a>
+          {/* Desktop Nav Links */}
+          <nav className="glass-nav-links" style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+            {[
+              { label: "Mengapa Bergabung?", href: "#mengapa" },
+              { label: "Cara Melamar", href: "#cara-melamar" },
+              { label: "Roadmap", href: "#roadmap" },
+              { label: "Lowongan", href: "#lowongan" },
+              { label: "FAQ", href: "#faq" },
+              { label: "Tentang", href: "#tentang" },
+            ].map((item, idx) => (
+              <a
+                key={idx}
+                href={item.href}
+                className="glass-nav-link"
+              >
+                {item.label}
+              </a>
+            ))}
           </nav>
 
-          <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-            <Link href="/auth/login">
-              <button style={{ padding: "10px 20px", fontSize: "15px", fontWeight: 600, background: "transparent", border: "none", cursor: "pointer", color: "#00205B" }}>Masuk</button>
-            </Link>
-            <Link href="/auth/register">
-              <button style={{ padding: "12px 24px", fontSize: "15px", fontWeight: 600, background: "#FF5E00", color: "#ffffff", border: "none", borderRadius: "10px", cursor: "pointer" }}>Daftar</button>
-            </Link>
+          {/* Right Action Group */}
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            {/* Info Bebas Biaya Badge Button */}
+            <button
+              onClick={() => setShowAnnouncement(true)}
+              className="glass-nav-info-btn"
+              title="Informasi Resmi Rekrutmen Bebas Biaya"
+            >
+              <ShieldCheck size={14} color="#c2410c" />
+              <span>Info Resmi</span>
+            </button>
+
+            {/* Auth / Profile Area */}
+            {isAuthenticated && user ? (
+              <Link
+                href={user.role === "APPLICANT" ? "/applicant/dashboard" : "/admin/dashboard"}
+                style={{ textDecoration: "none" }}
+              >
+                <div className="glass-user-badge">
+                  <div className="glass-user-avatar">
+                    {user.fullName
+                      ? user.fullName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
+                      : "U"}
+                  </div>
+                  <div className="glass-user-text">
+                    <span style={{ fontSize: "12px", fontWeight: 700, color: "#00205B", display: "block", lineHeight: 1.1 }}>
+                      Dashboard
+                    </span>
+                    <span style={{ fontSize: "10px", color: "#64748B", display: "block", lineHeight: 1 }}>
+                      {user.role === "APPLICANT" ? "Pelamar" : "Admin"}
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            ) : (
+              <div className="glass-auth-group">
+                <Link href="/auth/login" style={{ textDecoration: "none" }}>
+                  <button className="glass-btn-login">
+                    Masuk
+                  </button>
+                </Link>
+                <Link href="/auth/register" style={{ textDecoration: "none" }}>
+                  <button className="glass-btn-register">
+                    Daftar
+                  </button>
+                </Link>
+              </div>
+            )}
+
+            {/* Mobile Hamburger Toggle Button */}
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="glass-mobile-toggle"
+              aria-label="Menu Navigasi"
+            >
+              {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
           </div>
         </div>
+
+        {/* Floating Glass Mobile Drawer */}
+        {isMobileMenuOpen && (
+          <div
+            className="glass-mobile-drawer"
+            style={{
+              pointerEvents: "auto",
+              position: "fixed",
+              top: isScrolled ? "72px" : "78px",
+              left: "16px",
+              right: "16px",
+              maxWidth: "500px",
+              margin: "0 auto",
+              background: "rgba(255, 255, 255, 0.96)",
+              backdropFilter: "blur(20px)",
+              WebkitBackdropFilter: "blur(20px)",
+              border: "1px solid rgba(255, 255, 255, 0.8)",
+              borderRadius: "24px",
+              boxShadow: "0 20px 50px rgba(0, 32, 91, 0.22)",
+              zIndex: 999,
+              padding: "20px 22px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "10px",
+              animation: "glassDrawerSlide 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
+            }}
+          >
+            {[
+              { label: "Mengapa Bergabung?", href: "#mengapa" },
+              { label: "Cara Melamar", href: "#cara-melamar" },
+              { label: "Roadmap Seleksi", href: "#roadmap" },
+              { label: "Lowongan Tersedia", href: "#lowongan" },
+              { label: "Tentang KAI Services", href: "#tentang" },
+              { label: "FAQ", href: "#faq" },
+            ].map((link, idx) => (
+              <a
+                key={idx}
+                href={link.href}
+                onClick={() => setIsMobileMenuOpen(false)}
+                style={{
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  color: "#1e293b",
+                  textDecoration: "none",
+                  padding: "10px 14px",
+                  borderRadius: "12px",
+                  background: "rgba(241, 245, 249, 0.6)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  transition: "background 0.2s",
+                }}
+              >
+                <span>{link.label}</span>
+                <ChevronRight size={16} color="#94a3b8" />
+              </a>
+            ))}
+
+            <div style={{ display: "flex", gap: "10px", marginTop: "8px" }}>
+              <button
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  setIsCareerMatcherOpen(true);
+                }}
+                style={{
+                  flex: 1,
+                  padding: "12px",
+                  background: "#00205B",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "14px",
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                  cursor: "pointer",
+                }}
+              >
+                <Sparkles size={15} color="#FF5E00" />
+                <span>Career Matcher</span>
+              </button>
+              <button
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  setShowAnnouncement(true);
+                }}
+                style={{
+                  padding: "12px 14px",
+                  background: "#fff7ed",
+                  color: "#c2410c",
+                  border: "1px solid #fed7aa",
+                  borderRadius: "14px",
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                  cursor: "pointer",
+                }}
+              >
+                <ShieldCheck size={16} />
+                <span>Info</span>
+              </button>
+            </div>
+          </div>
+        )}
       </header>
 
-      {/* Mobile Header */}
-      <div className="mobile-header">
-        <Link href="/" style={{ display: "flex", alignItems: "center", gap: "10px", textDecoration: "none" }}>
-          <img src="/_logo_kais.png" alt="KAI Services" style={{ width: "40px", height: "40px", objectFit: "contain" }} />
-          <span style={{ fontWeight: 700, fontSize: "16px", color: "#00205B" }}>KAI Services</span>
-        </Link>
-        <div style={{ display: "flex", gap: "8px" }}>
-          <Link href="/auth/login">
-            <button style={{ padding: "8px 14px", fontSize: "13px", fontWeight: 600, background: "#f1f5f9", border: "none", borderRadius: "8px", cursor: "pointer", color: "#00205B" }}>Masuk</button>
-          </Link>
-          <Link href="/auth/register">
-            <button style={{ padding: "8px 14px", fontSize: "13px", fontWeight: 600, background: "#FF5E00", border: "none", borderRadius: "8px", cursor: "pointer", color: "#ffffff" }}>Daftar</button>
-          </Link>
-        </div>
-      </div>
 
-      {/* Hero */}
-      <section style={{ paddingTop: "72px", position: "relative", color: "#ffffff", height: "calc(100vh - 72px)", minHeight: "600px", maxHeight: "900px", overflow: "hidden" }}>
-        {/* Background Image Slideshow with fixed height */}
+      {/* Hero Section */}
+      <section
+        onMouseEnter={() => setIsSlidePaused(true)}
+        onMouseLeave={() => setIsSlidePaused(false)}
+        className="hero-section"
+        style={{
+          position: "relative",
+          color: "#ffffff",
+          overflow: "hidden",
+        }}
+      >
+        {/* Background Image Slideshow with smooth crossfade & Ken Burns zoom */}
         <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", zIndex: 0 }}>
-          {/* Placeholder background while loading */}
           {!imagesLoaded && (
             <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "linear-gradient(135deg, #00205B 0%, #003380 100%)", zIndex: 0 }} />
           )}
@@ -615,7 +890,8 @@ export default function HomePage() {
                 width: "100%",
                 height: "100%",
                 opacity: currentSlide === index ? 1 : 0,
-                transition: "opacity 0.5s ease-in-out",
+                transform: currentSlide === index ? "scale(1.05)" : "scale(1)",
+                transition: "opacity 0.9s cubic-bezier(0.4, 0, 0.2, 1), transform 6s cubic-bezier(0.25, 1, 0.5, 1)",
                 backgroundImage: `url(${slide.image})`,
                 backgroundSize: "cover",
                 backgroundPosition: "center center",
@@ -624,216 +900,176 @@ export default function HomePage() {
           ))}
         </div>
 
-        {/* Light Overlay for better image visibility */}
-        <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "linear-gradient(135deg, rgba(0,32,91,0.45) 0%, rgba(12,35,64,0.35) 100%)", zIndex: 1 }} />
+        {/* Dual-Gradient Overlay - ensures readability across all devices */}
+        <div className="hero-gradient-overlay" />
 
-        {/* Navigation Arrows */}
+        {/* Floating Side Navigation Arrows (Model A - Glassmorphic, non-colliding) */}
         <button
           onClick={() => setCurrentSlide(prev => (prev - 1 + heroSlides.length) % heroSlides.length)}
-          style={{
-            position: "absolute",
-            left: "24px",
-            top: "50%",
-            transform: "translateY(-50%)",
-            zIndex: 10,
-            width: "48px",
-            height: "48px",
-            background: "rgba(255,255,255,0.2)",
-            backdropFilter: "blur(8px)",
-            WebkitBackdropFilter: "blur(8px)",
-            border: "1px solid rgba(255,255,255,0.3)",
-            borderRadius: "50%",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "#ffffff",
-            padding: 0,
-            transition: "all 0.3s ease",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "rgba(255,94,0,0.85)";
-            e.currentTarget.style.transform = "translateY(-50%) scale(1.1)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "rgba(255,255,255,0.2)";
-            e.currentTarget.style.transform = "translateY(-50%) scale(1)";
-          }}
-          aria-label="Previous slide"
+          className="hero-side-arrow hero-side-arrow-left"
+          aria-label="Slide sebelumnya"
+          title="Slide sebelumnya"
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", marginLeft: "-2px" }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: "-2px" }}>
             <path d="M15 18l-6-6 6-6" />
           </svg>
         </button>
 
         <button
           onClick={() => setCurrentSlide(prev => (prev + 1) % heroSlides.length)}
-          style={{
-            position: "absolute",
-            right: "24px",
-            top: "50%",
-            transform: "translateY(-50%)",
-            zIndex: 10,
-            width: "48px",
-            height: "48px",
-            background: "rgba(255,255,255,0.2)",
-            backdropFilter: "blur(8px)",
-            WebkitBackdropFilter: "blur(8px)",
-            border: "1px solid rgba(255,255,255,0.3)",
-            borderRadius: "50%",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "#ffffff",
-            padding: 0,
-            transition: "all 0.3s ease",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "rgba(255,94,0,0.85)";
-            e.currentTarget.style.transform = "translateY(-50%) scale(1.1)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "rgba(255,255,255,0.2)";
-            e.currentTarget.style.transform = "translateY(-50%) scale(1)";
-          }}
-          aria-label="Next slide"
+          className="hero-side-arrow hero-side-arrow-right"
+          aria-label="Slide berikutnya"
+          title="Slide berikutnya"
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", marginRight: "-2px" }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: "-2px" }}>
             <path d="M9 18l6-6-6-6" />
           </svg>
         </button>
 
-        {/* Navigation Dots */}
-        <div style={{
-          position: "absolute",
-          bottom: "120px",
-          left: "50%",
-          transform: "translateX(-50%)",
-          display: "flex",
-          gap: "10px",
-          zIndex: 10,
-        }}>
-          {heroSlides.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setCurrentSlide(index)}
-              style={{
-                width: currentSlide === index ? "32px" : "12px",
-                height: "12px",
-                borderRadius: "6px",
-                background: currentSlide === index ? "#FF5E00" : "rgba(255,255,255,0.5)",
-                border: "none",
-                cursor: "pointer",
-                transition: "all 0.3s ease",
-                padding: 0,
-              }}
-              aria-label={`Go to slide ${index + 1}`}
-            />
-          ))}
-        </div>
+        {/* Hero Main Content Container */}
+        <div className="hero-container">
+          <div className="hero-grid">
+            {/* Left Column: Slide Text & Persistent Buttons */}
+            <div className="hero-left">
+              {/* Dynamic Slide Content (Stable container to prevent button jumping) */}
+              <div className="hero-text-wrapper">
+                <div key={currentSlide} className="hero-slide-anim">
+                  {/* Badge */}
+                  <div className="hero-badge">
+                    <span className="hero-badge-dot" />
+                    <span>{heroSlides[currentSlide]?.badge}</span>
+                  </div>
 
-        <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "100px 32px", display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "80px", alignItems: "center", position: "relative", zIndex: 2 }} className="hero-content">
-          <div style={{ minHeight: "360px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-            <div
-              key={currentSlide}
-              style={{
-                animation: `heroSlideFadeIn-${currentSlide} 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards`
-              }}
-            >
-              <style>{`
-                @keyframes heroSlideFadeIn-${currentSlide} {
-                  from {
-                    opacity: 0;
-                    transform: translateY(16px);
-                  }
-                  to {
-                    opacity: 1;
-                    transform: translateY(0);
-                  }
-                }
-              `}</style>
-              <div style={{ display: "inline-block", padding: "8px 16px", background: "rgba(255,255,255,0.12)", backdropFilter: "blur(6px)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: "24px", fontSize: "14px", fontWeight: 500, marginBottom: "24px" }}>
-                {heroSlides[currentSlide]?.badge}
+                  {/* Headline with natural wrap and accent highlight */}
+                  <h1 className="hero-title">
+                    <span>{heroSlides[currentSlide]?.titleLine1} </span>
+                    <span style={{ color: "#FF5E00" }}>{heroSlides[currentSlide]?.titleHighlight} </span>
+                    <span>{heroSlides[currentSlide]?.titleLine2}</span>
+                  </h1>
+
+                  {/* Description */}
+                  <p className="hero-desc">
+                    {heroSlides[currentSlide]?.description}
+                  </p>
+                </div>
               </div>
-              <h1 style={{ fontSize: "clamp(34px, 4.8vw, 54px)", fontWeight: 800, lineHeight: 1.15, marginBottom: "24px", letterSpacing: "-0.02em" }}>
-                {heroSlides[currentSlide]?.titleLine1}<br/>
-                <span style={{ color: "#FF5E00" }}>{heroSlides[currentSlide]?.titleHighlight}</span><br/>
-                {heroSlides[currentSlide]?.titleLine2}
-              </h1>
-              <p style={{ fontSize: "17px", color: "rgba(255,255,255,0.85)", lineHeight: 1.7, marginBottom: "40px", maxWidth: "520px" }}>
-                {heroSlides[currentSlide]?.description}
-              </p>
-              <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
+
+              {/* Persistent Action Buttons (Firmly anchored - never jumps or re-renders) */}
+              <div className="hero-cta-group">
                 <Link href="/auth/register">
-                  <button style={{ padding: "16px 32px", fontSize: "16px", fontWeight: 700, background: "#FF5E00", color: "#ffffff", border: "none", borderRadius: "12px", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px", boxShadow: "0 4px 20px rgba(255,94,0,0.4)", transition: "transform 0.2s, box-shadow 0.2s" }}
-                    onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 6px 24px rgba(255,94,0,0.5)"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(255,94,0,0.4)"; }}>
-                    Daftar Sekarang
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  <button className="hero-btn-primary">
+                    <span>Daftar Sekarang</span>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
                   </button>
                 </Link>
                 <Link href="#lowongan">
-                  <button style={{ padding: "16px 32px", fontSize: "16px", fontWeight: 600, background: "transparent", color: "#ffffff", border: "2px solid rgba(255,255,255,0.3)", borderRadius: "12px", cursor: "pointer" }}>
+                  <button className="hero-btn-secondary">
                     Lihat Lowongan
                   </button>
                 </Link>
+                <button
+                  onClick={() => setIsCareerMatcherOpen(true)}
+                  className="hero-btn-ai"
+                >
+                  <Sparkles size={17} color="#FF5E00" />
+                  <span>Career Matcher AI</span>
+                </button>
               </div>
-            </div>
-          </div>
 
-          <AnimatedSection delay={200} className="hero-stats">
-            <div style={{ background: "rgba(255,255,255,0.08)", borderRadius: "20px", padding: "32px", backdropFilter: "blur(10px)" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "32px" }}>
+              {/* Tablet & Mobile Compact Social Proof Ribbon */}
+              <div className="hero-mobile-stats">
                 {[
                   { v: "12,000+", l: "Total Pelamar" },
-                  { v: "24", l: "Posisi Terbuka" },
-                  { v: "1,200", l: "Terserap 2025" },
-                  { v: "18", l: "Kota" }
+                  { v: activeJobs.length > 0 ? String(activeJobs.length) : "24", l: "Lowongan" },
+                  { v: "1,200+", l: "Terserap 2025" },
+                  { v: "18+", l: "Kota Operasional" },
                 ].map((s, i) => (
-                  <div key={i} style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: "36px", fontWeight: 800, color: "#FF5E00", lineHeight: 1.1, marginBottom: "6px" }}>
-                      <RollingText text={s.v} delay={i * 0.15} isRolling={isStatsRolling} />
-                    </div>
-                    <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>{s.l}</div>
+                  <div key={i} className="hero-mobile-stat-item">
+                    <span className="hero-mobile-stat-val">{s.v}</span>
+                    <span className="hero-mobile-stat-lbl">{s.l}</span>
                   </div>
                 ))}
               </div>
             </div>
-          </AnimatedSection>
-        </div>
-      </section>
 
-      {/* Benefits */}
-      <section id="mengapa" style={{ minHeight: "100vh", padding: "80px 32px", background: "#f8f9fa", display: "flex", alignItems: "center" }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto", width: "100%" }}>
-          <AnimatedSection>
-            <div style={{ textAlign: "center", marginBottom: "56px" }}>
-              <h2 style={{ fontSize: "36px", fontWeight: 700, color: "#00205B", marginBottom: "14px", letterSpacing: "-0.02em" }}>Mengapa Bergabung?</h2>
-              <p style={{ fontSize: "16px", color: "#666666", maxWidth: "500px", margin: "0 auto" }}>Kesempatan karier stabil di lingkungan perusahaan BUMN terpercaya</p>
-            </div>
-          </AnimatedSection>
+            {/* Right Column: Desktop Stats Card with refined Glassmorphism */}
+            <div className="hero-stats-desktop">
+              <AnimatedSection delay={200}>
+                <div className="hero-stats-card">
+                  <div className="hero-stats-header">
+                    <div className="hero-stats-indicator">
+                      <span className="hero-stats-pulse" />
+                      <span style={{ fontSize: "12px", fontWeight: 700, color: "#ffffff", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                        Perekrutan Aktif 2025/2026
+                      </span>
+                    </div>
+                    <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.7)", background: "rgba(255,255,255,0.12)", padding: "4px 9px", borderRadius: "6px", fontWeight: 600 }}>
+                      Resmi KAI
+                    </span>
+                  </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "24px", alignItems: "stretch" }} className="benefits-grid">
-            {[
-              { title: "Asuransi Kesehatan", desc: "BPJS & Asuransi Tambahan", icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00205B" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" strokeLinecap="round" strokeLinejoin="round"/></svg> },
-              { title: "Cuti & Tunjangan", desc: "THR, cuti tahunan & hari besar", icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00205B" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> },
-              { title: "Jenjang Karier", desc: "Pelatihan & pengembangan skill", icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00205B" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg> },
-              { title: "Lingkungan Kerja", desc: "Profesional & suportif", icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00205B" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> },
-            ].map((b, i) => (
-              <AnimatedCard key={i} delay={i * 100}>
-                <div style={{ background: "#ffffff", padding: "32px", borderRadius: "20px", textAlign: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", transition: "transform 0.3s, box-shadow 0.3s", display: "flex", flexDirection: "column", height: "100%", minHeight: "280px", justifyContent: "center" }}
-                  onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-8px)"; e.currentTarget.style.boxShadow = "0 12px 24px rgba(0,0,0,0.12)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.06)"; }}>
-                  <div style={{ width: "64px", height: "64px", background: "#f0f4ff", borderRadius: "16px", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", flexShrink: 0 }}>{b.icon}</div>
-                  <h3 style={{ fontSize: "16px", fontWeight: 700, marginBottom: "8px", color: "#111111" }}>{b.title}</h3>
-                  <p style={{ fontSize: "13px", color: "#666666", lineHeight: 1.5, margin: 0 }}>{b.desc}</p>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "28px" }}>
+                    {[
+                      { v: "12,000+", l: "Total Pelamar" },
+                      { v: activeJobs.length > 0 ? String(activeJobs.length) : "24", l: "Posisi Terbuka" },
+                      { v: "1,200+", l: "Terserap 2025" },
+                      { v: "18+", l: "Kota Operasional" }
+                    ].map((s, i) => (
+                      <div key={i} style={{ textAlign: "left", borderLeft: "2px solid rgba(255,94,0,0.5)", paddingLeft: "14px" }}>
+                        <div style={{ fontSize: "34px", fontWeight: 800, color: "#FF5E00", lineHeight: 1.1, marginBottom: "4px" }}>
+                          <RollingText text={s.v} delay={i * 0.15} isRolling={isStatsRolling} />
+                        </div>
+                        <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.65)", fontWeight: 500 }}>{s.l}</div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </AnimatedCard>
-            ))}
+              </AnimatedSection>
+            </div>
+          </div>
+
+          {/* Bottom Status & Indicator Bar */}
+          <div className="hero-controls-bar">
+            {/* Slide Counter & Category Tag */}
+            <div className="hero-controls-info">
+              <span className="hero-slide-num">0{currentSlide + 1}</span>
+              <span className="hero-slide-num-sep">/</span>
+              <span className="hero-slide-total">0{heroSlides.length}</span>
+              <span className="hero-slide-divider" />
+              <span className="hero-slide-active-tag">{heroSlides[currentSlide]?.tag}</span>
+            </div>
+
+            {/* Clickable Slide Indicators with Active Progress Fill */}
+            <div className="hero-pills-track">
+              {heroSlides.map((slide, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentSlide(index)}
+                  className={`hero-pill-btn ${currentSlide === index ? "active" : ""}`}
+                  aria-label={`Pindah ke slide ${index + 1}: ${slide.tag}`}
+                  title={slide.tag}
+                >
+                  {currentSlide === index && (
+                    <span
+                      key={`progress-${currentSlide}`}
+                      className="hero-pill-progress"
+                      style={{
+                        animationPlayState: isSlidePaused ? "paused" : "running",
+                      }}
+                    />
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </section>
+
+      {/* Benefits Showcase (Mengapa Bergabung) */}
+      <BenefitsShowcase />
+
 
       {/* Steps (Pelni-style 5 Steps adapted for KAI Services) */}
       <section id="cara-melamar" style={{ padding: "100px 32px", background: "#ffffff", position: "relative", overflow: "hidden" }}>
@@ -1186,6 +1422,11 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Interactive Selection Roadmap */}
+      <div id="roadmap">
+        <InteractiveRoadmap />
+      </div>
+
       {/* Jobs */}
       <section id="lowongan" style={{ padding: "100px 32px", background: "#f8f9fa" }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
@@ -1207,13 +1448,34 @@ export default function HomePage() {
                 style={{ width: "100%", maxWidth: "440px", height: "52px", padding: "0 20px", border: "2px solid #e8e8e8", borderRadius: "12px", fontSize: "15px", outline: "none", background: "#ffffff" }} />
             </div>
 
-            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "40px" }}>
+            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "40px", alignItems: "center" }}>
               {filters.map((f) => (
                 <button key={f} onClick={() => setActiveFilter(f)} style={{
                   padding: "10px 20px", borderRadius: "24px", fontSize: "14px", fontWeight: 600, border: "none", cursor: "pointer",
                   background: activeFilter === f ? "#00205B" : "#ffffff", color: activeFilter === f ? "#ffffff" : "#666666", boxShadow: "0 2px 8px rgba(0,0,0,0.08)", transition: "all 0.2s"
                 }}>{f}</button>
               ))}
+              <button
+                onClick={() => setActiveFilter(activeFilter === "Tersimpan" ? "Semua" : "Tersimpan")}
+                style={{
+                  padding: "10px 20px",
+                  borderRadius: "24px",
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  border: activeFilter === "Tersimpan" ? "2px solid #FF5E00" : "1px solid #e2e8f0",
+                  cursor: "pointer",
+                  background: activeFilter === "Tersimpan" ? "#fff7ed" : "#ffffff",
+                  color: activeFilter === "Tersimpan" ? "#FF5E00" : "#4b5563",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                  transition: "all 0.2s",
+                }}
+              >
+                <Bookmark size={15} fill={activeFilter === "Tersimpan" ? "#FF5E00" : "none"} />
+                Tersimpan ({savedJobIds.length})
+              </button>
             </div>
           </AnimatedSection>
 
@@ -1224,7 +1486,9 @@ export default function HomePage() {
               </div>
             ) : filteredJobs.length === 0 ? (
               <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "60px", background: "#ffffff", borderRadius: "16px" }}>
-                <p style={{ color: "#666666" }}>Tidak ada lowongan tersedia</p>
+                <p style={{ color: "#666666" }}>
+                  {activeFilter === "Tersimpan" ? "Belum ada lowongan yang Anda simpan." : "Tidak ada lowongan tersedia"}
+                </p>
               </div>
             ) : (
               filteredJobs.map((job, i) => {
@@ -1233,13 +1497,25 @@ export default function HomePage() {
                 const isOpen = now >= startDate && now <= deadline;
                 const isUpcoming = now < startDate;
                 const isClosed = now > deadline;
+                const isBookmarked = savedJobIds.includes(job.id);
 
                 return (
                 <AnimatedCard key={job.id} delay={i * 100}>
-                  <div style={{ background: "#ffffff", padding: "28px", borderRadius: "16px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", transition: "transform 0.3s, box-shadow 0.3s", minHeight: "280px", display: "flex", flexDirection: "column" }}
-                    onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-8px)"; e.currentTarget.style.boxShadow = "0 12px 24px rgba(0,0,0,0.12)"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.06)"; }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
+                  <div
+                    className="card-hover-lift"
+                    style={{
+                      background: "#ffffff",
+                      padding: "28px",
+                      borderRadius: "18px",
+                      boxShadow: "0 4px 16px rgba(0,0,0,0.06)",
+                      border: "1px solid #f1f5f9",
+                      minHeight: "300px",
+                      display: "flex",
+                      flexDirection: "column",
+                      position: "relative",
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
                       <span style={{
                         padding: "6px 14px",
                         borderRadius: "14px",
@@ -1250,7 +1526,31 @@ export default function HomePage() {
                       }}>
                         {isOpen ? "Pendaftaran Terbuka" : isUpcoming ? "Segera Hadir" : "Pendaftaran Ditutup"}
                       </span>
-                      <span style={{ fontSize: "13px", color: "#999999", fontWeight: 500 }}>{job.applicantCount || 0} pelamar</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <span style={{ fontSize: "13px", color: "#999999", fontWeight: 500 }}>{job.applicantCount || 0} pelamar</span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleBookmark(job.id);
+                          }}
+                          title={isBookmarked ? "Hapus bookmark" : "Simpan lowongan"}
+                          style={{
+                            width: "32px",
+                            height: "32px",
+                            borderRadius: "50%",
+                            background: isBookmarked ? "#fff7ed" : "#f1f5f9",
+                            border: isBookmarked ? "1.5px solid #FF5E00" : "1px solid #e2e8f0",
+                            color: isBookmarked ? "#FF5E00" : "#94a3b8",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: "pointer",
+                            transition: "all 0.2s",
+                          }}
+                        >
+                          <Bookmark size={15} fill={isBookmarked ? "#FF5E00" : "none"} />
+                        </button>
+                      </div>
                     </div>
                     <h3 style={{ fontSize: "17px", fontWeight: 700, color: "#111111", marginBottom: "12px", lineHeight: 1.4 }}>{job.title}</h3>
                     <div style={{ fontSize: "14px", color: "#666666", marginBottom: "20px", lineHeight: 1.6 }}>
@@ -1263,19 +1563,74 @@ export default function HomePage() {
                         {new Date(job.startDate).toLocaleDateString("id-ID", { day: "numeric", month: "short" })} - {new Date(job.deadline).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
                       </div>
                     </div>
-                    {isOpen ? (
-                      <Link href={`/auth/register?job=${job.id}`}>
-                        <button style={{ width: "100%", padding: "14px", background: "#FF5E00", color: "#ffffff", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 700, cursor: "pointer", marginTop: "auto" }}>Lamar Posisi Ini</button>
-                      </Link>
-                    ) : isUpcoming ? (
-                      <div style={{ width: "100%", padding: "14px", background: "#f1f5f9", color: "#666666", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 600, textAlign: "center", marginTop: "auto" }}>
-                        Pendaftaran akan dibuka {new Date(job.startDate).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
-                      </div>
-                    ) : (
-                      <div style={{ width: "100%", padding: "14px", background: "#f1f5f9", color: "#999999", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 600, textAlign: "center", marginTop: "auto" }}>
-                        Pendaftaran sudah ditutup
-                      </div>
-                    )}
+
+                    <div style={{ display: "flex", gap: "8px", marginTop: "auto", paddingTop: "12px" }}>
+                      <button
+                        onClick={() => {
+                          setSelectedJob(job);
+                          setIsQuickViewOpen(true);
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: "12px 14px",
+                          background: "#eff6ff",
+                          color: "#00205B",
+                          border: "1px solid #dbeafe",
+                          borderRadius: "10px",
+                          fontSize: "13px",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "5px",
+                          transition: "all 0.2s",
+                        }}
+                      >
+                        <Eye size={15} />
+                        Detail
+                      </button>
+                      {isOpen ? (
+                        <Link
+                          href={isAuthenticated && user?.role === "APPLICANT" ? "/applicant/jobs" : `/auth/register?job=${job.id}`}
+                          style={{ flex: 1.4, textDecoration: "none" }}
+                        >
+                          <button
+                            style={{
+                              width: "100%",
+                              padding: "12px",
+                              background: "#FF5E00",
+                              color: "#ffffff",
+                              border: "none",
+                              borderRadius: "10px",
+                              fontSize: "13px",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              boxShadow: "0 4px 12px rgba(255,94,0,0.3)",
+                              transition: "all 0.2s",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = "translateY(-1px)";
+                              e.currentTarget.style.boxShadow = "0 6px 16px rgba(255,94,0,0.45)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = "translateY(0)";
+                              e.currentTarget.style.boxShadow = "0 4px 12px rgba(255,94,0,0.3)";
+                            }}
+                          >
+                            Lamar Posisi
+                          </button>
+                        </Link>
+                      ) : isUpcoming ? (
+                        <div style={{ flex: 1.4, padding: "12px", background: "#f1f5f9", color: "#666666", borderRadius: "10px", fontSize: "12px", fontWeight: 600, textAlign: "center" }}>
+                          Segera Hadir
+                        </div>
+                      ) : (
+                        <div style={{ flex: 1.4, padding: "12px", background: "#f1f5f9", color: "#999999", borderRadius: "10px", fontSize: "12px", fontWeight: 600, textAlign: "center" }}>
+                          Ditutup
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </AnimatedCard>
               );
@@ -1360,6 +1715,9 @@ export default function HomePage() {
           </div>
         </AnimatedSection>
       </section>
+
+      {/* FAQ Section */}
+      <FAQSection />
 
       {/* Contact */}
       <section id="kontak" style={{ padding: "60px 32px", background: "#f8f9fa", textAlign: "center" }}>
@@ -1467,44 +1825,66 @@ export default function HomePage() {
         </div>
       </footer>
 
-      {/* Scroll to Top Button */}
+      {/* Scroll to Top Button (Positioned above FloatingChat) */}
       {showScrollTop && (
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           style={{
             position: 'fixed',
-            bottom: '32px',
-            right: '32px',
-            width: '56px',
-            height: '56px',
-            background: 'linear-gradient(135deg, #FF5E00 0%, #FF8A3D 100%)',
-            border: 'none',
-            borderRadius: '16px',
+            bottom: '96px',
+            right: '24px',
+            width: '46px',
+            height: '46px',
+            background: 'linear-gradient(135deg, #00205B 0%, #0C2340 100%)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            borderRadius: '14px',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 8px 24px rgba(255, 94, 0, 0.4)',
-            zIndex: 99,
+            boxShadow: '0 6px 20px rgba(0, 32, 91, 0.35)',
+            zIndex: 90,
             transition: 'all 0.3s ease',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-4px) scale(1.05)';
-            e.currentTarget.style.boxShadow = '0 12px 32px rgba(255, 94, 0, 0.5)';
+            e.currentTarget.style.transform = 'translateY(-3px) scale(1.05)';
+            e.currentTarget.style.boxShadow = '0 10px 24px rgba(255, 94, 0, 0.45)';
+            e.currentTarget.style.background = 'linear-gradient(135deg, #FF5E00 0%, #FF8A3D 100%)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.transform = 'translateY(0) scale(1)';
-            e.currentTarget.style.boxShadow = '0 8px 24px rgba(255, 94, 0, 0.4)';
+            e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 32, 91, 0.35)';
+            e.currentTarget.style.background = 'linear-gradient(135deg, #00205B 0%, #0C2340 100%)';
           }}
           aria-label="Scroll to top"
+          title="Kembali ke Atas"
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 19V5M5 12l7-7 7 7"/>
           </svg>
         </button>
       )}
 
       <style>{`
+        html {
+          scroll-behavior: smooth;
+        }
+
+        section, div[id] {
+          scroll-margin-top: 80px;
+        }
+
+        @keyframes mobileMenuSlide {
+          from {
+            opacity: 0;
+            transform: translateY(-8px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
         @keyframes modalFadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
@@ -1532,30 +1912,164 @@ export default function HomePage() {
           }
         }
 
-        /* Desktop only nav */
-        @media (max-width: 1024px) {
-          .desktop-nav { display: none !important; }
-          .header-actions { display: none !important; }
+        /* Floating Glass Island Navbar Styles */
+        .glass-nav-link {
+          font-size: 13.5px;
+          color: #334155;
+          text-decoration: none;
+          font-weight: 600;
+          padding: 8px 14px;
+          border-radius: 9999px;
+          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+          display: inline-flex;
+          align-items: center;
+        }
+        .glass-nav-link:hover {
+          background: rgba(0, 32, 91, 0.06);
+          color: #FF5E00;
         }
 
-        /* Mobile header */
-        .mobile-header {
+        .glass-nav-info-btn {
+          padding: 7px 12px;
+          font-size: 12px;
+          font-weight: 600;
+          background: #fff7ed;
+          color: #c2410c;
+          border: 1px solid #fed7aa;
+          border-radius: 9999px;
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          transition: all 0.2s;
+        }
+        .glass-nav-info-btn:hover {
+          background: #ffedd5;
+          border-color: #fdba74;
+        }
+
+        .glass-user-badge {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 4px 12px 4px 6px;
+          background: rgba(0, 32, 91, 0.05);
+          border: 1px solid rgba(0, 32, 91, 0.1);
+          border-radius: 9999px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .glass-user-badge:hover {
+          background: rgba(0, 32, 91, 0.1);
+        }
+        .glass-user-avatar {
+          width: 30px;
+          height: 30px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #00205B 0%, #FF5E00 100%);
+          color: #ffffff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        .glass-auth-group {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+        .glass-btn-login {
+          padding: 8px 16px;
+          font-size: 13.5px;
+          font-weight: 600;
+          color: #00205B;
+          background: transparent;
+          border: none;
+          border-radius: 9999px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .glass-btn-login:hover {
+          background: rgba(0, 32, 91, 0.06);
+          color: #FF5E00;
+        }
+
+        .glass-btn-register {
+          padding: 8px 20px;
+          font-size: 13.5px;
+          font-weight: 700;
+          background: #FF5E00;
+          color: #ffffff;
+          border: none;
+          border-radius: 9999px;
+          cursor: pointer;
+          box-shadow: 0 4px 14px rgba(255, 94, 0, 0.35);
+          transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .glass-btn-register:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 6px 18px rgba(255, 94, 0, 0.5);
+        }
+
+        .glass-mobile-toggle {
           display: none;
+          width: 38px;
+          height: 38px;
+          border-radius: 50%;
+          background: rgba(0, 32, 91, 0.05);
+          border: none;
+          color: #00205B;
+          cursor: pointer;
+          align-items: center;
+          justify-content: center;
+          padding: 0;
+          transition: background 0.2s;
+        }
+        .glass-mobile-toggle:hover {
+          background: rgba(0, 32, 91, 0.1);
         }
 
+        @keyframes glassDrawerSlide {
+          from {
+            opacity: 0;
+            transform: translateY(-10px) scale(0.98);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        /* Breakpoint for Mobile / Tablet Navbar */
         @media (max-width: 1024px) {
-          .mobile-header {
+          .glass-nav-links {
+            display: none !important;
+          }
+          .glass-nav-info-btn {
+            display: none !important;
+          }
+          .glass-btn-register {
+            display: none !important;
+          }
+          .glass-mobile-toggle {
             display: flex !important;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 100;
-            background: #ffffff;
-            border-bottom: 1px solid #eeeeee;
-            padding: 12px 16px;
-            align-items: center;
-            justify-content: space-between;
+          }
+          .glass-navbar-island {
+            height: 56px !important;
+            padding: 0 10px 0 16px !important;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .glass-navbar-wrapper {
+            top: 10px !important;
+            padding: 0 10px !important;
+          }
+          .glass-btn-login {
+            padding: 6px 12px !important;
+            font-size: 12.5px !important;
           }
         }
 
@@ -1593,12 +2107,465 @@ export default function HomePage() {
           gap: 28px;
         }
 
-        /* Hero mobile */
-        @media (max-width: 1024px) {
-          .hero-content {
-            padding: 120px 16px 60px !important;
+        /* Hero Section Base & Responsive Styles */
+        .hero-section {
+          padding-top: 96px;
+          min-height: 640px;
+          max-height: 860px;
+          height: calc(100vh - 72px);
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+        }
+
+        .hero-gradient-overlay {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(90deg, rgba(0,18,52,0.92) 0%, rgba(0,32,91,0.76) 50%, rgba(12,35,64,0.42) 100%);
+          z-index: 1;
+        }
+
+        .hero-container {
+          max-width: 1240px;
+          width: 100%;
+          margin: 0 auto;
+          padding: 36px 32px 24px;
+          position: relative;
+          z-index: 2;
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+        }
+
+        .hero-grid {
+          display: grid;
+          grid-template-columns: 1.16fr 0.84fr;
+          gap: 60px;
+          align-items: center;
+          margin: auto 0;
+        }
+
+        .hero-left {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .hero-text-wrapper {
+          min-height: 250px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+        }
+
+        .hero-slide-anim {
+          animation: heroSlideCrossFade 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes heroSlideCrossFade {
+          from {
+            opacity: 0;
+            transform: translateY(12px);
           }
-          .hero-stats {
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .hero-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 6px 14px;
+          background: rgba(255, 255, 255, 0.12);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          border: 1px solid rgba(255, 255, 255, 0.22);
+          border-radius: 24px;
+          font-size: 13px;
+          font-weight: 500;
+          margin-bottom: 20px;
+          align-self: flex-start;
+        }
+
+        .hero-badge-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #FF5E00;
+          box-shadow: 0 0 8px rgba(255, 94, 0, 0.8);
+        }
+
+        .hero-title {
+          font-size: clamp(32px, 4.2vw, 48px);
+          font-weight: 800;
+          line-height: 1.18;
+          margin-bottom: 18px;
+          letter-spacing: -0.02em;
+          color: #ffffff;
+        }
+
+        .hero-desc {
+          font-size: 16px;
+          color: rgba(255, 255, 255, 0.85);
+          line-height: 1.65;
+          margin-bottom: 28px;
+          max-width: 540px;
+        }
+
+        .hero-cta-group {
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+          align-items: center;
+        }
+
+        .hero-btn-primary {
+          padding: 15px 28px;
+          font-size: 15px;
+          font-weight: 700;
+          background: #FF5E00;
+          color: #ffffff;
+          border: none;
+          border-radius: 12px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          box-shadow: 0 4px 20px rgba(255, 94, 0, 0.4);
+          transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .hero-btn-primary:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 24px rgba(255, 94, 0, 0.55);
+        }
+
+        .hero-btn-secondary {
+          padding: 15px 24px;
+          font-size: 15px;
+          font-weight: 600;
+          background: rgba(255, 255, 255, 0.12);
+          color: #ffffff;
+          border: 1.5px solid rgba(255, 255, 255, 0.35);
+          border-radius: 12px;
+          cursor: pointer;
+          backdrop-filter: blur(6px);
+          -webkit-backdrop-filter: blur(6px);
+          transition: background 0.2s, border-color 0.2s;
+        }
+        .hero-btn-secondary:hover {
+          background: rgba(255, 255, 255, 0.22);
+          border-color: rgba(255, 255, 255, 0.6);
+        }
+
+        .hero-btn-ai {
+          padding: 14px 22px;
+          font-size: 14px;
+          font-weight: 700;
+          background: rgba(0, 32, 91, 0.75);
+          color: #ffffff;
+          border: 1.5px solid rgba(255, 94, 0, 0.85);
+          border-radius: 12px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          transition: all 0.2s;
+        }
+        .hero-btn-ai:hover {
+          transform: translateY(-2px);
+          background: #00205B;
+          box-shadow: 0 6px 20px rgba(255, 94, 0, 0.3);
+        }
+
+        /* Mobile / Tablet Stats Ribbon */
+        .hero-mobile-stats {
+          display: none;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 8px;
+          margin-top: 24px;
+          padding: 14px 12px;
+          background: rgba(255, 255, 255, 0.08);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          border-radius: 14px;
+        }
+        .hero-mobile-stat-item {
+          text-align: center;
+        }
+        .hero-mobile-stat-val {
+          display: block;
+          font-size: 16px;
+          font-weight: 800;
+          color: #FF5E00;
+          line-height: 1.1;
+        }
+        .hero-mobile-stat-lbl {
+          display: block;
+          font-size: 10px;
+          color: rgba(255, 255, 255, 0.65);
+          margin-top: 2px;
+          font-weight: 500;
+        }
+
+        /* Desktop Stats Card */
+        .hero-stats-desktop {
+          display: block;
+        }
+        .hero-stats-card {
+          background: rgba(255, 255, 255, 0.07);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          border-radius: 24px;
+          padding: 32px 36px;
+          box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        }
+        .hero-stats-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 24px;
+          padding-bottom: 16px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        }
+        .hero-stats-indicator {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .hero-stats-pulse {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #22c55e;
+          box-shadow: 0 0 10px #22c55e;
+          animation: statsPulse 2s infinite;
+        }
+        @keyframes statsPulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.6; transform: scale(0.9); }
+        }
+
+        /* Floating Side Navigation Arrows (Model A - Glassmorphic, non-colliding) */
+        .hero-side-arrow {
+          position: absolute;
+          top: 50%;
+          transform: translateY(-50%);
+          z-index: 20;
+          width: 50px;
+          height: 50px;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.15);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border: 1.5px solid rgba(255, 255, 255, 0.28);
+          color: #ffffff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+          padding: 0;
+        }
+        .hero-side-arrow:hover {
+          background: #FF5E00;
+          border-color: #FF5E00;
+          color: #ffffff;
+          transform: translateY(-50%) scale(1.1);
+          box-shadow: 0 10px 28px rgba(255, 94, 0, 0.55);
+        }
+        .hero-side-arrow-left {
+          left: 28px;
+        }
+        .hero-side-arrow-right {
+          right: 28px;
+        }
+
+        /* Bottom Controls Bar */
+        .hero-controls-bar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 20px;
+          padding: 12px 20px;
+          background: rgba(0, 18, 52, 0.6);
+          backdrop-filter: blur(14px);
+          -webkit-backdrop-filter: blur(14px);
+          border: 1px solid rgba(255, 255, 255, 0.16);
+          border-radius: 18px;
+          margin-top: 24px;
+        }
+        .hero-controls-info {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 13px;
+          font-weight: 600;
+        }
+        .hero-slide-num {
+          color: #FF5E00;
+          font-weight: 800;
+          font-variant-numeric: tabular-nums;
+          font-size: 15px;
+        }
+        .hero-slide-num-sep {
+          color: rgba(255, 255, 255, 0.35);
+          font-size: 13px;
+        }
+        .hero-slide-total {
+          color: rgba(255, 255, 255, 0.6);
+          font-variant-numeric: tabular-nums;
+          font-size: 13px;
+        }
+        .hero-slide-divider {
+          width: 1px;
+          height: 14px;
+          background: rgba(255, 255, 255, 0.2);
+          margin: 0 8px;
+        }
+        .hero-slide-active-tag {
+          color: rgba(255, 255, 255, 0.9);
+          font-weight: 600;
+          font-size: 13px;
+          letter-spacing: 0.01em;
+        }
+
+        .hero-pills-track {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .hero-pill-btn {
+          width: 12px;
+          height: 8px;
+          border-radius: 4px;
+          background: rgba(255, 255, 255, 0.35);
+          border: none;
+          cursor: pointer;
+          position: relative;
+          overflow: hidden;
+          padding: 0;
+          transition: all 0.3s ease;
+        }
+        .hero-pill-btn:hover {
+          background: rgba(255, 255, 255, 0.6);
+        }
+        .hero-pill-btn.active {
+          width: 44px;
+          background: rgba(255, 255, 255, 0.2);
+        }
+        .hero-pill-progress {
+          position: absolute;
+          top: 0;
+          left: 0;
+          height: 100%;
+          width: 0%;
+          background: #FF5E00;
+          border-radius: 4px;
+          animation: heroPillFill 5s linear forwards;
+        }
+
+        @keyframes heroPillFill {
+          from { width: 0%; }
+          to { width: 100%; }
+        }
+
+        /* Hero Tablet Breakpoint */
+        @media (max-width: 1024px) {
+          .hero-section {
+            height: auto !important;
+            min-height: calc(100vh - 72px) !important;
+            max-height: none !important;
+            padding-top: 80px !important;
+          }
+          .hero-container {
+            padding: 30px 72px 24px !important;
+          }
+          .hero-side-arrow {
+            width: 44px !important;
+            height: 44px !important;
+          }
+          .hero-side-arrow-left {
+            left: 14px !important;
+          }
+          .hero-side-arrow-right {
+            right: 14px !important;
+          }
+          .hero-grid {
+            grid-template-columns: 1fr !important;
+            gap: 28px !important;
+          }
+          .hero-stats-desktop {
+            display: none !important;
+          }
+          .hero-mobile-stats {
+            display: grid !important;
+          }
+          .hero-text-wrapper {
+            min-height: auto !important;
+          }
+        }
+
+        /* Hero Mobile Breakpoint */
+        @media (max-width: 768px) {
+          .hero-section {
+            padding-top: 76px !important;
+          }
+          .hero-container {
+            padding: 24px 54px 20px !important;
+          }
+          .hero-side-arrow {
+            width: 38px !important;
+            height: 38px !important;
+          }
+          .hero-side-arrow-left {
+            left: 8px !important;
+          }
+          .hero-side-arrow-right {
+            right: 8px !important;
+          }
+          .hero-gradient-overlay {
+            background: linear-gradient(180deg, rgba(0,18,52,0.92) 0%, rgba(0,32,91,0.85) 60%, rgba(0,18,52,0.95) 100%) !important;
+          }
+          .hero-title {
+            font-size: clamp(24px, 6.2vw, 34px) !important;
+            line-height: 1.22 !important;
+            margin-bottom: 14px !important;
+          }
+          .hero-desc {
+            font-size: 13.5px !important;
+            line-height: 1.6 !important;
+            margin-bottom: 20px !important;
+          }
+          .hero-cta-group {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 10px !important;
+          }
+          .hero-btn-primary, .hero-btn-secondary, .hero-btn-ai {
+            justify-content: center !important;
+            width: 100% !important;
+            padding: 13px 18px !important;
+          }
+          .hero-controls-bar {
+            padding: 10px 14px !important;
+            margin-top: 20px !important;
+            justify-content: center !important;
+          }
+          .hero-slide-active-tag {
+            display: none !important;
+          }
+          .hero-slide-divider {
             display: none !important;
           }
         }
@@ -1649,6 +2616,33 @@ export default function HomePage() {
           }
         }
       `}</style>
+
+      {/* Job Quick View Modal */}
+      <JobQuickViewModal
+        job={selectedJob}
+        isOpen={isQuickViewOpen}
+        onClose={() => {
+          setIsQuickViewOpen(false);
+          setSelectedJob(null);
+        }}
+        isBookmarked={selectedJob ? savedJobIds.includes(selectedJob.id) : false}
+        onToggleBookmark={toggleBookmark}
+        divisionLabel={selectedJob ? divisionLabels[selectedJob.division] || selectedJob.division : ""}
+      />
+
+      {/* Career Matcher AI Modal */}
+      <CareerMatcherModal
+        isOpen={isCareerMatcherOpen}
+        onClose={() => setIsCareerMatcherOpen(false)}
+        jobs={activeJobs as any}
+        onSelectJob={(job) => {
+          setSelectedJob(job);
+          setIsQuickViewOpen(true);
+        }}
+      />
+
+      {/* Interactive Support Floating Chat */}
+      <FloatingChat />
     </div>
   );
 }

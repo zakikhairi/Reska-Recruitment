@@ -34,6 +34,8 @@ export async function GET(request: NextRequest) {
       include: {
         testSession: true,
         interview: true,
+        mcu: true,
+        offering: true,
         jobPosting: true,
         statusHistory: {
           orderBy: { createdAt: "desc" },
@@ -61,6 +63,8 @@ export async function GET(request: NextRequest) {
           status: app.testSession.status,
           sessionId: app.testSession.id,
           submittedAt: app.testSession.submittedAt,
+          totalScore: app.testSession.totalScore,
+          passed: app.testSession.passed,
         };
       }
 
@@ -71,19 +75,50 @@ export async function GET(request: NextRequest) {
           location: app.interview.location,
           interviewer: app.interview.interviewer,
           type: app.interview.type,
+          score: app.interview.score,
           result: app.interview.result,
           notes: app.interview.notes,
           zoomLink: app.interview.zoomLink,
         };
       }
 
+      // Add MCU schedule if exists
+      if (app.mcu) {
+        schedule.mcu = {
+          scheduledAt: app.mcu.scheduledAt,
+          location: app.mcu.location,
+          result: app.mcu.result,
+          notes: app.mcu.notes,
+        };
+      }
+
+      // Add Offering if exists
+      if (app.offering) {
+        schedule.offering = {
+          id: app.offering.id,
+          salary: app.offering.salary,
+          salaryPeriod: app.offering.salaryPeriod,
+          startDate: app.offering.startDate,
+          employmentType: app.offering.employmentType,
+          contractDuration: app.offering.contractDuration,
+          contractEndDate: app.offering.contractEndDate,
+          probationMonths: app.offering.probationMonths,
+          workLocation: app.offering.workLocation,
+          positionTitle: app.offering.positionTitle,
+          benefits: app.offering.benefits,
+          notes: app.offering.notes,
+          status: app.offering.status,
+          createdAt: app.offering.createdAt,
+        };
+      }
+
       return schedule;
     });
 
-    // Filter: Show applications that have test session OR interview
+    // Filter: Show applications that have test session OR interview OR mcu OR offering
     // Include those with null scheduledAt (waiting for schedule)
     const upcomingSchedules = schedules.filter(
-      (s) => s.test || s.interview
+      (s) => s.test || s.interview || s.mcu || s.offering
     );
 
     return NextResponse.json({

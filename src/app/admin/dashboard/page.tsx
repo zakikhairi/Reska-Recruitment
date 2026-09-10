@@ -206,6 +206,7 @@ export default function AdminDashboardPage() {
   const { jobs, _hasHydrated } = useJobsStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedFunnelStage, setSelectedFunnelStage] = useState<string | null>(null);
   const [applications, setApplications] = useState<any[]>([]);
   const [statsData, setStatsData] = useState<typeof stats>([]);
   const [statusDist, setStatusDist] = useState<typeof statusDistribution>([]);
@@ -279,9 +280,23 @@ export default function AdminDashboardPage() {
 
   const loadData = async () => {
     try {
-      // Fetch applications from API
-      const response = await fetch('/api/admin/applications');
+      // Fetch applications and jobs from API in parallel
+      const [response, jobsResponse] = await Promise.all([
+        fetch('/api/admin/applications'),
+        fetch('/api/admin/jobs').catch(() => null)
+      ]);
       const result = await response.json();
+
+      let activeJobsCount = 0;
+      if (jobsResponse && jobsResponse.ok) {
+        const jobsResult = await jobsResponse.json();
+        if (jobsResult.success && Array.isArray(jobsResult.jobs)) {
+          activeJobsCount = jobsResult.jobs.filter((j: any) => j.status === "ACTIVE").length;
+        }
+      }
+      if (activeJobsCount === 0 && jobs.length > 0) {
+        activeJobsCount = jobs.filter((j: any) => j.status === "ACTIVE").length;
+      }
 
       if (result.success) {
         const apps = result.applications.map((app: any) => ({
@@ -296,7 +311,6 @@ export default function AdminDashboardPage() {
 
         // Calculate stats
         const totalApplicants = apps.length;
-        const activeJobsCount = jobs.filter((j: any) => j.status === "ACTIVE").length;
         const completedTests = apps.filter((a: any) => a.status === "TEST_COMPLETED").length;
         const passedTests = apps.filter((a: any) => ["ACCEPTED", "INTERVIEW", "MCU", "OFFERED"].includes(a.status)).length;
         const passingRate = totalApplicants > 0 ? Math.round((passedTests / totalApplicants) * 100) : 0;
@@ -544,9 +558,39 @@ export default function AdminDashboardPage() {
     setShowNotifications(false);
   };
 
-  // Filter and sort applications based on search query
+  const handleExportCSV = () => {
+    if (applications.length === 0) return;
+    const headers = ["ID Lamaran", "Nama Pelamar", "Posisi", "Divisi", "Tanggal Pendaftaran", "Status Seleksi"];
+    const rows = applications.map(app => [
+      app.id,
+      `"${(app.applicantName || "").replace(/"/g, '""')}"`,
+      `"${(app.jobTitle || "").replace(/"/g, '""')}"`,
+      `"${(app.division || "").replace(/"/g, '""')}"`,
+      new Date(app.createdAt).toLocaleDateString("id-ID"),
+      getStatusConfig(app.status).label
+    ]);
+    const csvContent = [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Rekap_Pelamar_KAI_Services_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Filter and sort applications based on search query, status, and funnel stage
   const filteredApplications = applications
     .filter((app) => {
+      // Funnel stage filter
+      if (selectedFunnelStage) {
+        if (selectedFunnelStage === "adminCheck" && !["ADMIN_CHECK", "PENDING"].includes(app.status)) return false;
+        if (selectedFunnelStage === "onlineTest" && !["TEST_SCHEDULED", "IN_TEST", "TEST_COMPLETED"].includes(app.status)) return false;
+        if (selectedFunnelStage === "interviewMcu" && !["INTERVIEW", "MCU"].includes(app.status)) return false;
+        if (selectedFunnelStage === "accepted" && !["OFFERING", "OFFERED", "ACCEPTED"].includes(app.status)) return false;
+      }
+
       // Filter by status if not "all"
       if (statusFilter !== "all" && app.status !== statusFilter) return false;
 
@@ -824,18 +868,127 @@ export default function AdminDashboardPage() {
           ))}
         </div>
 
+        {/* Recruitment Pipeline Funnel */}
+        <div style={{
+          background: "linear-gradient(135deg, #ffffff 0%, #fbfcfe 100%)",
+          borderRadius: "16px",
+          padding: "24px 28px",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
+          border: "1px solid #eef2f6",
+          marginBottom: "32px",
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <h2 style={{ fontSize: "18px", fontWeight: 800, color: "#00205B", margin: 0, letterSpacing: "-0.01em" }}>
+                  Pipeline Alur Seleksi Rekrutmen
+                </h2>
+                <span style={{
+                  padding: "3px 8px",
+                  background: "#e0f2fe",
+                  color: "#0284c7",
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  borderRadius: "20px"
+                }}>
+                  Interaktif
+                </span>
+              </div>
+              <p style={{ fontSize: "13px", color: "#64748b", margin: "4px 0 0" }}>
+                Klik pada salah satu tahap untuk memfilter daftar pelamar secara langsung
+              </p>
+            </div>
+            {selectedFunnelStage && (
+              <button
+                onClick={() => setSelectedFunnelStage(null)}
+                style={{
+                  padding: "6px 14px",
+                  background: "#f1f5f9",
+                  border: "none",
+                  borderRadius: "20px",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  color: "#475569",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px"
+                }}
+              >
+                <X className="w-3.5 h-3.5" />
+                Reset Filter Pipeline
+              </button>
+            )}
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "14px" }}>
+            {[
+              { key: "all", label: "1. Berkas Masuk", sub: "Total pendaftar", count: applications.length, color: "#00205B", bg: "#f0f4ff", icon: <Users className="w-4 h-4" /> },
+              { key: "adminCheck", label: "2. Verifikasi Berkas", sub: "Review administrasi", count: applications.filter(a => ["ADMIN_CHECK", "PENDING"].includes(a.status)).length, color: "#d97706", bg: "#fef3c7", icon: <FileText className="w-4 h-4" /> },
+              { key: "onlineTest", label: "3. Ujian Online CAT", sub: "Jadwal & tes aktif", count: applications.filter(a => ["TEST_SCHEDULED", "IN_TEST", "TEST_COMPLETED"].includes(a.status)).length, color: "#2563eb", bg: "#dbeafe", icon: <ClipboardCheck className="w-4 h-4" /> },
+              { key: "interviewMcu", label: "4. Wawancara & MCU", sub: "Evaluasi fisik & interview", count: applications.filter(a => ["INTERVIEW", "MCU"].includes(a.status)).length, color: "#9333ea", bg: "#f3e8ff", icon: <Clock className="w-4 h-4" /> },
+              { key: "accepted", label: "5. Offering / Lolos", sub: "Kandidat diterima", count: applications.filter(a => ["OFFERING", "OFFERED", "ACCEPTED"].includes(a.status)).length, color: "#16a34a", bg: "#dcfce7", icon: <CheckCircle2 className="w-4 h-4" /> },
+            ].map((stage) => {
+              const isSelected = selectedFunnelStage === (stage.key === "all" ? null : stage.key);
+              return (
+                <div
+                  key={stage.key}
+                  onClick={() => setSelectedFunnelStage(stage.key === "all" ? null : stage.key)}
+                  style={{
+                    padding: "16px",
+                    borderRadius: "14px",
+                    background: isSelected ? stage.bg : "#ffffff",
+                    border: `2px solid ${isSelected ? stage.color : "#e2e8f0"}`,
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                    boxShadow: isSelected ? `0 6px 20px ${stage.color}25` : "0 1px 3px rgba(0,0,0,0.02)",
+                    transform: isSelected ? "translateY(-2px)" : "none",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                    <div style={{
+                      width: "32px",
+                      height: "32px",
+                      borderRadius: "8px",
+                      background: stage.bg,
+                      color: stage.color,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center"
+                    }}>
+                      {stage.icon}
+                    </div>
+                    <span style={{ fontSize: "20px", fontWeight: 800, color: stage.color }}>
+                      {stage.count}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: "#0f172a", marginBottom: "2px" }}>
+                    {stage.label}
+                  </div>
+                  <div style={{ fontSize: "11px", color: "#64748b" }}>
+                    {stage.sub}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: "28px" }}>
           {/* Main Content */}
           <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
 
             {/* Recent Applications Table */}
             <div style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>
                 <div>
                   <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#111111", marginBottom: "4px" }}>Lamaran Terbaru</h2>
-                  <p style={{ fontSize: "14px", color: "#888888" }}>{filteredApplications.length} pelamar ditemukan</p>
+                  <p style={{ fontSize: "14px", color: "#888888" }}>
+                    {filteredApplications.length} pelamar ditemukan
+                    {selectedFunnelStage && <span style={{ color: "#FF5E00", fontWeight: 600 }}> (Filtered by Pipeline)</span>}
+                  </p>
                 </div>
-                <div style={{ display: "flex", gap: "12px" }}>
+                <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
                   <div style={{ position: "relative" }}>
                     <Search className="w-4 h-4" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#888888" }} />
                     <input
@@ -843,10 +996,31 @@ export default function AdminDashboardPage() {
                       placeholder="Cari nama..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      style={{ padding: "10px 14px 10px 42px", border: "2px solid #eeeeee", borderRadius: "10px", fontSize: "14px", outline: "none", width: "200px" }}
+                      style={{ padding: "10px 14px 10px 42px", border: "2px solid #eeeeee", borderRadius: "10px", fontSize: "14px", outline: "none", width: "180px" }}
                     />
                   </div>
                   <StatusFilterDropdown statusFilter={statusFilter} setStatusFilter={setStatusFilter} />
+                  <button
+                    onClick={handleExportCSV}
+                    style={{
+                      padding: "10px 16px",
+                      background: "#f0fdf4",
+                      border: "2px solid #bbf7d0",
+                      borderRadius: "10px",
+                      color: "#16a34a",
+                      fontSize: "13.5px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      transition: "all 0.2s ease"
+                    }}
+                    title="Export data pelamar ke file CSV"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Export CSV</span>
+                  </button>
                 </div>
               </div>
 
@@ -1034,6 +1208,57 @@ export default function AdminDashboardPage() {
 
           {/* Sidebar */}
           <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+            {/* Live Activity Feed */}
+            <div style={{ background: "#ffffff", borderRadius: "16px", padding: "24px 28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span style={{ width: "8px", height: "8px", background: "#16a34a", borderRadius: "50%", boxShadow: "0 0 8px #16a34a" }} />
+                  <h2 style={{ fontSize: "17px", fontWeight: 700, color: "#111111", margin: 0 }}>Aktivitas Pelamar</h2>
+                </div>
+                <span style={{ fontSize: "11px", color: "#64748b", background: "#f1f5f9", padding: "3px 8px", borderRadius: "20px", fontWeight: 600 }}>Live Feed</span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                {applications.length === 0 ? (
+                  <p style={{ fontSize: "13px", color: "#888", textAlign: "center", padding: "20px 0" }}>Belum ada aktivitas</p>
+                ) : (
+                  applications.slice(0, 4).map((app, idx) => (
+                    <div key={idx} style={{ display: "flex", gap: "12px", alignItems: "flex-start", paddingBottom: idx < Math.min(applications.length, 4) - 1 ? "12px" : "0", borderBottom: idx < Math.min(applications.length, 4) - 1 ? "1px solid #f1f5f9" : "none" }}>
+                      <div style={{
+                        width: "36px",
+                        height: "36px",
+                        borderRadius: "10px",
+                        background: "linear-gradient(135deg, #00205B 0%, #1e3a8a 100%)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#ffffff",
+                        fontWeight: 700,
+                        fontSize: "12px",
+                        flexShrink: 0
+                      }}>
+                        {(app.applicantName || "P")[0].toUpperCase()}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: "#0f172a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {app.applicantName}
+                        </p>
+                        <p style={{ margin: "2px 0 0", fontSize: "12px", color: "#64748b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {app.jobTitle}
+                        </p>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "4px" }}>
+                          <span style={{ fontSize: "10.5px", padding: "1px 6px", borderRadius: "6px", background: getStatusConfig(app.status).bg, color: getStatusConfig(app.status).text, fontWeight: 700 }}>
+                            {getStatusConfig(app.status).label}
+                          </span>
+                          <span style={{ fontSize: "10.5px", color: "#94a3b8" }}>
+                            {new Date(app.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
 
             {/* Status Distribution */}
             <div style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
