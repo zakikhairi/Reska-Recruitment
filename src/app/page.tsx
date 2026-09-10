@@ -66,7 +66,7 @@ const heroSlides = [
     tag: "Culinary",
   },
   {
-    image: "/images/hero-4.jpg",
+    image: "/images/hero-4.png",
     badge: "Manajemen Kawasan Stasiun - ResParking",
     titleLine1: "Kelola Layanan Parkir",
     titleHighlight: "Modern & Terintegrasi",
@@ -75,7 +75,7 @@ const heroSlides = [
     tag: "ResParking",
   },
   {
-    image: "/images/hero-5.jpg",
+    image: "/images/hero-5.png",
     badge: "Hospitality & Barista - Loko Coffee Shop",
     titleLine1: "Karier Kreatif di",
     titleHighlight: "Loko Coffee Shop",
@@ -84,7 +84,7 @@ const heroSlides = [
     tag: "Loko Coffee",
   },
   {
-    image: "/images/hero-6.jpg",
+    image: "/images/hero-6.png",
     badge: "Keamanan & Pelayanan - Security & Customer Care",
     titleLine1: "Berikan Rasa Aman &",
     titleHighlight: "Pelayanan Sepenuh Hati",

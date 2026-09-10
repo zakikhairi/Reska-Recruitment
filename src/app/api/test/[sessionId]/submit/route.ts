@@ -79,10 +79,17 @@ export async function POST(
       );
     }
 
-    if (session.status === "SCORED") {
+    if (session.status === "SCORED" || session.status === "SUBMITTED" || session.status === "COMPLETED" || session.submittedAt) {
       return NextResponse.json(
-        { success: false, error: "Tes sudah dinilai" },
+        { success: false, error: "Tes sudah selesai dikerjakan dan tidak dapat disubmit lagi" },
         { status: 400 }
+      );
+    }
+
+    if (session.scheduledAt && new Date(session.scheduledAt) > new Date()) {
+      return NextResponse.json(
+        { success: false, error: "Jadwal tes belum dimulai" },
+        { status: 403 }
       );
     }
 

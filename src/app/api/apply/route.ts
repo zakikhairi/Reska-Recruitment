@@ -107,6 +107,11 @@ export async function GET(request: NextRequest) {
     // Get applicant by userId
     const applicant = await prisma.applicant.findFirst({
       where: { userId },
+      include: {
+        documents: {
+          orderBy: { uploadedAt: "desc" },
+        },
+      },
     });
 
     if (!applicant) {
@@ -115,6 +120,9 @@ export async function GET(request: NextRequest) {
         applications: [],
       });
     }
+
+    // Find latest MCU document for the applicant
+    const mcuDoc = applicant.documents?.find((d) => d.type === "MCU");
 
     // Get applications
     const applications = await prisma.application.findMany({
@@ -169,6 +177,12 @@ export async function GET(request: NextRequest) {
           location: app.mcu.location,
           result: app.mcu.result,
           notes: app.mcu.notes,
+          document: mcuDoc ? {
+            id: mcuDoc.id,
+            fileName: mcuDoc.fileName,
+            fileUrl: mcuDoc.fileUrl,
+            fileSize: mcuDoc.fileSize,
+          } : null,
         } : null,
         offering: app.offering ? {
           id: app.offering.id,

@@ -144,10 +144,14 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
           setCanStart(result.canStart);
           setScheduledTime(result.scheduledAt || null);
 
-          if (!result.canStart && result.minutesUntilStart !== undefined && result.minutesUntilStart > 0) {
+          const seconds = result.secondsUntilStart !== undefined
+            ? result.secondsUntilStart
+            : (result.minutesUntilStart !== undefined ? result.minutesUntilStart * 60 : 0);
+
+          if (!result.canStart && seconds > 0) {
             // Time hasn't arrived yet - set countdown
-            setCountdownToStart(result.minutesUntilStart * 60);
-            startCountdownToStart(result.minutesUntilStart * 60);
+            setCountdownToStart(seconds);
+            startCountdownToStart(seconds);
           }
         }
 
@@ -260,8 +264,8 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
   }, [testState]);
 
   const handleStart = async () => {
-    // Prevent starting if test is completed or expired
-    if (isTestCompleted || isTestExpired) {
+    // Prevent starting if test is completed, expired, or scheduled time has not arrived yet
+    if (isTestCompleted || isTestExpired || !canStart) {
       return;
     }
 
@@ -557,38 +561,43 @@ export default function TestInterfacePage({ params }: { params: Promise<{ sessio
             </div>
           )}
 
-          <div style={{ background: "#fef3c7", borderRadius: "12px", padding: "16px", marginBottom: "28px" }}>
-            <p style={{ fontSize: "13px", color: "#92400e", margin: 0, display: "flex", alignItems: "flex-start", gap: "10px" }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, marginTop: "2px" }}>
-                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-              </svg>
-              <span>Pastikan koneksi internet stabil. Switch tab atau minimize jendela akan tercatat.</span>
-            </p>
-          </div>
+          {!isTestCompleted && !isTestExpired && (
+            <>
+              <div style={{ background: "#fef3c7", borderRadius: "12px", padding: "16px", marginBottom: "28px" }}>
+                <p style={{ fontSize: "13px", color: "#92400e", margin: 0, display: "flex", alignItems: "flex-start", gap: "10px" }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, marginTop: "2px" }}>
+                    <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                  </svg>
+                  <span>Pastikan koneksi internet stabil. Switch tab atau minimize jendela akan tercatat.</span>
+                </p>
+              </div>
 
-          <button
-            onClick={handleStart}
-            disabled={!canStart || isTestCompleted || isTestExpired}
-            style={{
-              width: "100%",
-              height: "56px",
-              background: (canStart && !isTestCompleted && !isTestExpired) ? "linear-gradient(135deg, #FF5E00, #ff7a2f)" : "#9ca3af",
-              color: "#fff",
-              border: "none",
-              borderRadius: "14px",
-              fontSize: "16px",
-              fontWeight: 700,
-              cursor: (canStart && !isTestCompleted && !isTestExpired) ? "pointer" : "not-allowed",
-              opacity: 0.7,
-            }}
-          >
-            {(isTestCompleted || isTestExpired) ? "Tes Tidak Tersedia" : canStart ? "Mulai Tes" : "Menunggu Waktu Tes..."}
-          </button>
+              <button
+                onClick={handleStart}
+                disabled={!canStart}
+                style={{
+                  width: "100%",
+                  height: "56px",
+                  background: canStart ? "linear-gradient(135deg, #FF5E00, #ff7a2f)" : "#cbd5e1",
+                  color: canStart ? "#fff" : "#64748b",
+                  border: "none",
+                  borderRadius: "14px",
+                  fontSize: "16px",
+                  fontWeight: 700,
+                  cursor: canStart ? "pointer" : "not-allowed",
+                  boxShadow: canStart ? "0 4px 14px rgba(255, 94, 0, 0.35)" : "none",
+                  transition: "all 0.2s ease",
+                }}
+              >
+                {canStart ? "Mulai Tes" : "Menunggu Waktu Tes..."}
+              </button>
 
-          {!canStart && !isTestCompleted && !isTestExpired && (
-            <p style={{ textAlign: "center", fontSize: "12px", color: "#888", marginTop: "12px" }}>
-              Tombol akan aktif otomatis saat waktu tes tiba
-            </p>
+              {!canStart && (
+                <p style={{ textAlign: "center", fontSize: "12px", color: "#888", marginTop: "12px" }}>
+                  Tombol akan aktif otomatis saat waktu tes tiba
+                </p>
+              )}
+            </>
           )}
         </div>
       </div>

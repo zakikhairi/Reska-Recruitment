@@ -144,9 +144,10 @@ export async function GET(
         // Check scheduled time
         const scheduledAt = application.testSession?.scheduledAt;
         const canStart = !scheduledAt || new Date(scheduledAt) <= now;
-        const minutesUntilStart = scheduledAt
-          ? Math.max(0, Math.ceil((new Date(scheduledAt).getTime() - now.getTime()) / (1000 * 60)))
+        const secondsUntilStart = scheduledAt
+          ? Math.max(0, Math.ceil((new Date(scheduledAt).getTime() - now.getTime()) / 1000))
           : 0;
+        const minutesUntilStart = Math.ceil(secondsUntilStart / 60);
 
         return NextResponse.json({
           success: true,
@@ -162,6 +163,7 @@ export async function GET(
           canStart,
           scheduledAt: scheduledAt?.toISOString() || null,
           minutesUntilStart,
+          secondsUntilStart,
         });
       } else {
         return NextResponse.json(
@@ -189,9 +191,10 @@ export async function GET(
     // Check scheduled time
     const scheduledAt = session.scheduledAt;
     const canStart = !scheduledAt || new Date(scheduledAt) <= now;
-    const minutesUntilStart = scheduledAt
-      ? Math.max(0, Math.ceil((new Date(scheduledAt).getTime() - now.getTime()) / (1000 * 60)))
+    const secondsUntilStart = scheduledAt
+      ? Math.max(0, Math.ceil((new Date(scheduledAt).getTime() - now.getTime()) / 1000))
       : 0;
+    const minutesUntilStart = Math.ceil(secondsUntilStart / 60);
 
     // Get questions
     let questions: any[] = [];
@@ -274,7 +277,7 @@ export async function GET(
     }
 
     // Check if already submitted or scored
-    if (session.status === "SUBMITTED" || session.status === "SCORED") {
+    if (session.status === "SUBMITTED" || session.status === "SCORED" || session.status === "COMPLETED" || session.submittedAt) {
       return NextResponse.json({
         success: true,
         session: {
@@ -287,17 +290,17 @@ export async function GET(
           tabSwitchCount: session.tabSwitchCount,
         },
         jobTitle: application.jobPosting.title,
-        questions: safeQuestions,
+        questions: [],
         config: {
           totalDurationMinutes: application.jobPosting.testConfig.totalDurationMinutes,
           categories: application.jobPosting.testConfig.categories.split(","),
         },
-        canStart: false, // Already done
+        canStart: false,
         scheduledAt: scheduledAt?.toISOString() || null,
         isCompleted: true,
         completedMessage: session.status === "SCORED"
           ? "Tes sudah dinilai"
-          : "Tes sudah dikerjakan",
+          : "Tes sudah selesai dikerjakan dan tidak dapat diakses lagi",
       });
     }
 
@@ -317,10 +320,35 @@ export async function GET(
           totalDurationMinutes: application.jobPosting.testConfig.totalDurationMinutes,
           categories: application.jobPosting.testConfig.categories.split(","),
         },
-        canStart: false, // Time expired
+        canStart: false,
         scheduledAt: scheduledAt?.toISOString() || null,
         isExpired: true,
-        expiredMessage: "Waktu mengerjakan tes sudah berakhir",
+        expiredMessage: "Batas waktu pengerjaan tes telah berakhir",
+      });
+    }
+
+    // Check if scheduled time has not arrived yet
+    if (!canStart) {
+      return NextResponse.json({
+        success: true,
+        session: {
+          id: session.id,
+          status: session.status,
+          startedAt: session.startedAt,
+          tabSwitchCount: session.tabSwitchCount,
+        },
+        jobTitle: application.jobPosting.title,
+        questions: [],
+        config: {
+          totalDurationMinutes: application.jobPosting.testConfig.totalDurationMinutes,
+          categories: application.jobPosting.testConfig.categories.split(","),
+          questionsPerCategory: application.jobPosting.testConfig.questionsPerCategory,
+          passingGrade: application.jobPosting.testConfig.overallPassingGrade,
+        },
+        canStart: false,
+        scheduledAt: scheduledAt?.toISOString() || null,
+        minutesUntilStart,
+        secondsUntilStart,
       });
     }
 
@@ -341,9 +369,9 @@ export async function GET(
         questionsPerCategory: application.jobPosting.testConfig.questionsPerCategory,
         passingGrade: application.jobPosting.testConfig.overallPassingGrade,
       },
-      canStart,
+      canStart: true,
       scheduledAt: scheduledAt?.toISOString() || null,
-      minutesUntilStart,
+      minutesUntilStart: 0,
     });
   } catch (error) {
     console.error("Error fetching test:", error);
@@ -384,11 +412,30 @@ export async function POST(
     });
 
     if (existingSession) {
-      // Check if already submitted
-      if (existingSession.status === "SUBMITTED" || existingSession.status === "SCORED") {
+      // Check if already completed or submitted
+      if (existingSession.status === "SUBMITTED" || existingSession.status === "SCORED" || existingSession.status === "COMPLETED" || existingSession.submittedAt) {
         return NextResponse.json(
-          { success: false, error: "Test sudah selesai" },
-          { status: 400 }
+          { success: false, error: "Tes sudah selesai dikerjakan dan tidak dapat diakses lagi." },
+          { status: 403 }
+        );
+      }
+
+      // Check if scheduled time has not arrived yet
+      if (existingSession.scheduledAt && new Date(existingSession.scheduledAt) > new Date()) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Jadwal tes belum dimulai. Silakan menunggu hingga waktu yang ditentukan (${new Date(existingSession.scheduledAt).toLocaleString("id-ID")}).`,
+          },
+          { status: 403 }
+        );
+      }
+
+      // Check if time window has expired
+      if (existingSession.endTime && new Date(existingSession.endTime) < new Date()) {
+        return NextResponse.json(
+          { success: false, error: "Batas waktu pengerjaan tes telah berakhir." },
+          { status: 403 }
         );
       }
 
@@ -486,7 +533,7 @@ export async function POST(
       });
     }
 
-    // Get application with job posting and test config
+    // Get application with job posting, test config, and existing testSession
     const application = await prisma.application.findUnique({
       where: { id: sessionId },
       include: {
@@ -495,6 +542,7 @@ export async function POST(
             testConfig: true,
           },
         },
+        testSession: true,
       },
     });
 
@@ -503,6 +551,30 @@ export async function POST(
         { success: false, error: "Lamaran tidak ditemukan" },
         { status: 404 }
       );
+    }
+
+    if (application.testSession) {
+      if (application.testSession.status === "SUBMITTED" || application.testSession.status === "SCORED" || application.testSession.status === "COMPLETED" || application.testSession.submittedAt) {
+        return NextResponse.json(
+          { success: false, error: "Tes sudah selesai dikerjakan dan tidak dapat diakses lagi." },
+          { status: 403 }
+        );
+      }
+      if (application.testSession.scheduledAt && new Date(application.testSession.scheduledAt) > new Date()) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Jadwal tes belum dimulai. Silakan menunggu hingga waktu yang ditentukan (${new Date(application.testSession.scheduledAt).toLocaleString("id-ID")}).`,
+          },
+          { status: 403 }
+        );
+      }
+      if (application.testSession.endTime && new Date(application.testSession.endTime) < new Date()) {
+        return NextResponse.json(
+          { success: false, error: "Batas waktu pengerjaan tes telah berakhir." },
+          { status: 403 }
+        );
+      }
     }
 
     if (!application.jobPosting.testConfig) {

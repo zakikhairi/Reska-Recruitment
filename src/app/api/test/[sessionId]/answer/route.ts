@@ -30,6 +30,30 @@ export async function PUT(
       );
     }
 
+    // 1. Cek apakah tes sudah selesai / disubmit
+    if (session.status === "SUBMITTED" || session.status === "SCORED" || session.status === "COMPLETED" || session.submittedAt) {
+      return NextResponse.json(
+        { success: false, error: "Tes sudah selesai dikerjakan dan jawaban tidak dapat diubah lagi." },
+        { status: 403 }
+      );
+    }
+
+    // 2. Cek apakah waktu tes belum tiba
+    if (session.scheduledAt && new Date(session.scheduledAt) > new Date()) {
+      return NextResponse.json(
+        { success: false, error: "Jadwal tes belum dimulai." },
+        { status: 403 }
+      );
+    }
+
+    // 3. Cek apakah waktu tes sudah habis
+    if (session.endTime && new Date(session.endTime) < new Date()) {
+      return NextResponse.json(
+        { success: false, error: "Batas waktu pengerjaan tes telah berakhir." },
+        { status: 403 }
+      );
+    }
+
     // Parse answer mappings from tabSwitchLogs
     let answerMappings: Record<string, any> = {};
     if (session.tabSwitchLogs) {

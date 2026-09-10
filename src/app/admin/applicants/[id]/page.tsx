@@ -183,8 +183,6 @@ const documentTypes = [
   { key: "TRANSCRIPT", label: "Transkrip Nilai", icon: FileText },
   { key: "SKCK", label: "Pas Foto 3x4", icon: Image },
   { key: "CERTIFICATE", label: "Sertifikat", icon: FileText },
-  { key: "MCU", label: "Hasil / Berkas MCU", icon: HeartPulse },
-  { key: "INTERVIEW_NOTE", label: "Catatan Interview", icon: Award },
 ];
 
 export default function ApplicantDetailPage() {

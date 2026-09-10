@@ -82,6 +82,34 @@ const getStatusLabel = (status: string): string => {
   return labels[status] || status;
 };
 
+const FILTER_TABS = [
+  { key: "all", label: "Semua" },
+  { key: "PENDING", label: "Menunggu" },
+  { key: "ADMIN_CHECK", label: "Verifikasi" },
+  { key: "TEST_SCHEDULED", label: "Menunggu Tes" },
+  { key: "IN_TEST", label: "Sedang Tes" },
+  { key: "TEST_COMPLETED", label: "Tes Selesai" },
+  { key: "INTERVIEW", label: "Interview" },
+  { key: "MCU", label: "Medical Check-Up" },
+  { key: "OFFERING", label: "Offering" },
+  { key: "ACCEPTED", label: "Diterima" },
+  { key: "REJECTED", label: "Ditolak" },
+];
+
+const statusPillConfig: Record<string, { bg: string; text: string; label: string }> = {
+  PENDING: { bg: "#fef3c7", text: "#d97706", label: "Menunggu" },
+  ADMIN_CHECK: { bg: "#fef3c7", text: "#d97706", label: "Verifikasi" },
+  TEST_SCHEDULED: { bg: "#dbeafe", text: "#2563eb", label: "Menunggu Tes" },
+  IN_TEST: { bg: "#e0e7ff", text: "#4f46e5", label: "Sedang Tes" },
+  TEST_COMPLETED: { bg: "#dcfce7", text: "#16a34a", label: "Tes Selesai" },
+  INTERVIEW: { bg: "#fce7f3", text: "#be185d", label: "Interview" },
+  MCU: { bg: "#d1fae5", text: "#059669", label: "Medical Check-Up" },
+  OFFERING: { bg: "#fef3c7", text: "#d97706", label: "Offering" },
+  OFFERED: { bg: "#fef3c7", text: "#d97706", label: "Offering" },
+  ACCEPTED: { bg: "#dcfce7", text: "#16a34a", label: "Diterima" },
+  REJECTED: { bg: "#fee2e2", text: "#dc2626", label: "Ditolak" },
+};
+
 interface TestSessionData {
   id: string;
   status: string;
@@ -212,6 +240,7 @@ export default function ApplicantDashboardPage() {
   const [activeGuideTab, setActiveGuideTab] = useState<"akhlak" | "cat" | "interview">("akhlak");
   const [showReminder, setShowReminder] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [filter, setFilter] = useState("all");
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
@@ -310,6 +339,9 @@ export default function ApplicantDashboardPage() {
   const adminCheckApps = applications.filter((a) => ["ADMIN_CHECK", "PENDING"].includes(a.status)).length;
   const testApps = applications.filter((a) => ["TEST_SCHEDULED", "IN_TEST", "TEST_COMPLETED"].includes(a.status)).length;
   const interviewApps = applications.filter((a) => ["INTERVIEW", "MCU", "OFFERING", "ACCEPTED"].includes(a.status)).length;
+  const filteredApps = filter === "all"
+    ? applications
+    : applications.filter((a) => a.status === filter);
 
   const userInitials = (userName || "Pelamar")
     .split(" ")
@@ -464,8 +496,43 @@ export default function ApplicantDashboardPage() {
           </div>
         </MobileSection>
 
-        {/* Applications with Stepper (Mobile) */}
-        <MobileSection title="Lamaran Saya" action="Lihat Semua">
+        {/* Applications List (Mobile matching SS) */}
+        <div style={{ marginBottom: "16px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
+            <h2 style={{ fontSize: "14px", fontWeight: 700, color: "#00205B", borderBottom: "2px solid #FF5E00", paddingBottom: "4px", margin: 0 }}>
+              Lamaran Saya
+            </h2>
+            <Link href="/applicant/applications" style={{ textDecoration: "none", fontSize: "11px", color: "#FF5E00", fontWeight: 700 }}>
+              Lihat Semua ({applications.length})
+            </Link>
+          </div>
+          {/* Filter Tabs Scrollable */}
+          <div style={{ display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "8px", marginBottom: "12px", WebkitOverflowScrolling: "touch" }}>
+            {FILTER_TABS.map((f) => {
+              const isActive = filter === f.key;
+              return (
+                <button
+                  key={f.key}
+                  onClick={() => setFilter(f.key)}
+                  style={{
+                    padding: "6px 12px",
+                    background: isActive ? "#00205B" : "#ffffff",
+                    color: isActive ? "#ffffff" : "#666666",
+                    border: "1.5px solid",
+                    borderColor: isActive ? "#00205B" : "#e5e5e5",
+                    borderRadius: "16px",
+                    fontSize: "11px",
+                    fontWeight: 600,
+                    whiteSpace: "nowrap",
+                    cursor: "pointer",
+                  }}
+                >
+                  {f.label}
+                </button>
+              );
+            })}
+          </div>
+
           {isLoading ? (
             <MobileLoading />
           ) : applications.length === 0 ? (
@@ -479,206 +546,79 @@ export default function ApplicantDashboardPage() {
                 </Link>
               }
             />
+          ) : filteredApps.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "20px", background: "#ffffff", borderRadius: "12px", border: "1px dashed #e2e8f0" }}>
+              <p style={{ fontSize: "12px", color: "#64748b", margin: "0 0 8px" }}>
+                Tidak ada lamaran berstatus <strong>{FILTER_TABS.find(t => t.key === filter)?.label}</strong>
+              </p>
+              <button
+                onClick={() => setFilter("all")}
+                style={{ padding: "4px 10px", background: "#f1f5f9", border: "1px solid #cbd5e1", borderRadius: "6px", fontSize: "11px", color: "#00205B", fontWeight: 600 }}
+              >
+                Tampilkan Semua
+              </button>
+            </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              {applications.slice(0, 3).map((app) => {
-                const currentStage = getStageNumberFromStatus(app.status);
-                const badge = getStatusBadgeConfig(app.status);
-                const isTestActive = ["TEST_SCHEDULED", "IN_TEST"].includes(app.status);
-
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {filteredApps.map((app) => {
+                const status = statusPillConfig[app.status] || {
+                  bg: "#f1f5f9",
+                  text: "#475569",
+                  label: app.status,
+                };
                 return (
-                  <div
+                  <Link
                     key={app.id}
-                    style={{
-                      background: "#ffffff",
-                      borderRadius: "14px",
-                      padding: "16px",
-                      boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
-                      border: "1px solid #e2e8f0",
-                    }}
+                    href={`/applicant/applications#app-${app.id}`}
+                    style={{ textDecoration: "none", color: "inherit" }}
                   >
-                    {/* Header */}
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
-                      <div style={{ flex: 1, minWidth: 0, paddingRight: "8px" }}>
-                        <h3
+                    <div
+                      style={{
+                        background: "#ffffff",
+                        borderRadius: "12px",
+                        padding: "14px",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+                        border: "1.5px solid #e5e5e5",
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
+                        <div style={{ flex: 1, minWidth: 0, paddingRight: "8px" }}>
+                          <h4 style={{ fontSize: "13.5px", fontWeight: 700, color: "#111111", margin: "0 0 2px" }}>
+                            {app.job?.title || "Lowongan Posisi"}
+                          </h4>
+                          <p style={{ fontSize: "11.5px", color: "#666666", margin: 0 }}>
+                            {app.job?.location || "Indonesia"} • {formatDivision(app.job?.division)}
+                          </p>
+                        </div>
+                        <span
                           style={{
-                            fontSize: "14px",
-                            fontWeight: 800,
-                            color: "#00205B",
-                            margin: "0 0 4px",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
+                            fontSize: "11px",
+                            fontWeight: 700,
+                            padding: "4px 10px",
+                            borderRadius: "12px",
+                            background: status.bg,
+                            color: status.text,
                             whiteSpace: "nowrap",
                           }}
                         >
-                          {app.job?.title || "Lowongan Posisi"}
-                        </h3>
-                        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                          <span style={{ fontSize: "10px", padding: "2px 8px", background: "#f0f4ff", color: "#00205B", borderRadius: "10px", fontWeight: 600 }}>
-                            {formatDivision(app.job?.division)}
-                          </span>
-                          <span style={{ fontSize: "10px", color: "#94a3b8" }}>
-                            {new Date(app.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
-                          </span>
-                        </div>
+                          {status.label}
+                        </span>
                       </div>
-                      <span
-                        style={{
-                          fontSize: "10px",
-                          fontWeight: 700,
-                          padding: "4px 8px",
-                          borderRadius: "12px",
-                          background: badge.bg,
-                          color: badge.text,
-                          border: `1px solid ${badge.border}`,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {badge.label}
-                      </span>
-                    </div>
-
-                    {/* Progress Stepper (Mobile Condensed) */}
-                    <div style={{ margin: "14px 0 10px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", position: "relative", marginBottom: "6px" }}>
-                        {/* Connecting Line */}
-                        <div
-                          style={{
-                            position: "absolute",
-                            top: "10px",
-                            left: "14px",
-                            right: "14px",
-                            height: "2px",
-                            background: "#e2e8f0",
-                            zIndex: 1,
-                          }}
-                        />
-                        <div
-                          style={{
-                            position: "absolute",
-                            top: "10px",
-                            left: "14px",
-                            width: `${Math.max(0, Math.min(100, ((currentStage - 1) / 4) * 100))}%`,
-                            height: "2px",
-                            background: "#16a34a",
-                            zIndex: 2,
-                            transition: "width 0.4s ease",
-                          }}
-                        />
-
-                        {RECRUITMENT_STAGES.map((st) => {
-                          const isCompleted = st.id < currentStage || (st.id === 5 && app.status === "ACCEPTED");
-                          const isCurrent = st.id === currentStage && app.status !== "ACCEPTED" && app.status !== "REJECTED";
-                          const isFailed = st.id === 5 && app.status === "REJECTED";
-
-                          let dotBg = "#f1f5f9";
-                          let dotColor = "#94a3b8";
-                          let border = "2px solid #e2e8f0";
-
-                          if (isCompleted) {
-                            dotBg = "#16a34a";
-                            dotColor = "#ffffff";
-                            border = "2px solid #16a34a";
-                          } else if (isCurrent) {
-                            dotBg = "#FF5E00";
-                            dotColor = "#ffffff";
-                            border = "2px solid #FF5E00";
-                          } else if (isFailed) {
-                            dotBg = "#dc2626";
-                            dotColor = "#ffffff";
-                            border = "2px solid #dc2626";
-                          }
-
-                          return (
-                            <div key={st.id} style={{ display: "flex", flexDirection: "column", alignItems: "center", zIndex: 3, position: "relative" }}>
-                              <div
-                                style={{
-                                  width: "20px",
-                                  height: "20px",
-                                  borderRadius: "50%",
-                                  background: dotBg,
-                                  color: dotColor,
-                                  border,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  fontSize: "9px",
-                                  fontWeight: 800,
-                                }}
-                              >
-                                {isCompleted ? <Check size={10} strokeWidth={3} /> : st.id}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "8px", color: "#64748b", fontWeight: 600 }}>
-                        <span>Berkas</span>
-                        <span>Verifikasi</span>
-                        <span>Ujian CAT</span>
-                        <span>Interview</span>
-                        <span>Hasil</span>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "6px", borderTop: "1px solid #f1f5f9" }}>
+                        <span style={{ fontSize: "10.5px", color: "#888888" }}>
+                          Dilamar: {new Date(app.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                        </span>
+                        <span style={{ fontSize: "11px", fontWeight: 700, color: "#FF5E00", display: "flex", alignItems: "center", gap: "2px" }}>
+                          Progres <ChevronRight size={12} />
+                        </span>
                       </div>
                     </div>
-
-                    {/* Active Test Callout (Mobile) */}
-                    {isTestActive && (
-                      <div
-                        style={{
-                          background: "linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)",
-                          borderRadius: "10px",
-                          padding: "10px 12px",
-                          marginTop: "12px",
-                          border: "1px solid #fed7aa",
-                        }}
-                      >
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
-                          <PlayCircle size={15} color="#ea580c" />
-                          <span style={{ fontSize: "11px", fontWeight: 800, color: "#9a3412" }}>
-                            Sesi Ujian CAT Siap Dikerjakan
-                          </span>
-                        </div>
-                        <Link
-                          href={app.testSession?.id ? `/applicant/test/${app.testSession.id}` : "/applicant/schedule"}
-                          style={{ textDecoration: "none" }}
-                        >
-                          <button
-                            style={{
-                              width: "100%",
-                              padding: "8px",
-                              background: "#FF5E00",
-                              color: "#ffffff",
-                              border: "none",
-                              borderRadius: "8px",
-                              fontSize: "11px",
-                              fontWeight: 700,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              gap: "6px",
-                              cursor: "pointer",
-                            }}
-                          >
-                            <PlayCircle size={13} /> Mulai Ujian Sekarang
-                          </button>
-                        </Link>
-                      </div>
-                    )}
-
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "10px", paddingTop: "8px", borderTop: "1px solid #f1f5f9" }}>
-                      <span style={{ fontSize: "10px", color: "#64748b", display: "flex", alignItems: "center", gap: "4px" }}>
-                        <MapPin size={11} color="#94a3b8" /> {app.job?.location || "Indonesia"}
-                      </span>
-                      <Link href="/applicant/applications" style={{ fontSize: "10px", fontWeight: 700, color: "#FF5E00", textDecoration: "none", display: "flex", alignItems: "center", gap: "2px" }}>
-                        Detail <ChevronRight size={11} />
-                      </Link>
-                    </div>
-                  </div>
+                  </Link>
                 );
               })}
             </div>
           )}
-        </MobileSection>
+        </div>
 
         {/* Tips & Panduan Seleksi BUMN (Mobile) */}
         <MobileCard style={{ background: "#ffffff", border: "1px solid #e2e8f0", marginTop: "14px" }}>
@@ -1025,6 +965,7 @@ export default function ApplicantDashboardPage() {
         <div style={{ display: "grid", gridTemplateColumns: "2.1fr 1fr", gap: "32px" }}>
           {/* LEFT: APPLICATIONS & STEPPER TIMELINE */}
           <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+            {/* LAMARAN SAYA (Replaced from SS as requested) */}
             <div
               style={{
                 background: "#ffffff",
@@ -1034,27 +975,14 @@ export default function ApplicantDashboardPage() {
                 border: "1px solid #eef2f6",
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+              {/* Header matching the screenshot */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
                 <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <h2 style={{ fontSize: "20px", fontWeight: 800, color: "#00205B", margin: 0, letterSpacing: "-0.01em" }}>
-                      Progres Lamaran Kerja
-                    </h2>
-                    <span
-                      style={{
-                        padding: "3px 10px",
-                        background: "#f0f4ff",
-                        color: "#00205B",
-                        fontSize: "11px",
-                        fontWeight: 700,
-                        borderRadius: "20px",
-                      }}
-                    >
-                      {applications.length} Lamaran
-                    </span>
-                  </div>
-                  <p style={{ fontSize: "13px", color: "#64748b", margin: "4px 0 0" }}>
-                    Pantau timeline alur seleksi transparan dari tahap berkas hingga offering
+                  <h2 style={{ fontSize: "24px", fontWeight: 800, color: "#00205B", margin: "0 0 4px", letterSpacing: "-0.01em" }}>
+                    Lamaran Saya
+                  </h2>
+                  <p style={{ fontSize: "14px", color: "#666666", margin: 0 }}>
+                    {applications.length} lamaran
                   </p>
                 </div>
                 <Link
@@ -1067,10 +995,41 @@ export default function ApplicantDashboardPage() {
                     display: "flex",
                     alignItems: "center",
                     gap: "4px",
+                    padding: "8px 14px",
+                    background: "#fff7f0",
+                    borderRadius: "10px",
+                    border: "1px solid #ffedd5",
                   }}
                 >
-                  Lihat Riwayat Lengkap <ChevronRight size={16} />
+                  Lihat Progres Lengkap <ChevronRight size={16} />
                 </Link>
+              </div>
+
+              {/* Filter Tabs matching the screenshot */}
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "24px" }}>
+                {FILTER_TABS.map((f) => {
+                  const isActive = filter === f.key;
+                  return (
+                    <button
+                      key={f.key}
+                      onClick={() => setFilter(f.key)}
+                      style={{
+                        padding: "8px 18px",
+                        background: isActive ? "#00205B" : "#ffffff",
+                        color: isActive ? "#ffffff" : "#666666",
+                        border: "2px solid",
+                        borderColor: isActive ? "#00205B" : "#e5e5e5",
+                        borderRadius: "20px",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      {f.label}
+                    </button>
+                  );
+                })}
               </div>
 
               {isLoading ? (
@@ -1087,7 +1046,7 @@ export default function ApplicantDashboardPage() {
                     }}
                   />
                   <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-                  <p style={{ color: "#64748b", fontSize: "14px", fontWeight: 600 }}>Memuat status lamaran Anda...</p>
+                  <p style={{ color: "#64748b", fontSize: "14px", fontWeight: 600 }}>Memuat status lamaran...</p>
                 </div>
               ) : applications.length === 0 ? (
                 <div
@@ -1114,7 +1073,7 @@ export default function ApplicantDashboardPage() {
                     <FileText size={32} color="#64748b" />
                   </div>
                   <h3 style={{ fontSize: "18px", fontWeight: 800, color: "#00205B", marginBottom: "6px" }}>
-                    Belum Ada Lamaran Aktif
+                    Belum Ada Lamaran
                   </h3>
                   <p style={{ fontSize: "14px", color: "#64748b", maxWidth: "420px", margin: "0 auto 20px" }}>
                     Temukan posisi yang sesuai dengan keahlian dan minat Anda di PT Reska Multi Usaha (KAI Services).
@@ -1137,572 +1096,113 @@ export default function ApplicantDashboardPage() {
                     </button>
                   </Link>
                 </div>
+              ) : filteredApps.length === 0 ? (
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "40px 20px",
+                    background: "#f8fafc",
+                    borderRadius: "14px",
+                    border: "1px dashed #cbd5e1",
+                  }}
+                >
+                  <p style={{ fontSize: "14px", color: "#64748b", margin: "0 0 12px" }}>
+                    Tidak ada lamaran dengan status <strong>{FILTER_TABS.find(t => t.key === filter)?.label}</strong>
+                  </p>
+                  <button
+                    onClick={() => setFilter("all")}
+                    style={{
+                      padding: "6px 14px",
+                      background: "#00205B",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontSize: "12.5px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Tampilkan Semua ({applications.length})
+                  </button>
+                </div>
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-                  {applications.map((app) => {
-                    const currentStage = getStageNumberFromStatus(app.status);
-                    const badge = getStatusBadgeConfig(app.status);
-                    const isTestActive = ["TEST_SCHEDULED", "IN_TEST"].includes(app.status);
-                    const isInterviewActive = app.status === "INTERVIEW";
-                    const isAccepted = app.status === "ACCEPTED";
-                    const isRejected = app.status === "REJECTED";
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  {filteredApps.map((app, index) => {
+                    const status = statusPillConfig[app.status] || {
+                      bg: "#f1f5f9",
+                      text: "#475569",
+                      label: app.status,
+                    };
+                    const isFirstOrHighlight = index === 0 && app.status === "OFFERING";
 
                     return (
-                      <div
+                      <Link
                         key={app.id}
-                        style={{
-                          background: "#ffffff",
-                          borderRadius: "16px",
-                          border: "1.5px solid #e2e8f0",
-                          padding: "24px",
-                          transition: "box-shadow 0.2s ease",
-                        }}
+                        href={`/applicant/applications#app-${app.id}`}
+                        style={{ textDecoration: "none", color: "inherit" }}
                       >
-                        {/* Job Card Header */}
                         <div
                           style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "flex-start",
-                            paddingBottom: "18px",
-                            borderBottom: "1px solid #f1f5f9",
-                            marginBottom: "20px",
+                            background: isFirstOrHighlight ? "#fffcf9" : "#ffffff",
+                            borderRadius: "14px",
+                            padding: "20px 24px",
+                            boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                            cursor: "pointer",
+                            border: `2px solid ${isFirstOrHighlight ? "#FF5E00" : "#e5e5e5"}`,
+                            transition: "all 0.2s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.borderColor = "#FF5E00";
+                            e.currentTarget.style.boxShadow = "0 6px 16px rgba(255,94,0,0.12)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.borderColor = isFirstOrHighlight ? "#FF5E00" : "#e5e5e5";
+                            e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.06)";
                           }}
                         >
-                          <div>
-                            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
-                              <h3 style={{ fontSize: "17px", fontWeight: 800, color: "#00205B", margin: 0 }}>
-                                {app.job?.title || "Posisi Pekerjaan"}
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
+                            <div>
+                              <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#111111", margin: "0 0 4px" }}>
+                                {app.job?.title || "Lowongan Pekerjaan"}
                               </h3>
-                              <span
-                                style={{
-                                  padding: "3px 10px",
-                                  background: "#f0f4ff",
-                                  color: "#00205B",
-                                  borderRadius: "20px",
-                                  fontSize: "11px",
-                                  fontWeight: 700,
-                                }}
-                              >
-                                {formatDivision(app.job?.division)}
-                              </span>
+                              <p style={{ fontSize: "13px", color: "#666666", margin: 0 }}>
+                                {app.job?.location || "Lokasi tidak disebutkan"} • {formatDivision(app.job?.division)}
+                              </p>
                             </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: "14px", fontSize: "13px", color: "#64748b" }}>
-                              <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                                <Building2 size={14} color="#94a3b8" /> PT Reska Multi Usaha
-                              </span>
-                              <span>•</span>
-                              <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                                <MapPin size={14} color="#94a3b8" /> {app.job?.location || "Indonesia"}
-                              </span>
-                              <span>•</span>
-                              <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                                <Calendar size={14} color="#94a3b8" /> Dilamar: {new Date(app.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
-                              </span>
-                            </div>
-                          </div>
-
-                          <span
-                            style={{
-                              padding: "6px 14px",
-                              borderRadius: "20px",
-                              fontSize: "12px",
-                              fontWeight: 800,
-                              background: badge.bg,
-                              color: badge.text,
-                              border: `1px solid ${badge.border}`,
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "6px",
-                            }}
-                          >
-                            <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: badge.text }} />
-                            {badge.label}
-                          </span>
-                        </div>
-
-                        {/* RECRUITMENT PIPELINE STEPPER TRACKER */}
-                        <div style={{ marginBottom: "22px" }}>
-                          <div style={{ position: "relative", marginBottom: "8px" }}>
-                            {/* Inactive Track Line */}
-                            <div
+                            <span
                               style={{
-                                position: "absolute",
-                                top: "18px",
-                                left: "40px",
-                                right: "40px",
-                                height: "3px",
-                                background: "#e2e8f0",
-                                zIndex: 1,
+                                padding: "6px 14px",
+                                background: status.bg,
+                                color: status.text,
+                                borderRadius: "20px",
+                                fontSize: "12px",
+                                fontWeight: 700,
+                                whiteSpace: "nowrap",
                               }}
-                            />
-                            {/* Active Progress Track Line */}
-                            <div
-                              style={{
-                                position: "absolute",
-                                top: "18px",
-                                left: "40px",
-                                width: isRejected
-                                  ? `${Math.max(0, Math.min(100, ((currentStage - 1) / 4) * 100))}%`
-                                  : `${Math.max(0, Math.min(100, ((currentStage - 1) / 4) * 100))}%`,
-                                height: "3px",
-                                background: isRejected ? "#ef4444" : "#16a34a",
-                                zIndex: 2,
-                                transition: "width 0.5s ease",
-                              }}
-                            />
-
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", position: "relative", zIndex: 3 }}>
-                              {RECRUITMENT_STAGES.map((st) => {
-                                const isCompleted = st.id < currentStage || (st.id === 5 && isAccepted);
-                                const isCurrent = st.id === currentStage && !isAccepted && !isRejected;
-                                const isFailed = st.id === 5 && isRejected;
-
-                                let circleBg = "#f8fafc";
-                                let circleColor = "#94a3b8";
-                                let circleBorder = "3px solid #cbd5e1";
-                                let pulse = false;
-
-                                if (isCompleted) {
-                                  circleBg = "#16a34a";
-                                  circleColor = "#ffffff";
-                                  circleBorder = "3px solid #16a34a";
-                                } else if (isCurrent) {
-                                  circleBg = "#FF5E00";
-                                  circleColor = "#ffffff";
-                                  circleBorder = "3px solid #FF8800";
-                                  pulse = true;
-                                } else if (isFailed) {
-                                  circleBg = "#ef4444";
-                                  circleColor = "#ffffff";
-                                  circleBorder = "3px solid #ef4444";
-                                }
-
-                                return (
-                                  <div key={st.id} style={{ textAlign: "center", padding: "0 4px" }}>
-                                    <div
-                                      style={{
-                                        width: "36px",
-                                        height: "36px",
-                                        borderRadius: "50%",
-                                        background: circleBg,
-                                        color: circleColor,
-                                        border: circleBorder,
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        margin: "0 auto 8px",
-                                        fontSize: "13px",
-                                        fontWeight: 800,
-                                        boxShadow: pulse ? "0 0 0 5px rgba(255,94,0,0.2)" : "none",
-                                        transition: "all 0.3s ease",
-                                      }}
-                                    >
-                                      {isCompleted ? <Check size={18} strokeWidth={3} /> : isFailed ? "✕" : st.id}
-                                    </div>
-                                    <div
-                                      style={{
-                                        fontSize: "12.5px",
-                                        fontWeight: isCurrent || isCompleted ? 700 : 500,
-                                        color: isCurrent ? "#FF5E00" : isCompleted ? "#16a34a" : isFailed ? "#ef4444" : "#64748b",
-                                        marginBottom: "2px",
-                                      }}
-                                    >
-                                      {st.title}
-                                    </div>
-                                    <div style={{ fontSize: "11px", color: "#94a3b8" }}>{st.desc}</div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* CONTEXTUAL ACTION CALLOUT / BANNER */}
-                        {isTestActive && (
-                          <div
-                            style={{
-                              background: "linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)",
-                              borderRadius: "14px",
-                              padding: "18px 20px",
-                              border: "1.5px solid #fed7aa",
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center",
-                              gap: "16px",
-                            }}
-                          >
-                            <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-                              <div
-                                style={{
-                                  width: "44px",
-                                  height: "44px",
-                                  borderRadius: "12px",
-                                  background: "#FF5E00",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  color: "#ffffff",
-                                  flexShrink: 0,
-                                  boxShadow: "0 4px 12px rgba(255,94,0,0.3)",
-                                }}
-                              >
-                                <PlayCircle size={24} />
-                              </div>
-                              <div>
-                                <h4 style={{ fontSize: "15px", fontWeight: 800, color: "#9a3412", margin: "0 0 2px" }}>
-                                  Sesi Ujian CAT Online Telah Siap!
-                                </h4>
-                                <p style={{ fontSize: "12.5px", color: "#7c2d12", margin: 0 }}>
-                                  {app.testSession?.adminMessage || "Silakan persiapkan diri, pastikan koneksi lancar, dan kerjakan tepat waktu."}
-                                </p>
-                              </div>
-                            </div>
-                            <Link
-                              href={app.testSession?.id ? `/applicant/test/${app.testSession.id}` : "/applicant/schedule"}
-                              style={{ textDecoration: "none", flexShrink: 0 }}
                             >
-                              <button
-                                style={{
-                                  padding: "10px 20px",
-                                  background: "#FF5E00",
-                                  color: "#ffffff",
-                                  border: "none",
-                                  borderRadius: "10px",
-                                  fontSize: "13.5px",
-                                  fontWeight: 700,
-                                  cursor: "pointer",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: "8px",
-                                  boxShadow: "0 4px 12px rgba(255,94,0,0.3)",
-                                  transition: "all 0.2s ease",
-                                }}
-                              >
-                                <PlayCircle size={16} /> Mulai Ujian Sekarang
-                              </button>
-                            </Link>
-                          </div>
-                        )}
-
-                        {isInterviewActive && (
-                          <div
-                            style={{
-                              background: "#e0e7ff",
-                              borderRadius: "14px",
-                              padding: "16px 20px",
-                              border: "1.5px solid #c7d2fe",
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center",
-                            }}
-                          >
-                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                              <Calendar size={22} color="#4338ca" />
-                              <div>
-                                <h4 style={{ fontSize: "14px", fontWeight: 800, color: "#312e81", margin: 0 }}>
-                                  Jadwal Wawancara Anda Telah Ditentukan
-                                </h4>
-                                <p style={{ fontSize: "12.5px", color: "#4338ca", margin: "2px 0 0" }}>
-                                  {app.interview?.scheduledAt
-                                    ? `Jadwal: ${new Date(app.interview.scheduledAt).toLocaleString("id-ID")} • Lokasi: ${app.interview.location}`
-                                    : "Informasi jadwal wawancara resmi akan dikirim via email dan notifikasi."}
-                                </p>
-                              </div>
-                            </div>
-                            <Link href="/applicant/schedule" style={{ textDecoration: "none" }}>
-                              <button
-                                style={{
-                                  padding: "8px 16px",
-                                  background: "#4338ca",
-                                  color: "#ffffff",
-                                  border: "none",
-                                  borderRadius: "8px",
-                                  fontSize: "12.5px",
-                                  fontWeight: 700,
-                                  cursor: "pointer",
-                                }}
-                              >
-                                Detail Jadwal
-                              </button>
-                            </Link>
-                          </div>
-                        )}
-
-                        {app.status === "MCU" && (
-                          <div
-                            style={{
-                              background: "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)",
-                              borderRadius: "14px",
-                              padding: "18px 20px",
-                              border: "1.5px solid #bae6fd",
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center",
-                              gap: "16px",
-                              flexWrap: "wrap",
-                            }}
-                          >
-                            <div style={{ display: "flex", alignItems: "flex-start", gap: "14px" }}>
-                              <div
-                                style={{
-                                  width: "44px",
-                                  height: "44px",
-                                  borderRadius: "12px",
-                                  background: "#0284c7",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  color: "#ffffff",
-                                  flexShrink: 0,
-                                  boxShadow: "0 4px 12px rgba(2,132,199,0.3)",
-                                }}
-                              >
-                                <Calendar size={22} />
-                              </div>
-                              <div>
-                                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                                  <span style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", background: "#0284c7", color: "#ffffff", padding: "2px 8px", borderRadius: "6px" }}>
-                                    Tahap MCU Offline
-                                  </span>
-                                  <span style={{ fontSize: "12px", color: "#0369a1", fontWeight: 700 }}>Kantor Balai Yasa</span>
-                                </div>
-                                <h4 style={{ fontSize: "15px", fontWeight: 800, color: "#0c4a6e", margin: "0 0 4px" }}>
-                                  {app.medicalCheckup?.scheduledAt
-                                    ? `Jadwal MCU: ${new Date(app.medicalCheckup.scheduledAt).toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })} • ${new Date(app.medicalCheckup.scheduledAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })} WIB`
-                                    : "Selamat! Anda Lolos Wawancara dan Lanjut ke MCU Offline di Balai Yasa"}
-                                </h4>
-                                <p style={{ fontSize: "12.5px", color: "#0369a1", margin: 0, lineHeight: 1.5 }}>
-                                  {app.medicalCheckup?.scheduledAt
-                                    ? `Lokasi: ${app.medicalCheckup.location || "Kantor Balai Yasa PT KAI"}. Wajib berpuasa 10-12 jam sebelum pemeriksaan laboratorium.`
-                                    : "Jadwal dan petunjuk persiapan pemeriksaan kesehatan di Kantor Balai Yasa sedang disiapkan oleh tim rekrutmen."}
-                                </p>
-                              </div>
-                            </div>
-                            <Link href="/applicant/schedule" style={{ textDecoration: "none", flexShrink: 0 }}>
-                              <button
-                                style={{
-                                  padding: "10px 18px",
-                                  background: "#0284c7",
-                                  color: "#ffffff",
-                                  border: "none",
-                                  borderRadius: "10px",
-                                  fontSize: "13px",
-                                  fontWeight: 700,
-                                  cursor: "pointer",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: "6px",
-                                  boxShadow: "0 4px 12px rgba(2,132,199,0.25)",
-                                }}
-                              >
-                                Detail Jadwal MCU <ChevronRight size={15} />
-                              </button>
-                            </Link>
-                          </div>
-                        )}
-
-                        {/* Offering Banner */}
-                        {(app.status === "OFFERING" || app.offering) && (
-                          <div
-                            style={{
-                              background: "linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)",
-                              borderRadius: "14px",
-                              padding: "18px 20px",
-                              border: "1.5px solid #fde68a",
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center",
-                              gap: "16px",
-                              flexWrap: "wrap",
-                            }}
-                          >
-                            <div style={{ display: "flex", alignItems: "flex-start", gap: "14px" }}>
-                              <div
-                                style={{
-                                  width: "44px",
-                                  height: "44px",
-                                  borderRadius: "12px",
-                                  background: "#d97706",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  color: "#ffffff",
-                                  flexShrink: 0,
-                                  boxShadow: "0 4px 12px rgba(217,119,6,0.3)",
-                                }}
-                              >
-                                <Briefcase size={22} />
-                              </div>
-                              <div>
-                                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                                  <span style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", background: "#d97706", color: "#ffffff", padding: "2px 8px", borderRadius: "6px" }}>
-                                    Offering Letter Resmi
-                                  </span>
-                                  <span style={{ fontSize: "12px", color: "#92400e", fontWeight: 700 }}>
-                                    {app.offering?.employmentType === "PERMANENT" ? "PKWTT (Karyawan Tetap)" : `PKWT (Kontrak ${app.offering?.contractDuration || 12} Bulan)`}
-                                  </span>
-                                </div>
-                                <h4 style={{ fontSize: "15px", fontWeight: 800, color: "#78350f", margin: "0 0 4px" }}>
-                                  {app.offering?.salary
-                                    ? `Gaji Pokok: Rp ${Number(app.offering.salary).toLocaleString("id-ID")} / bulan`
-                                    : "Penawaran Kerja Resmi Telah Diterbitkan"}
-                                </h4>
-                                <p style={{ fontSize: "12.5px", color: "#92400e", margin: 0, lineHeight: 1.5 }}>
-                                  {app.offering?.startDate
-                                    ? `Mulai Kerja: ${new Date(app.offering.startDate).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })} • Penempatan: ${app.offering.workLocation || "KAI Services"}`
-                                    : "Silakan periksa detail penawaran kerja resmi dan rincian fasilitas di halaman Jadwal."}
-                                </p>
-                              </div>
-                            </div>
-                            <Link href="/applicant/schedule" style={{ textDecoration: "none", flexShrink: 0 }}>
-                              <button
-                                style={{
-                                  padding: "10px 18px",
-                                  background: "#d97706",
-                                  color: "#ffffff",
-                                  border: "none",
-                                  borderRadius: "10px",
-                                  fontSize: "13px",
-                                  fontWeight: 700,
-                                  cursor: "pointer",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: "6px",
-                                  boxShadow: "0 4px 12px rgba(217,119,6,0.25)",
-                                }}
-                              >
-                                Lihat Offering Letter <ChevronRight size={15} />
-                              </button>
-                            </Link>
-                          </div>
-                        )}
-
-                        {/* Rekapitulasi Hasil & Nilai Seleksi yang telah diinput Admin */}
-                        {(app.testSession?.totalScore !== undefined || app.interview?.score !== undefined || app.medicalCheckup?.result) && (
-                          <div
-                            style={{
-                              background: "#f8fafc",
-                              borderRadius: "14px",
-                              padding: "16px 18px",
-                              border: "1px solid #e2e8f0",
-                              display: "flex",
-                              flexDirection: "column",
-                              gap: "10px",
-                            }}
-                          >
-                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                              <Award size={18} color="#00205B" />
-                              <span style={{ fontSize: "13px", fontWeight: 700, color: "#00205B" }}>
-                                Rekapitulasi Nilai & Hasil Evaluasi Seleksi:
-                              </span>
-                            </div>
-
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "10px" }}>
-                              {app.testSession?.totalScore !== undefined && app.testSession?.totalScore !== null && (
-                                <div style={{ background: "#ffffff", padding: "10px 14px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
-                                  <span style={{ fontSize: "11px", color: "#64748b", fontWeight: 600, display: "block" }}>1. Tes CAT Online</span>
-                                  <span style={{ fontSize: "15px", fontWeight: 800, color: "#16a34a" }}>
-                                    {app.testSession.totalScore} / 100
-                                  </span>
-                                  <span style={{ fontSize: "11px", color: "#15803d", marginLeft: "6px", fontWeight: 600 }}>✓ Lolos</span>
-                                </div>
-                              )}
-
-                              {app.interview?.score !== undefined && app.interview?.score !== null && (
-                                <div style={{ background: "#ffffff", padding: "10px 14px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
-                                  <span style={{ fontSize: "11px", color: "#64748b", fontWeight: 600, display: "block" }}>2. Wawancara Kompetensi</span>
-                                  <span style={{ fontSize: "15px", fontWeight: 800, color: "#be185d" }}>
-                                    {app.interview.score} / 100
-                                  </span>
-                                  <span style={{ fontSize: "11px", color: app.interview.result === "PASSED" ? "#16a34a" : "#dc2626", marginLeft: "6px", fontWeight: 600 }}>
-                                    {app.interview.result === "PASSED" ? "✓ Lolos" : app.interview.result || "Selesai"}
-                                  </span>
-                                </div>
-                              )}
-
-                              {app.medicalCheckup?.result && (
-                                <div style={{ background: "#ffffff", padding: "10px 14px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
-                                  <span style={{ fontSize: "11px", color: "#64748b", fontWeight: 600, display: "block" }}>3. MCU Balai Yasa</span>
-                                  <span style={{ fontSize: "14px", fontWeight: 800, color: app.medicalCheckup.result === "FIT" ? "#16a34a" : "#dc2626" }}>
-                                    {app.medicalCheckup.result === "FIT" ? "✓ FIT (Lolos Medis)" : app.medicalCheckup.result}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-
-                            {app.interview?.notes && (
-                              <div style={{ fontSize: "12px", color: "#475569", background: "#ffffff", padding: "8px 12px", borderRadius: "8px", border: "1px solid #f1f5f9" }}>
-                                <strong>Catatan Interview:</strong> {app.interview.notes}
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {app.status === "ADMIN_CHECK" && (
-                          <div
-                            style={{
-                              background: "#fef9c3",
-                              borderRadius: "12px",
-                              padding: "12px 18px",
-                              border: "1px solid #fef08a",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "10px",
-                              fontSize: "13px",
-                              color: "#854d0e",
-                            }}
-                          >
-                            <Clock size={16} color="#ca8a04" style={{ flexShrink: 0 }} />
-                            <span>
-                              Dokumen lamaran Anda sedang dalam tahap verifikasi oleh Tim HR KAI Services. Mohon periksa berkala portal ini.
+                              {status.label}
                             </span>
                           </div>
-                        )}
 
-                        {isAccepted && (
-                          <div
-                            style={{
-                              background: "#dcfce7",
-                              borderRadius: "12px",
-                              padding: "14px 18px",
-                              border: "1px solid #86efac",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "12px",
-                              fontSize: "13.5px",
-                              color: "#15803d",
-                              fontWeight: 600,
-                            }}
-                          >
-                            <CheckCircle2 size={20} color="#16a34a" style={{ flexShrink: 0 }} />
-                            <span>
-                              Selamat! Anda dinyatakan lolos seleksi. Silakan cek menu Penawaran / Riwayat Lamaran untuk konfirmasi Offering Letter.
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <p style={{ fontSize: "12px", color: "#888888", margin: 0 }}>
+                              Dilamar: {new Date(app.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
+                            </p>
+                            <span
+                              style={{
+                                fontSize: "12.5px",
+                                fontWeight: 700,
+                                color: "#FF5E00",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                              }}
+                            >
+                              Lihat Alur Seleksi <ChevronRight size={14} />
                             </span>
                           </div>
-                        )}
-
-                        {isRejected && (
-                          <div
-                            style={{
-                              background: "#fef2f2",
-                              borderRadius: "12px",
-                              padding: "12px 18px",
-                              border: "1px solid #fecaca",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "10px",
-                              fontSize: "13px",
-                              color: "#991b1b",
-                            }}
-                          >
-                            <AlertCircle size={16} color="#ef4444" style={{ flexShrink: 0 }} />
-                            <span>
-                              Terima kasih telah berpartisipasi. Kualifikasi Anda belum memenuhi posisi ini saat ini. Anda dapat melamar lowongan lain yang tersedia.
-                            </span>
-                          </div>
-                        )}
-                      </div>
+                        </div>
+                      </Link>
                     );
                   })}
                 </div>

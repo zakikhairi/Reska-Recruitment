@@ -19,6 +19,11 @@ export async function GET(request: NextRequest) {
     // Get applicant
     const applicant = await prisma.applicant.findUnique({
       where: { userId },
+      include: {
+        documents: {
+          orderBy: { uploadedAt: "desc" },
+        },
+      },
     });
 
     if (!applicant) {
@@ -44,6 +49,9 @@ export async function GET(request: NextRequest) {
       },
       orderBy: { createdAt: "desc" },
     });
+
+    // Find latest MCU document for the applicant
+    const mcuDoc = applicant.documents?.find((d) => d.type === "MCU");
 
     // Format the response
     const schedules = applications.map((app) => {
@@ -89,6 +97,15 @@ export async function GET(request: NextRequest) {
           location: app.mcu.location,
           result: app.mcu.result,
           notes: app.mcu.notes,
+          document: mcuDoc
+            ? {
+                id: mcuDoc.id,
+                fileName: mcuDoc.fileName,
+                fileUrl: mcuDoc.fileUrl,
+                fileSize: mcuDoc.fileSize,
+                uploadedAt: mcuDoc.uploadedAt,
+              }
+            : null,
         };
       }
 
@@ -115,15 +132,15 @@ export async function GET(request: NextRequest) {
       return schedule;
     });
 
-    // Filter: Show applications that have test session OR interview OR mcu OR offering
-    // Include those with null scheduledAt (waiting for schedule)
-    const upcomingSchedules = schedules.filter(
-      (s) => s.test || s.interview || s.mcu || s.offering
+    // Filter: Show applications that have test session OR interview OR mcu OR offering,
+    // as well as applications that are ACCEPTED or REJECTED (for history)
+    const filteredSchedules = schedules.filter(
+      (s) => s.test || s.interview || s.mcu || s.offering || s.status === "REJECTED" || s.status === "ACCEPTED"
     );
 
     return NextResponse.json({
       success: true,
-      schedules: upcomingSchedules,
+      schedules: filteredSchedules,
       allApplications: schedules,
     });
   } catch (error) {
