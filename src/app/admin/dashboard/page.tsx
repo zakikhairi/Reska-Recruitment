@@ -1101,10 +1101,10 @@ export default function AdminDashboardPage() {
 
         <div className="admin-main-grid" style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: "28px" }}>
           {/* Main Content */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
+          <div className="admin-main-col-left" style={{ display: "flex", flexDirection: "column", gap: "28px", minWidth: 0, width: "100%" }}>
 
             {/* Recent Applications Table */}
-            <div className="admin-table-card" style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+            <div className="admin-table-card" style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", width: "100%", boxSizing: "border-box" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>
                 <div>
                   <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#111111", marginBottom: "4px" }}>Lamaran Terbaru</h2>
@@ -1149,7 +1149,7 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
 
-              <div style={{ overflowX: "auto" }}>
+              <div className="table-responsive" style={{ overflowX: "auto", width: "100%", maxWidth: "100%" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
                     <tr style={{ borderBottom: "2px solid #eeeeee" }}>
@@ -1268,8 +1268,8 @@ export default function AdminDashboardPage() {
             </div>
 
             {/* Monthly Trend */}
-            <div style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+            <div className="admin-monthly-card" style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", width: "100%", boxSizing: "border-box" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
                 <div>
                   <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#111111", marginBottom: "4px" }}>Tren Pelamar Bulanan</h2>
                   <p style={{ fontSize: "14px", color: "#888888" }}>Data pelamar dan kelulusan per bulan</p>
@@ -1287,18 +1287,18 @@ export default function AdminDashboardPage() {
               </div>
 
               {/* Simple bar chart - per month */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", height: "150px", gap: "8px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", height: "150px", gap: "8px", width: "100%", overflowX: "auto" }}>
                 {monthlyData.map((data, i) => {
                   const maxVal = Math.max(...monthlyData.map(d => Math.max(d.pelamar, d.lulus)), 1);
                   const pelamarHeight = (data.pelamar / maxVal) * 100;
                   const lulusHeight = (data.lulus / maxVal) * 100;
 
                   return (
-                    <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", height: "100%" }}>
+                    <div key={i} style={{ flex: 1, minWidth: "36px", display: "flex", flexDirection: "column", alignItems: "center", height: "100%" }}>
                       {/* Values on top */}
                       <div style={{ display: "flex", gap: "4px", marginBottom: "8px", alignItems: "flex-end", height: "60px" }}>
                         <div style={{
-                          width: "20px",
+                          width: "16px",
                           background: "#2563eb",
                           borderRadius: "4px 4px 0 0",
                           height: `${Math.max(pelamarHeight * 0.6, data.pelamar > 0 ? 20 : 0)}px`,
@@ -1310,7 +1310,7 @@ export default function AdminDashboardPage() {
                           {data.pelamar > 0 && <span style={{ fontSize: "10px", fontWeight: 600, color: "#fff" }}>{data.pelamar}</span>}
                         </div>
                         <div style={{
-                          width: "20px",
+                          width: "16px",
                           background: "#10B981",
                           borderRadius: "4px 4px 0 0",
                           height: `${Math.max(lulusHeight * 0.6, data.lulus > 0 ? 20 : 0)}px`,
@@ -1332,9 +1332,9 @@ export default function AdminDashboardPage() {
           </div>
 
           {/* Sidebar */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          <div className="admin-main-col-right" style={{ display: "flex", flexDirection: "column", gap: "24px", minWidth: 0, width: "100%" }}>
             {/* Live Activity Feed */}
-            <div style={{ background: "#ffffff", borderRadius: "16px", padding: "24px 28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+            <div className="admin-activity-card" style={{ background: "#ffffff", borderRadius: "16px", padding: "24px 28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", width: "100%", boxSizing: "border-box" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <span style={{ width: "8px", height: "8px", background: "#16a34a", borderRadius: "50%", boxShadow: "0 0 8px #16a34a" }} />
@@ -1363,7 +1363,7 @@ export default function AdminDashboardPage() {
                       }}>
                         {(app.applicantName || "P")[0].toUpperCase()}
                       </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
                         <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: "#0f172a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                           {app.applicantName}
                         </p>
@@ -1386,11 +1386,11 @@ export default function AdminDashboardPage() {
             </div>
 
             {/* Status Distribution */}
-            <div style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+            <div className="admin-dist-card" style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", width: "100%", boxSizing: "border-box" }}>
               <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#111111", marginBottom: "20px" }}>Distribusi Status</h2>
 
               {/* Simple pie chart visualization */}
-              <div style={{ display: "flex", justifyContent: "center", marginBottom: "24px" }}>
+              <div style={{ display: "flex", justifyContent: "center", alignItems: "center", marginBottom: "24px", width: "100%" }}>
                 <div style={{
                   width: "140px",
                   height: "140px",
@@ -1400,7 +1400,8 @@ export default function AdminDashboardPage() {
                     const percentage = total > 0 ? (item.value / total) * 100 : 0;
                     return `${item.color} ${statusDist.slice(0, i).reduce((sum, s) => sum + (total > 0 ? (s.value / total) * 360 : 0), 0)}deg ${statusDist.slice(0, i + 1).reduce((sum, s) => sum + (total > 0 ? (s.value / total) * 360 : 0), 0)}deg`;
                   }).join(', ')})`,
-                  position: "relative"
+                  position: "relative",
+                  margin: "0 auto"
                 }}>
                   <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "80px", height: "80px", background: "#ffffff", borderRadius: "50%" }}>
                     <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", textAlign: "center" }}>
@@ -1411,7 +1412,7 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px", width: "100%" }}>
                 {statusDist.filter(item => item.value > 0).map((item, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -1425,45 +1426,45 @@ export default function AdminDashboardPage() {
             </div>
 
             {/* Quick Actions */}
-            <div style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+            <div className="admin-actions-card" style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", width: "100%", boxSizing: "border-box" }}>
               <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#111111", marginBottom: "20px" }}>Aksi Cepat</h2>
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                <Link href="/admin/jobs/create" style={{ textDecoration: "none" }}>
-                  <button style={{ width: "100%", padding: "14px 18px", border: "2px solid #eeeeee", background: "#ffffff", borderRadius: "12px", fontSize: "14px", fontWeight: 600, color: "#111111", cursor: "pointer", display: "flex", alignItems: "center", gap: "12px", transition: "all 0.2s" }}>
-                    <div style={{ width: "36px", height: "36px", background: "#fff7f0", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px", width: "100%" }}>
+                <Link href="/admin/jobs/create" style={{ textDecoration: "none", width: "100%", display: "block" }}>
+                  <button style={{ width: "100%", padding: "14px 18px", border: "2px solid #eeeeee", background: "#ffffff", borderRadius: "12px", fontSize: "14px", fontWeight: 600, color: "#111111", cursor: "pointer", display: "flex", alignItems: "center", gap: "12px", transition: "all 0.2s", boxSizing: "border-box" }}>
+                    <div style={{ width: "36px", height: "36px", background: "#fff7f0", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                       <Plus className="w-5 h-5" style={{ color: "#FF5E00" }} />
                     </div>
-                    Buat Lowongan Baru
+                    <span>Buat Lowongan Baru</span>
                   </button>
                 </Link>
-                <Link href="/admin/questions" style={{ textDecoration: "none" }}>
-                  <button style={{ width: "100%", padding: "14px 18px", border: "2px solid #eeeeee", background: "#ffffff", borderRadius: "12px", fontSize: "14px", fontWeight: 600, color: "#111111", cursor: "pointer", display: "flex", alignItems: "center", gap: "12px", transition: "all 0.2s" }}>
-                    <div style={{ width: "36px", height: "36px", background: "#f0f4ff", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Link href="/admin/questions" style={{ textDecoration: "none", width: "100%", display: "block" }}>
+                  <button style={{ width: "100%", padding: "14px 18px", border: "2px solid #eeeeee", background: "#ffffff", borderRadius: "12px", fontSize: "14px", fontWeight: 600, color: "#111111", cursor: "pointer", display: "flex", alignItems: "center", gap: "12px", transition: "all 0.2s", boxSizing: "border-box" }}>
+                    <div style={{ width: "36px", height: "36px", background: "#f0f4ff", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                       <ClipboardCheck className="w-5 h-5" style={{ color: "#00205B" }} />
                     </div>
-                    Kelola Bank Soal
+                    <span>Kelola Bank Soal</span>
                   </button>
                 </Link>
-                <Link href="/admin/reports" style={{ textDecoration: "none" }}>
-                  <button style={{ width: "100%", padding: "14px 18px", border: "2px solid #eeeeee", background: "#ffffff", borderRadius: "12px", fontSize: "14px", fontWeight: 600, color: "#111111", cursor: "pointer", display: "flex", alignItems: "center", gap: "12px", transition: "all 0.2s" }}>
-                    <div style={{ width: "36px", height: "36px", background: "#f0fdf4", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Link href="/admin/reports" style={{ textDecoration: "none", width: "100%", display: "block" }}>
+                  <button style={{ width: "100%", padding: "14px 18px", border: "2px solid #eeeeee", background: "#ffffff", borderRadius: "12px", fontSize: "14px", fontWeight: 600, color: "#111111", cursor: "pointer", display: "flex", alignItems: "center", gap: "12px", transition: "all 0.2s", boxSizing: "border-box" }}>
+                    <div style={{ width: "36px", height: "36px", background: "#f0fdf4", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                       <Download className="w-5 h-5" style={{ color: "#16a34a" }} />
                     </div>
-                    Export Laporan
+                    <span>Export Laporan</span>
                   </button>
                 </Link>
               </div>
             </div>
 
-              {/* Top Divisi */}
-              <div style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+            {/* Top Divisi */}
+            <div className="admin-active-jobs-card" style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", width: "100%", boxSizing: "border-box" }}>
               <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#111111", marginBottom: "20px" }}>Lowongan Aktif</h2>
-              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px", width: "100%" }}>
                 {jobs.filter(j => j.status === "ACTIVE").length === 0 ? (
                   <p style={{ color: "#888888", fontSize: "14px", textAlign: "center", padding: "20px" }}>Belum ada lowongan aktif</p>
                 ) : (
                   jobs.filter(j => j.status === "ACTIVE").map((div: any, i: number) => (
-                    <div key={div.id || i}>
+                    <div key={div.id || i} style={{ width: "100%" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
                         <span style={{ fontSize: "14px", fontWeight: 500, color: "#111111" }}>{div.title}</span>
                         <span style={{ fontSize: "14px", fontWeight: 700, color: "#FF5E00" }}>{applications.filter(a => a.jobPostingId === div.id).length}</span>

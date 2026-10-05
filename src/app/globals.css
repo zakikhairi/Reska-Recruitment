@@ -430,19 +430,13 @@ html, body {
     box-sizing: border-box !important;
   }
 
-  /* Universal reset for all outer margin: 0 auto wrappers on mobile */
-  .kai-portal-mobile-main div[style*="margin: 0 auto"],
-  .kai-portal-mobile-main div[style*="margin: 0px auto"],
-  .kai-portal-mobile-main div[style*="padding: 0 32px"],
-  .kai-portal-mobile-main div[style*="padding: 0px 32px"],
-  .kai-portal-mobile-main div[style*="padding: 24px 32px"],
-  .kai-portal-mobile-main div[style*="padding: 20px 32px"],
-  .kai-portal-mobile-main div[style*="padding: 0 32px 60px"],
-  .kai-portal-mobile-main div[style*="padding: 0 32px 64px"],
+  /* Universal reset for outer page wrappers on mobile */
   .kai-portal-mobile-main .admin-page-container,
   .kai-portal-mobile-main .admin-dashboard-container,
   .kai-portal-mobile-main .kai-portal-jobs-container,
-  .kai-portal-mobile-main .kai-portal-profile-container {
+  .kai-portal-mobile-main .kai-portal-profile-container,
+  .kai-portal-mobile-main > div > div[style*="max-width: 1400px"],
+  .kai-portal-mobile-main > div > div[style*="maxWidth: 1400px"] {
     padding-left: 0 !important;
     padding-right: 0 !important;
     padding-top: 2px !important;
@@ -518,8 +512,20 @@ html, body {
   }
   .kai-portal-mobile-main .admin-funnel-card > div:first-child,
   .kai-portal-mobile-main .admin-table-card > div:first-child,
-  .kai-portal-mobile-main div:has(> h2),
-  .kai-portal-mobile-main div:has(> h3) {
+  .kai-portal-mobile-main .admin-monthly-card > div:first-child,
+  .kai-portal-mobile-main .admin-activity-card > div:first-child {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+  .kai-portal-mobile-main .admin-funnel-card > div:first-child > div,
+  .kai-portal-mobile-main .admin-table-card > div:first-child > div,
+  .kai-portal-mobile-main .admin-monthly-card > div:first-child > div,
+  .kai-portal-mobile-main .admin-activity-card > div:first-child > div {
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important;
@@ -527,19 +533,10 @@ html, body {
     text-align: center !important;
     width: 100% !important;
   }
-  .kai-portal-mobile-main div:has(> h2) > div,
-  .kai-portal-mobile-main div:has(> h3) > div {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    text-align: center !important;
-    width: 100% !important;
-  }
-  .kai-portal-mobile-main div:has(> h2) span,
-  .kai-portal-mobile-main div:has(> h3) span,
-  .kai-portal-mobile-main div:has(> h2) p,
-  .kai-portal-mobile-main div:has(> h3) p {
+  .kai-portal-mobile-main .admin-funnel-card p,
+  .kai-portal-mobile-main .admin-table-card p,
+  .kai-portal-mobile-main .admin-monthly-card p,
+  .kai-portal-mobile-main .admin-activity-card p {
     text-align: center !important;
     width: 100% !important;
   }
@@ -638,12 +635,26 @@ html, body {
   .kai-portal-mobile-main .admin-main-grid,
   .kai-portal-mobile-main .profile-form-grid,
   .kai-portal-mobile-main .admin-schedule-split {
-    grid-template-columns: 1fr !important;
+    display: flex !important;
     flex-direction: column !important;
-    gap: 14px !important;
+    gap: 16px !important;
     width: 100% !important;
     max-width: 100% !important;
+    min-width: 0 !important;
     box-sizing: border-box !important;
+  }
+  .kai-portal-mobile-main .admin-main-grid > div,
+  .kai-portal-mobile-main .admin-main-col-left,
+  .kai-portal-mobile-main .admin-main-col-right,
+  .kai-portal-mobile-main div[style*="1fr 380px"] > div,
+  .kai-portal-mobile-main div[style*="1fr 400px"] > div {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    gap: 16px !important;
   }
   .kai-portal-mobile-main .admin-schedule-calendar {
     width: 100% !important;
@@ -685,6 +696,7 @@ html, body {
     -webkit-overflow-scrolling: touch !important;
     width: 100% !important;
     max-width: 100% !important;
+    min-width: 0 !important;
     display: block !important;
     box-sizing: border-box !important;
   }
@@ -718,13 +730,49 @@ html, body {
   .kai-portal-mobile-main .admin-filters-card,
   .kai-portal-mobile-main .admin-table-card,
   .kai-portal-mobile-main .admin-funnel-card,
+  .kai-portal-mobile-main .admin-monthly-card,
+  .kai-portal-mobile-main .admin-activity-card,
+  .kai-portal-mobile-main .admin-dist-card,
+  .kai-portal-mobile-main .admin-actions-card,
+  .kai-portal-mobile-main .admin-active-jobs-card,
   .kai-portal-mobile-main .profile-card {
-    padding: 14px 16px !important;
+    padding: 16px 14px !important;
     border-radius: 14px !important;
     width: 100% !important;
     max-width: 100% !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
     box-sizing: border-box !important;
+  }
+
+  /* Status Distribution Pie Chart Centering */
+  .kai-portal-mobile-main .admin-dist-card div[style*="conic-gradient"],
+  .kai-portal-mobile-main div[style*="conic-gradient"] {
+    margin: 0 auto !important;
+  }
+
+  /* Quick Actions button links */
+  .kai-portal-mobile-main .admin-actions-card a {
+    width: 100% !important;
+    display: block !important;
+  }
+  .kai-portal-mobile-main .admin-actions-card button {
+    width: 100% !important;
+    padding: 12px 14px !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Table bottom pagination center */
+  .kai-portal-mobile-main .admin-table-card > div:last-child {
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
     text-align: center !important;
+    gap: 12px !important;
+  }
+  .kai-portal-mobile-main .admin-table-card > div:last-child > div {
+    justify-content: center !important;
   }
 
   /* Filter and search toolbars wrap cleanly INSIDE PORTAL - CENTERED */
