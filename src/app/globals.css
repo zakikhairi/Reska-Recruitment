@@ -711,9 +711,7 @@ html, body {
 
   /* Universal Responsive Tables INSIDE PORTAL - CENTERED */
   .kai-portal-mobile-main div:has(> table),
-  .kai-portal-mobile-main .table-responsive,
-  .kai-portal-mobile-main div[style*="overflowX: auto"],
-  .kai-portal-mobile-main div[style*="overflow-x: auto"] {
+  .kai-portal-mobile-main .table-responsive {
     overflow-x: auto !important;
     -webkit-overflow-scrolling: touch !important;
     width: 100% !important;
@@ -721,6 +719,40 @@ html, body {
     min-width: 0 !important;
     display: block !important;
     box-sizing: border-box !important;
+  }
+
+  /* Monthly trend horizontal scrolling track (kesamping) */
+  .kai-portal-mobile-main .admin-monthly-chart {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: flex-end !important;
+    justify-content: flex-start !important;
+    gap: 12px !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding-bottom: 8px !important;
+    box-sizing: border-box !important;
+  }
+  .kai-portal-mobile-main .admin-monthly-chart > div {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    flex: 0 0 38px !important;
+    min-width: 38px !important;
+    height: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .kai-portal-mobile-main .admin-monthly-chart > div > div:first-child {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: flex-end !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    margin-bottom: 6px !important;
   }
   .kai-portal-mobile-main table {
     min-width: 580px !important;

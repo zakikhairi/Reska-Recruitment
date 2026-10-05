@@ -1122,43 +1122,77 @@ export default function AdminDashboardPage() {
             </div>
 
             {/* Simple bar chart - per month */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", height: "160px", gap: "8px", width: "100%", overflowX: "auto", paddingBottom: "4px" }}>
+            <div
+              className="admin-monthly-chart"
+              style={{
+                display: "flex",
+                flexDirection: "row",
+                alignItems: "flex-end",
+                justifyContent: "space-between",
+                height: "170px",
+                gap: "10px",
+                width: "100%",
+                overflowX: "auto",
+                overflowY: "hidden",
+                paddingBottom: "6px",
+                WebkitOverflowScrolling: "touch",
+              }}
+            >
               {monthlyData.map((data, i) => {
                 const maxVal = Math.max(...monthlyData.map(d => Math.max(d.pelamar, d.lulus)), 1);
                 const pelamarHeight = (data.pelamar / maxVal) * 100;
                 const lulusHeight = (data.lulus / maxVal) * 100;
 
                 return (
-                  <div key={i} style={{ flex: 1, minWidth: "36px", display: "flex", flexDirection: "column", alignItems: "center", height: "100%" }}>
+                  <div
+                    key={i}
+                    style={{
+                      flex: "1 0 auto",
+                      minWidth: "36px",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "flex-end",
+                      height: "100%",
+                    }}
+                  >
                     {/* Values on top */}
-                    <div style={{ display: "flex", gap: "4px", marginBottom: "8px", alignItems: "flex-end", height: "70px" }}>
-                      <div style={{
-                        width: "16px",
-                        background: "#2563eb",
-                        borderRadius: "4px 4px 0 0",
-                        height: `${Math.max(pelamarHeight * 0.7, data.pelamar > 0 ? 20 : 0)}px`,
-                        display: "flex",
-                        alignItems: "flex-start",
-                        justifyContent: "center",
-                        paddingTop: "4px"
-                      }}>
-                        {data.pelamar > 0 && <span style={{ fontSize: "10px", fontWeight: 600, color: "#fff" }}>{data.pelamar}</span>}
+                    <div style={{ display: "flex", flexDirection: "row", gap: "4px", marginBottom: "8px", alignItems: "flex-end", height: "80px" }}>
+                      <div
+                        style={{
+                          width: "14px",
+                          background: "#2563eb",
+                          borderRadius: "4px 4px 0 0",
+                          height: `${Math.max(pelamarHeight * 0.7, data.pelamar > 0 ? 16 : 4)}px`,
+                          display: "flex",
+                          alignItems: "flex-start",
+                          justifyContent: "center",
+                          paddingTop: "2px",
+                          transition: "height 0.3s ease",
+                        }}
+                        title={`Pelamar: ${data.pelamar}`}
+                      >
+                        {data.pelamar > 0 && <span style={{ fontSize: "9px", fontWeight: 700, color: "#fff" }}>{data.pelamar}</span>}
                       </div>
-                      <div style={{
-                        width: "16px",
-                        background: "#10B981",
-                        borderRadius: "4px 4px 0 0",
-                        height: `${Math.max(lulusHeight * 0.7, data.lulus > 0 ? 20 : 0)}px`,
-                        display: "flex",
-                        alignItems: "flex-start",
-                        justifyContent: "center",
-                        paddingTop: "4px"
-                      }}>
-                        {data.lulus > 0 && <span style={{ fontSize: "10px", fontWeight: 600, color: "#fff" }}>{data.lulus}</span>}
+                      <div
+                        style={{
+                          width: "14px",
+                          background: "#10B981",
+                          borderRadius: "4px 4px 0 0",
+                          height: `${Math.max(lulusHeight * 0.7, data.lulus > 0 ? 16 : 4)}px`,
+                          display: "flex",
+                          alignItems: "flex-start",
+                          justifyContent: "center",
+                          paddingTop: "2px",
+                          transition: "height 0.3s ease",
+                        }}
+                        title={`Lulus: ${data.lulus}`}
+                      >
+                        {data.lulus > 0 && <span style={{ fontSize: "9px", fontWeight: 700, color: "#fff" }}>{data.lulus}</span>}
                       </div>
                     </div>
                     {/* Month label */}
-                    <span style={{ fontSize: "11px", color: "#94a3b8", fontWeight: 500 }}>{data.month}</span>
+                    <span style={{ fontSize: "11px", color: "#64748b", fontWeight: 600, marginTop: "2px" }}>{data.month}</span>
                   </div>
                 );
               })}
