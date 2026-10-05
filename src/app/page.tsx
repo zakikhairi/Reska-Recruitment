@@ -1030,39 +1030,27 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Bottom Status & Indicator Bar */}
-          <div className="hero-controls-bar">
-            {/* Slide Counter & Category Tag */}
-            <div className="hero-controls-info">
-              <span className="hero-slide-num">0{currentSlide + 1}</span>
-              <span className="hero-slide-num-sep">/</span>
-              <span className="hero-slide-total">0{heroSlides.length}</span>
-              <span className="hero-slide-divider" />
-              <span className="hero-slide-active-tag">{heroSlides[currentSlide]?.tag}</span>
-            </div>
-
-            {/* Clickable Slide Indicators with Active Progress Fill */}
-            <div className="hero-pills-track">
-              {heroSlides.map((slide, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentSlide(index)}
-                  className={`hero-pill-btn ${currentSlide === index ? "active" : ""}`}
-                  aria-label={`Pindah ke slide ${index + 1}: ${slide.tag}`}
-                  title={slide.tag}
-                >
-                  {currentSlide === index && (
-                    <span
-                      key={`progress-${currentSlide}`}
-                      className="hero-pill-progress"
-                      style={{
-                        animationPlayState: isSlidePaused ? "paused" : "running",
-                      }}
-                    />
-                  )}
-                </button>
-              ))}
-            </div>
+          {/* Bottom Slide Indicators (Dots Centered) */}
+          <div className="hero-indicators-bar">
+            {heroSlides.map((slide, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentSlide(index)}
+                className={`hero-pill-btn ${currentSlide === index ? "active" : ""}`}
+                aria-label={`Pindah ke slide ${index + 1}: ${slide.tag}`}
+                title={slide.tag}
+              >
+                {currentSlide === index && (
+                  <span
+                    key={`progress-${currentSlide}`}
+                    className="hero-pill-progress"
+                    style={{
+                      animationPlayState: isSlidePaused ? "paused" : "running",
+                    }}
+                  />
+                )}
+              </button>
+            ))}
           </div>
         </div>
       </section>
@@ -2391,59 +2379,13 @@ export default function HomePage() {
           right: 28px;
         }
 
-        /* Bottom Controls Bar */
-        .hero-controls-bar {
+        /* Bottom Slide Indicators (Dots Centered) */
+        .hero-indicators-bar {
           display: flex;
           align-items: center;
-          justify-content: space-between;
-          gap: 20px;
-          padding: 12px 20px;
-          background: rgba(0, 18, 52, 0.6);
-          backdrop-filter: blur(14px);
-          -webkit-backdrop-filter: blur(14px);
-          border: 1px solid rgba(255, 255, 255, 0.16);
-          border-radius: 18px;
-          margin-top: 24px;
-        }
-        .hero-controls-info {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 13px;
-          font-weight: 600;
-        }
-        .hero-slide-num {
-          color: #FF5E00;
-          font-weight: 800;
-          font-variant-numeric: tabular-nums;
-          font-size: 15px;
-        }
-        .hero-slide-num-sep {
-          color: rgba(255, 255, 255, 0.35);
-          font-size: 13px;
-        }
-        .hero-slide-total {
-          color: rgba(255, 255, 255, 0.6);
-          font-variant-numeric: tabular-nums;
-          font-size: 13px;
-        }
-        .hero-slide-divider {
-          width: 1px;
-          height: 14px;
-          background: rgba(255, 255, 255, 0.2);
-          margin: 0 8px;
-        }
-        .hero-slide-active-tag {
-          color: rgba(255, 255, 255, 0.9);
-          font-weight: 600;
-          font-size: 13px;
-          letter-spacing: 0.01em;
-        }
-
-        .hero-pills-track {
-          display: flex;
-          align-items: center;
+          justify-content: center;
           gap: 8px;
+          margin-top: 24px;
         }
         .hero-pill-btn {
           width: 12px;
@@ -2557,16 +2499,8 @@ export default function HomePage() {
             width: 100% !important;
             padding: 13px 18px !important;
           }
-          .hero-controls-bar {
-            padding: 10px 14px !important;
-            margin-top: 20px !important;
-            justify-content: center !important;
-          }
-          .hero-slide-active-tag {
-            display: none !important;
-          }
-          .hero-slide-divider {
-            display: none !important;
+          .hero-indicators-bar {
+            margin-top: 16px !important;
           }
         }
 
