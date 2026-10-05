@@ -67,7 +67,7 @@ export function MobileLayout({ userName, userRole, children }: MobileLayoutProps
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
 
   return (
-    <div className="kai-mobile-portal-shell" style={{ minHeight: "100vh", background: "#F8FAFC", display: "flex", flexDirection: "column" }}>
+    <div className="kai-mobile-portal-shell" style={{ minHeight: "100vh", background: "#F8FAFC", display: "flex", flexDirection: "column", width: "100%", maxWidth: "100vw", overflowX: "hidden", boxSizing: "border-box" }}>
       {/* Fixed Header */}
       <header style={{
         position: "fixed",

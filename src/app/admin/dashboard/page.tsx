@@ -632,13 +632,13 @@ export default function AdminDashboardPage() {
   return (
     <div style={{ fontFamily: "Inter, system-ui, -apple-system, sans-serif", minHeight: "100vh", background: "#f8f9fa", color: "#111111", margin: 0, padding: 0 }}>
       {/* Header */}
-      <header style={{ background: "#ffffff", borderBottom: "1px solid #eeeeee", padding: "20px 32px", marginBottom: "32px" }}>
-        <div style={{ maxWidth: "1400px", margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <header className="admin-page-header" style={{ background: "#ffffff", borderBottom: "1px solid #eeeeee", padding: "20px 32px", marginBottom: "32px" }}>
+        <div style={{ maxWidth: "1400px", margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
           <div>
             <h1 style={{ fontSize: "28px", fontWeight: 800, color: "#00205B", marginBottom: "4px", letterSpacing: "-0.02em" }}>Dashboard HR</h1>
             <p style={{ fontSize: "15px", color: "#666666" }}>Ringkasan aktivitas rekrutmen • Juli 2026</p>
           </div>
-          <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
             <button
               onClick={loadData}
               style={{ padding: "10px", background: "#f1f5f9", border: "none", borderRadius: "12px", cursor: "pointer" }}
@@ -994,7 +994,7 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Recruitment Pipeline Funnel */}
-        <div style={{
+        <div className="admin-funnel-card" style={{
           background: "linear-gradient(135deg, #ffffff 0%, #fbfcfe 100%)",
           borderRadius: "16px",
           padding: "24px 28px",
@@ -1002,7 +1002,7 @@ export default function AdminDashboardPage() {
           border: "1px solid #eef2f6",
           marginBottom: "32px",
         }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <h2 style={{ fontSize: "18px", fontWeight: 800, color: "#00205B", margin: 0, letterSpacing: "-0.01em" }}>
@@ -1104,7 +1104,7 @@ export default function AdminDashboardPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
 
             {/* Recent Applications Table */}
-            <div style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+            <div className="admin-table-card" style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>
                 <div>
                   <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#111111", marginBottom: "4px" }}>Lamaran Terbaru</h2>
@@ -1113,15 +1113,15 @@ export default function AdminDashboardPage() {
                     {selectedFunnelStage && <span style={{ color: "#FF5E00", fontWeight: 600 }}> (Filtered by Pipeline)</span>}
                   </p>
                 </div>
-                <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                  <div style={{ position: "relative" }}>
+                <div className="admin-table-filter-toolbar" style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+                  <div style={{ position: "relative", flex: "1 1 180px", minWidth: "140px" }}>
                     <Search className="w-4 h-4" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#888888" }} />
                     <input
                       type="text"
                       placeholder="Cari nama..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      style={{ padding: "10px 14px 10px 42px", border: "2px solid #eeeeee", borderRadius: "10px", fontSize: "14px", outline: "none", width: "180px" }}
+                      style={{ padding: "10px 14px 10px 42px", border: "2px solid #eeeeee", borderRadius: "10px", fontSize: "14px", outline: "none", width: "100%", boxSizing: "border-box" }}
                     />
                   </div>
                   <StatusFilterDropdown statusFilter={statusFilter} setStatusFilter={setStatusFilter} />
