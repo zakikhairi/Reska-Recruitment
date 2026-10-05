@@ -223,7 +223,6 @@ html, body {
 @media (max-width: 768px) {
   /* Section standard padding on mobile */
   #mengapa,
-  #cara-melamar,
   #roadmap,
   #lowongan,
   #tentang,
@@ -234,7 +233,6 @@ html, body {
 
   /* Section Headings */
   #mengapa h2,
-  #cara-melamar h2,
   #roadmap h2,
   #lowongan h2,
   #tentang h2,
@@ -246,7 +244,6 @@ html, body {
   }
 
   #mengapa p,
-  #cara-melamar p,
   #roadmap p,
   #tentang p,
   #faq p {
@@ -341,79 +338,6 @@ html, body {
     border-color: #cbd5e1;
   }
 
-  /* ===================================================
-     CARA MELAMAR VERTICAL CONNECTED TIMELINE (MOBILE)
-     =================================================== */
-  .how-to-apply-checklist {
-    display: none !important;
-  }
-
-  .how-to-apply-cards {
-    display: flex !important;
-    flex-direction: column !important;
-    position: relative !important;
-    padding-left: 36px !important;
-    gap: 18px !important;
-  }
-
-  .how-to-apply-cards::before {
-    content: '' !important;
-    position: absolute !important;
-    left: 12px !important;
-    top: 28px !important;
-    bottom: 28px !important;
-    width: 3px !important;
-    background: linear-gradient(180deg, #00205B 0%, #0284C7 25%, #1D4ED8 50%, #334155 75%, #FF5E00 100%) !important;
-    border-radius: 9999px !important;
-    z-index: 1 !important;
-  }
-
-  .how-to-apply-cards > div {
-    position: relative !important;
-    width: 100% !important;
-  }
-
-  /* Timeline Node Dots on Cards */
-  .how-to-apply-cards > div::before {
-    content: '' !important;
-    position: absolute !important;
-    left: -30px !important;
-    top: 26px !important;
-    width: 15px !important;
-    height: 15px !important;
-    border-radius: 50% !important;
-    background: #ffffff !important;
-    border: 3.5px solid #00205B !important;
-    z-index: 2 !important;
-    box-shadow: 0 0 0 3px rgba(0, 32, 91, 0.18) !important;
-  }
-
-  .how-to-apply-cards > div:nth-child(2)::before {
-    border-color: #0284C7 !important;
-    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.22) !important;
-  }
-
-  .how-to-apply-cards > div:nth-child(3)::before {
-    border-color: #1D4ED8 !important;
-    box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.22) !important;
-  }
-
-  .how-to-apply-cards > div:nth-child(4)::before {
-    border-color: #334155 !important;
-    box-shadow: 0 0 0 3px rgba(51, 65, 85, 0.22) !important;
-  }
-
-  .how-to-apply-cards > div:nth-child(5)::before {
-    border-color: #FF5E00 !important;
-    box-shadow: 0 0 0 4px rgba(255, 94, 0, 0.35) !important;
-    animation: pulseDot 2s infinite !important;
-  }
-
-  .how-to-apply-cards > div > div {
-    padding: 22px 20px !important;
-    border-radius: 16px !important;
-    min-height: auto !important;
-  }
 
   /* Jobs Grid */
   .jobs-grid {
