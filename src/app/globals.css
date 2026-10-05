@@ -177,6 +177,14 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.6);
 }
 
+/* Roadmap Desktop/Mobile Visibility Defaults */
+.desktop-roadmap-view {
+  display: block;
+}
+.mobile-roadmap-timeline {
+  display: none;
+}
+
 /* ===================================================
    COMPREHENSIVE MOBILE & TABLET RESPONSIVE STYLES
    =================================================== */
@@ -385,7 +393,7 @@ html, body {
 }
 
 /* ===================================================
-   MOBILE PORTAL & RESPONSIVE LAYOUT (ADMIN & APPLICANT)
+   MOBILE PORTAL & RESPONSIVE LAYOUT (ADMIN & APPLICANT ONLY)
    =================================================== */
 @media (max-width: 1023px) {
   /* Prevent horizontal body/window blowout */
@@ -407,7 +415,7 @@ html, body {
     box-sizing: border-box !important;
   }
 
-  /* Reset outer desktop page paddings & containers */
+  /* Reset outer desktop page paddings & containers INSIDE PORTAL ONLY */
   .kai-portal-mobile-main > div,
   .kai-portal-mobile-main div[style*="minHeight: 100vh"],
   .kai-portal-mobile-main div[style*="min-height: 100vh"] {
@@ -418,57 +426,48 @@ html, body {
     max-width: 100% !important;
   }
 
-  div[style*="padding: 0 32px 60px"],
-  div[style*="padding: 0px 32px 60px"],
-  div[style*="padding: 28px 32px"],
-  div[style*="padding: 28px 24px 60px"],
-  div[style*="padding: 24px"],
-  div[style*="padding: 32px"] {
+  .kai-portal-mobile-main .admin-page-container,
+  .kai-portal-mobile-main .admin-dashboard-container,
+  .kai-portal-mobile-main .kai-portal-jobs-container,
+  .kai-portal-mobile-main .kai-portal-profile-container {
     padding-left: 0 !important;
     padding-right: 0 !important;
-    padding-top: 6px !important;
+    padding-top: 4px !important;
     padding-bottom: 24px !important;
     max-width: 100% !important;
   }
 
-  /* Streamline secondary desktop headers on mobile */
-  header[style*="padding: 20px 32px"],
-  header[style*="padding: 24px 32px"] {
+  /* Streamline secondary desktop headers on mobile INSIDE PORTAL */
+  .kai-portal-mobile-main header {
     padding: 12px 14px !important;
     margin-bottom: 14px !important;
     border-radius: 12px !important;
   }
-  header[style*="padding: 20px 32px"] h1,
-  header[style*="padding: 24px 32px"] h1 {
+  .kai-portal-mobile-main header h1 {
     font-size: 18px !important;
     margin-bottom: 2px !important;
   }
-  header[style*="padding: 20px 32px"] p,
-  header[style*="padding: 24px 32px"] p {
+  .kai-portal-mobile-main header p {
     font-size: 12px !important;
   }
 
-  /* Responsive Stats Grid (2x2 on mobile instead of 4) */
-  div[style*="gridTemplateColumns: repeat(4, 1fr)"],
-  div[style*="grid-template-columns: repeat(4, 1fr)"] {
+  /* Responsive Stats Grid (2x2 on mobile instead of 4) INSIDE PORTAL */
+  .kai-portal-mobile-main .admin-stats-grid {
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 8px !important;
     margin-bottom: 16px !important;
   }
-  div[style*="gridTemplateColumns: repeat(4, 1fr)"] > div,
-  div[style*="grid-template-columns: repeat(4, 1fr)"] > div {
+  .kai-portal-mobile-main .admin-stats-grid > div {
     padding: 12px !important;
     border-radius: 12px !important;
   }
-  div[style*="gridTemplateColumns: repeat(4, 1fr)"] div[style*="font-size: 32px"],
-  div[style*="gridTemplateColumns: repeat(4, 1fr)"] div[style*="fontSize: 32px"],
-  div[style*="grid-template-columns: repeat(4, 1fr)"] div[style*="font-size: 32px"] {
+  .kai-portal-mobile-main .admin-stats-grid div[style*="font-size: 32px"],
+  .kai-portal-mobile-main .admin-stats-grid div[style*="fontSize: 32px"] {
     font-size: 20px !important;
   }
 
-  /* Responsive Pipeline Ribbon (Swipeable track on mobile) */
-  div[style*="gridTemplateColumns: repeat(5, 1fr)"],
-  div[style*="grid-template-columns: repeat(5, 1fr)"] {
+  /* Responsive Pipeline Ribbon (Swipeable track on mobile) INSIDE PORTAL */
+  .kai-portal-mobile-main .admin-funnel-grid {
     display: flex !important;
     flex-wrap: nowrap !important;
     overflow-x: auto !important;
@@ -477,8 +476,7 @@ html, body {
     padding-bottom: 8px !important;
     scroll-snap-type: x mandatory;
   }
-  div[style*="gridTemplateColumns: repeat(5, 1fr)"] > div,
-  div[style*="grid-template-columns: repeat(5, 1fr)"] > div {
+  .kai-portal-mobile-main .admin-funnel-grid > div {
     min-width: 140px !important;
     flex: 0 0 140px !important;
     padding: 10px 12px !important;
@@ -486,68 +484,78 @@ html, body {
     border-radius: 12px !important;
   }
 
-  /* 2-Column grids collapse to 1 column on mobile */
-  div[style*="gridTemplateColumns: 1fr 380px"],
-  div[style*="grid-template-columns: 1fr 380px"],
-  div[style*="gridTemplateColumns: 1.8fr 1.2fr"],
-  div[style*="grid-template-columns: 1.8fr 1.2fr"],
-  div[style*="gridTemplateColumns: 1.6fr 1fr"],
-  div[style*="grid-template-columns: 1.6fr 1fr"],
-  div[style*="gridTemplateColumns: 1fr 1fr"],
-  div[style*="grid-template-columns: 1fr 1fr"],
-  form div[style*="gridTemplateColumns: 1fr 1fr"],
-  form div[style*="grid-template-columns: 1fr 1fr"] {
+  /* 2-Column grids collapse to 1 column on mobile INSIDE PORTAL */
+  .kai-portal-mobile-main .admin-main-grid,
+  .kai-portal-mobile-main .profile-form-grid,
+  .kai-portal-mobile-main .admin-schedule-split {
     grid-template-columns: 1fr !important;
+    flex-direction: column !important;
     gap: 14px !important;
   }
+  .kai-portal-mobile-main .admin-schedule-calendar {
+    width: 100% !important;
+    padding: 12px !important;
+    border-right: none !important;
+    border-bottom: 1px solid #e0e0e0 !important;
+  }
+  .kai-portal-mobile-main .admin-schedule-list {
+    width: 100% !important;
+  }
 
-  /* Auto-fill jobs grid on admin & applicant */
-  div[style*="minmax(380px, 1fr)"],
-  div[style*="minmax(360px, 1fr)"] {
+  /* Auto-fill jobs grid on admin & applicant INSIDE PORTAL */
+  .kai-portal-mobile-main .admin-jobs-grid {
     grid-template-columns: 1fr !important;
     gap: 12px !important;
   }
+  .kai-portal-mobile-main .applicant-job-card {
+    flex-direction: column !important;
+    gap: 14px !important;
+    padding: 16px !important;
+  }
+  .kai-portal-mobile-main .applicant-job-card > div:first-child {
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 10px !important;
+  }
 
-  /* Universal Responsive Tables */
-  div:has(> table),
-  .table-responsive,
-  div[style*="overflowX: auto"],
-  div[style*="overflow-x: auto"] {
+  /* Universal Responsive Tables INSIDE PORTAL */
+  .kai-portal-mobile-main div:has(> table),
+  .kai-portal-mobile-main .table-responsive,
+  .kai-portal-mobile-main div[style*="overflowX: auto"],
+  .kai-portal-mobile-main div[style*="overflow-x: auto"] {
     overflow-x: auto !important;
     -webkit-overflow-scrolling: touch !important;
     width: 100% !important;
     max-width: 100% !important;
     display: block !important;
   }
-  table {
+  .kai-portal-mobile-main table {
     min-width: 580px !important;
   }
-  th, td {
+  .kai-portal-mobile-main th,
+  .kai-portal-mobile-main td {
     padding: 10px 12px !important;
     font-size: 12px !important;
   }
 
-  /* Responsive card boxes */
-  div[style*="padding: 28px"],
-  div[style*="padding: 32px"],
-  div[style*="padding: 24px"],
-  div[style*="padding: 26px 30px"] {
+  /* Responsive card boxes INSIDE PORTAL */
+  .kai-portal-mobile-main .admin-filters-card,
+  .kai-portal-mobile-main .profile-card {
     padding: 14px 16px !important;
     border-radius: 14px !important;
   }
 
-  /* Filter and search toolbars wrap cleanly */
-  div[style*="display: flex"][style*="flexWrap: wrap"],
-  div[style*="display: flex"][style*="flex-wrap: wrap"] {
+  /* Filter and search toolbars wrap cleanly INSIDE PORTAL */
+  .kai-portal-mobile-main .admin-filters-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
     gap: 10px !important;
   }
-  div[style*="minWidth: 280px"],
-  div[style*="min-width: 280px"] {
-    min-width: 100% !important;
-    flex: 1 1 100% !important;
-  }
-  select[style*="padding: 12px 40px 12px 16px"] {
+  .kai-portal-mobile-main .admin-filters-row > div,
+  .kai-portal-mobile-main .admin-filters-row select,
+  .kai-portal-mobile-main .admin-filters-row input {
     width: 100% !important;
+    min-width: 0 !important;
     box-sizing: border-box !important;
   }
 

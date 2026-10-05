@@ -23,6 +23,7 @@ export default function InteractiveRoadmap() {
       id: 0,
       number: "01",
       title: "Pendaftaran Akun, Profil & Lamar Posisi",
+      shortTitle: "Pendaftaran & Profil",
       shortDesc: "Pembuatan akun resmi, unggah CV/berkas profil, dan lamar posisi impian",
       duration: "10 - 20 Menit",
       icon: <FileCheck size={22} />,
@@ -40,6 +41,7 @@ export default function InteractiveRoadmap() {
       id: 1,
       number: "02",
       title: "Seleksi Administrasi & Berkas",
+      shortTitle: "Seleksi Berkas",
       shortDesc: "Verifikasi dokumen oleh tim verifikator HRD",
       duration: "3 - 5 Hari Kerja",
       icon: <CheckCircle size={22} />,
@@ -56,6 +58,7 @@ export default function InteractiveRoadmap() {
       id: 2,
       number: "03",
       title: "Ujian Online Berbasis CAT",
+      shortTitle: "Ujian CAT Online",
       shortDesc: "Tes kompetensi, logika & kepribadian digital",
       duration: "60 - 90 Menit",
       icon: <MonitorCheck size={22} />,
@@ -72,6 +75,7 @@ export default function InteractiveRoadmap() {
       id: 3,
       number: "04",
       title: "Wawancara (Interview) HRD & User",
+      shortTitle: "Wawancara User",
       shortDesc: "Eksplorasi motivasi, integritas, dan keahlian",
       duration: "30 - 45 Menit per kandidat",
       icon: <Users2 size={22} />,
@@ -88,6 +92,7 @@ export default function InteractiveRoadmap() {
       id: 4,
       number: "05",
       title: "Medical Check-Up (MCU)",
+      shortTitle: "Medical Check-Up",
       shortDesc: "Pemeriksaan kesehatan fisik & bebas narkoba",
       duration: "1 Hari Pemeriksaan",
       icon: <HeartPulse size={22} />,
@@ -104,6 +109,7 @@ export default function InteractiveRoadmap() {
       id: 5,
       number: "06",
       title: "Offering & Pelatihan Onboarding",
+      shortTitle: "Offering & Kontrak",
       shortDesc: "Penandatanganan kontrak kerja & orientasi",
       duration: "1 - 2 Minggu Diklat",
       icon: <Award size={22} />,
@@ -217,7 +223,7 @@ export default function InteractiveRoadmap() {
                       lineHeight: 1.3,
                     }}
                   >
-                    {stg.title.split(" ")[0]} {stg.title.split(" ")[1] || ""}
+                    {stg.shortTitle}
                   </div>
                 </div>
               );
