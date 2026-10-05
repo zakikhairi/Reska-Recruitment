@@ -527,7 +527,7 @@ html, body {
   }
   .kai-portal-mobile-main .admin-funnel-card > div:first-child > div,
   .kai-portal-mobile-main .admin-table-card > div:first-child > div,
-  .kai-portal-mobile-main .admin-monthly-card > div:first-child > div,
+  .kai-portal-mobile-main .admin-monthly-card > div:first-child > div:first-child,
   .kai-portal-mobile-main .admin-activity-card > div:first-child > div {
     display: flex !important;
     flex-direction: column !important;
@@ -535,6 +535,22 @@ html, body {
     justify-content: center !important;
     text-align: center !important;
     width: 100% !important;
+  }
+  .kai-portal-mobile-main .admin-monthly-legend {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 16px !important;
+    width: 100% !important;
+    flex-wrap: wrap !important;
+  }
+  .kai-portal-mobile-main .admin-monthly-legend > div {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 6px !important;
+    width: auto !important;
   }
   .kai-portal-mobile-main .admin-funnel-card p,
   .kai-portal-mobile-main .admin-table-card p,
@@ -633,8 +649,10 @@ html, body {
   .kai-portal-mobile-main div[style*="1fr 380px"],
   .kai-portal-mobile-main div[style*="1.8fr 1.2fr"],
   .kai-portal-mobile-main div[style*="1.6fr 1fr"],
+  .kai-portal-mobile-main div[style*="1.4fr 1fr"],
   .kai-portal-mobile-main div[style*="gridTemplateColumns: 1fr 1fr"],
   .kai-portal-mobile-main div[style*="grid-template-columns: 1fr 1fr"],
+  .kai-portal-mobile-main .admin-analytics-grid,
   .kai-portal-mobile-main .admin-main-grid,
   .kai-portal-mobile-main .profile-form-grid,
   .kai-portal-mobile-main .admin-schedule-split {
@@ -646,6 +664,7 @@ html, body {
     min-width: 0 !important;
     box-sizing: border-box !important;
   }
+  .kai-portal-mobile-main .admin-analytics-grid > div,
   .kai-portal-mobile-main .admin-main-grid > div,
   .kai-portal-mobile-main .admin-main-col-left,
   .kai-portal-mobile-main .admin-main-col-right,

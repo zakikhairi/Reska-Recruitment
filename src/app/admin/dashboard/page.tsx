@@ -1100,6 +1100,112 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
+        {/* Analytics Section: Tren Pelamar Bulanan & Distribusi Status (SEJAJAR / SIDE-BY-SIDE) */}
+        <div className="admin-analytics-grid" style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: "28px", marginBottom: "28px" }}>
+          {/* Monthly Trend */}
+          <div className="admin-monthly-card" style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", width: "100%", boxSizing: "border-box", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
+              <div>
+                <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#111111", marginBottom: "4px" }}>Tren Pelamar Bulanan</h2>
+                <p style={{ fontSize: "14px", color: "#888888", margin: 0 }}>Data pelamar dan kelulusan per bulan</p>
+              </div>
+              <div className="admin-monthly-legend" style={{ display: "flex", gap: "16px", fontSize: "13px", alignItems: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <div style={{ width: "12px", height: "12px", background: "#2563eb", borderRadius: "3px" }} />
+                  <span style={{ color: "#666666" }}>Total Pelamar</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <div style={{ width: "12px", height: "12px", background: "#10B981", borderRadius: "3px" }} />
+                  <span style={{ color: "#666666" }}>Lulus</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Simple bar chart - per month */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", height: "160px", gap: "8px", width: "100%", overflowX: "auto", paddingBottom: "4px" }}>
+              {monthlyData.map((data, i) => {
+                const maxVal = Math.max(...monthlyData.map(d => Math.max(d.pelamar, d.lulus)), 1);
+                const pelamarHeight = (data.pelamar / maxVal) * 100;
+                const lulusHeight = (data.lulus / maxVal) * 100;
+
+                return (
+                  <div key={i} style={{ flex: 1, minWidth: "36px", display: "flex", flexDirection: "column", alignItems: "center", height: "100%" }}>
+                    {/* Values on top */}
+                    <div style={{ display: "flex", gap: "4px", marginBottom: "8px", alignItems: "flex-end", height: "70px" }}>
+                      <div style={{
+                        width: "16px",
+                        background: "#2563eb",
+                        borderRadius: "4px 4px 0 0",
+                        height: `${Math.max(pelamarHeight * 0.7, data.pelamar > 0 ? 20 : 0)}px`,
+                        display: "flex",
+                        alignItems: "flex-start",
+                        justifyContent: "center",
+                        paddingTop: "4px"
+                      }}>
+                        {data.pelamar > 0 && <span style={{ fontSize: "10px", fontWeight: 600, color: "#fff" }}>{data.pelamar}</span>}
+                      </div>
+                      <div style={{
+                        width: "16px",
+                        background: "#10B981",
+                        borderRadius: "4px 4px 0 0",
+                        height: `${Math.max(lulusHeight * 0.7, data.lulus > 0 ? 20 : 0)}px`,
+                        display: "flex",
+                        alignItems: "flex-start",
+                        justifyContent: "center",
+                        paddingTop: "4px"
+                      }}>
+                        {data.lulus > 0 && <span style={{ fontSize: "10px", fontWeight: 600, color: "#fff" }}>{data.lulus}</span>}
+                      </div>
+                    </div>
+                    {/* Month label */}
+                    <span style={{ fontSize: "11px", color: "#94a3b8", fontWeight: 500 }}>{data.month}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Status Distribution */}
+          <div className="admin-dist-card" style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", width: "100%", boxSizing: "border-box", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+            <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#111111", marginBottom: "16px" }}>Distribusi Status</h2>
+
+            {/* Simple pie chart visualization */}
+            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", marginBottom: "20px", width: "100%" }}>
+              <div style={{
+                width: "130px",
+                height: "130px",
+                borderRadius: "50%",
+                background: `conic-gradient(${statusDist.map((item, i) => {
+                  const total = statusDist.reduce((sum, s) => sum + s.value, 0);
+                  const percentage = total > 0 ? (item.value / total) * 100 : 0;
+                  return `${item.color} ${statusDist.slice(0, i).reduce((sum, s) => sum + (total > 0 ? (s.value / total) * 360 : 0), 0)}deg ${statusDist.slice(0, i + 1).reduce((sum, s) => sum + (total > 0 ? (s.value / total) * 360 : 0), 0)}deg`;
+                }).join(', ')})`,
+                position: "relative",
+                margin: "0 auto"
+              }}>
+                <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "74px", height: "74px", background: "#ffffff", borderRadius: "50%" }}>
+                  <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", textAlign: "center" }}>
+                    <div style={{ fontSize: "22px", fontWeight: 800, color: "#111111" }}>{applications.length}</div>
+                    <div style={{ fontSize: "10.5px", color: "#888888" }}>Total</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", width: "100%" }}>
+              {statusDist.filter(item => item.value > 0).map((item, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <div style={{ width: "10px", height: "10px", background: item.color, borderRadius: "50%" }} />
+                    <span style={{ fontSize: "13.5px", color: "#666666" }}>{item.name}</span>
+                  </div>
+                  <span style={{ fontSize: "13.5px", fontWeight: 700, color: "#111111" }}>{item.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
         <div className="admin-main-grid" style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: "28px" }}>
           {/* Main Content */}
           <div className="admin-main-col-left" style={{ display: "flex", flexDirection: "column", gap: "28px", minWidth: 0, width: "100%" }}>
@@ -1267,69 +1373,6 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
             </div>
-
-            {/* Monthly Trend */}
-            <div className="admin-monthly-card" style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", width: "100%", boxSizing: "border-box" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
-                <div>
-                  <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#111111", marginBottom: "4px" }}>Tren Pelamar Bulanan</h2>
-                  <p style={{ fontSize: "14px", color: "#888888" }}>Data pelamar dan kelulusan per bulan</p>
-                </div>
-                <div style={{ display: "flex", gap: "20px", fontSize: "13px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <div style={{ width: "12px", height: "12px", background: "#2563eb", borderRadius: "3px" }} />
-                    <span style={{ color: "#666666" }}>Total Pelamar</span>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <div style={{ width: "12px", height: "12px", background: "#10B981", borderRadius: "3px" }} />
-                    <span style={{ color: "#666666" }}>Lulus</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Simple bar chart - per month */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", height: "150px", gap: "8px", width: "100%", overflowX: "auto" }}>
-                {monthlyData.map((data, i) => {
-                  const maxVal = Math.max(...monthlyData.map(d => Math.max(d.pelamar, d.lulus)), 1);
-                  const pelamarHeight = (data.pelamar / maxVal) * 100;
-                  const lulusHeight = (data.lulus / maxVal) * 100;
-
-                  return (
-                    <div key={i} style={{ flex: 1, minWidth: "36px", display: "flex", flexDirection: "column", alignItems: "center", height: "100%" }}>
-                      {/* Values on top */}
-                      <div style={{ display: "flex", gap: "4px", marginBottom: "8px", alignItems: "flex-end", height: "60px" }}>
-                        <div style={{
-                          width: "16px",
-                          background: "#2563eb",
-                          borderRadius: "4px 4px 0 0",
-                          height: `${Math.max(pelamarHeight * 0.6, data.pelamar > 0 ? 20 : 0)}px`,
-                          display: "flex",
-                          alignItems: "flex-start",
-                          justifyContent: "center",
-                          paddingTop: "4px"
-                        }}>
-                          {data.pelamar > 0 && <span style={{ fontSize: "10px", fontWeight: 600, color: "#fff" }}>{data.pelamar}</span>}
-                        </div>
-                        <div style={{
-                          width: "16px",
-                          background: "#10B981",
-                          borderRadius: "4px 4px 0 0",
-                          height: `${Math.max(lulusHeight * 0.6, data.lulus > 0 ? 20 : 0)}px`,
-                          display: "flex",
-                          alignItems: "flex-start",
-                          justifyContent: "center",
-                          paddingTop: "4px"
-                        }}>
-                          {data.lulus > 0 && <span style={{ fontSize: "10px", fontWeight: 600, color: "#fff" }}>{data.lulus}</span>}
-                        </div>
-                      </div>
-                      {/* Month label */}
-                      <span style={{ fontSize: "11px", color: "#94a3b8", fontWeight: 500 }}>{data.month}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
           </div>
 
           {/* Sidebar */}
@@ -1383,46 +1426,6 @@ export default function AdminDashboardPage() {
                     </div>
                   ))
                 )}
-              </div>
-            </div>
-
-            {/* Status Distribution */}
-            <div className="admin-dist-card" style={{ background: "#ffffff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", width: "100%", boxSizing: "border-box" }}>
-              <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#111111", marginBottom: "20px" }}>Distribusi Status</h2>
-
-              {/* Simple pie chart visualization */}
-              <div style={{ display: "flex", justifyContent: "center", alignItems: "center", marginBottom: "24px", width: "100%" }}>
-                <div style={{
-                  width: "140px",
-                  height: "140px",
-                  borderRadius: "50%",
-                  background: `conic-gradient(${statusDist.map((item, i) => {
-                    const total = statusDist.reduce((sum, s) => sum + s.value, 0);
-                    const percentage = total > 0 ? (item.value / total) * 100 : 0;
-                    return `${item.color} ${statusDist.slice(0, i).reduce((sum, s) => sum + (total > 0 ? (s.value / total) * 360 : 0), 0)}deg ${statusDist.slice(0, i + 1).reduce((sum, s) => sum + (total > 0 ? (s.value / total) * 360 : 0), 0)}deg`;
-                  }).join(', ')})`,
-                  position: "relative",
-                  margin: "0 auto"
-                }}>
-                  <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "80px", height: "80px", background: "#ffffff", borderRadius: "50%" }}>
-                    <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", textAlign: "center" }}>
-                      <div style={{ fontSize: "24px", fontWeight: 800, color: "#111111" }}>{applications.length}</div>
-                      <div style={{ fontSize: "11px", color: "#888888" }}>Total</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px", width: "100%" }}>
-                {statusDist.filter(item => item.value > 0).map((item, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <div style={{ width: "10px", height: "10px", background: item.color, borderRadius: "50%" }} />
-                      <span style={{ fontSize: "14px", color: "#666666" }}>{item.name}</span>
-                    </div>
-                    <span style={{ fontSize: "14px", fontWeight: 700, color: "#111111" }}>{item.value}</span>
-                  </div>
-                ))}
               </div>
             </div>
 
