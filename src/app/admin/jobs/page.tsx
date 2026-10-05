@@ -121,10 +121,10 @@ export default function JobsPage() {
         </div>
       </header>
 
-      <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "0 32px 60px" }}>
+      <div className="admin-page-container" style={{ maxWidth: "1400px", margin: "0 auto", padding: "0 32px 60px" }}>
         {/* Filters */}
-        <div style={{ background: "#ffffff", borderRadius: "16px", padding: "24px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", marginBottom: "24px" }}>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", alignItems: "center" }}>
+        <div className="admin-filters-card" style={{ background: "#ffffff", borderRadius: "16px", padding: "24px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", marginBottom: "24px" }}>
+          <div className="admin-filters-row" style={{ display: "flex", flexWrap: "wrap", gap: "16px", alignItems: "center" }}>
             {/* Search */}
             <div style={{ position: "relative", flex: "1", minWidth: "280px" }}>
               <Search className="w-4 h-4" style={{ position: "absolute", left: "16px", top: "50%", transform: "translateY(-50%)", color: "#888888" }} />
@@ -167,7 +167,7 @@ export default function JobsPage() {
         </div>
 
         {/* Jobs Grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(380px, 1fr))", gap: "24px" }}>
+        <div className="admin-jobs-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "20px" }}>
           {filteredJobs.map((job) => {
             const status = getStatusConfig(job.status);
             return (

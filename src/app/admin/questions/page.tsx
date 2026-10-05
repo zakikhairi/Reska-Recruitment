@@ -268,7 +268,7 @@ export default function QuestionsPage() {
         </div>
       </header>
 
-      <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "0 32px 64px" }}>
+      <div className="admin-page-container" style={{ maxWidth: "1400px", margin: "0 auto", padding: "0 32px 64px" }}>
         {/* Category Stats */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "32px" }}>
           {stats.map((stat) => (

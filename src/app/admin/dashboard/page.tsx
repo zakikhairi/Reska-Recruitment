@@ -848,9 +848,9 @@ export default function AdminDashboardPage() {
         </div>
       </header>
 
-      <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "0 32px 60px" }}>
+      <div className="admin-dashboard-container" style={{ maxWidth: "1400px", margin: "0 auto", padding: "0 32px 60px" }}>
         {/* Stats Cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "20px", marginBottom: "32px" }}>
+        <div className="admin-stats-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "20px", marginBottom: "32px" }}>
           {statsData.map((stat, i) => (
             <div key={i} style={{ background: "#ffffff", borderRadius: "16px", padding: "24px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
@@ -921,7 +921,7 @@ export default function AdminDashboardPage() {
             )}
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "14px" }}>
+          <div className="admin-funnel-grid" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "14px" }}>
             {[
               { key: "all", label: "1. Berkas Masuk", sub: "Total pendaftar", count: applications.length, color: "#00205B", bg: "#f0f4ff", icon: <Users className="w-4 h-4" /> },
               { key: "adminCheck", label: "2. Verifikasi Berkas", sub: "Review administrasi", count: applications.filter(a => ["ADMIN_CHECK", "PENDING"].includes(a.status)).length, color: "#d97706", bg: "#fef3c7", icon: <FileText className="w-4 h-4" /> },
@@ -974,7 +974,7 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: "28px" }}>
+        <div className="admin-main-grid" style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: "28px" }}>
           {/* Main Content */}
           <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
 

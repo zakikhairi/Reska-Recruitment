@@ -92,7 +92,7 @@ export default function JobsPage() {
         </div>
       </header>
 
-      <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "0 32px 60px" }}>
+      <div className="kai-portal-jobs-container" style={{ maxWidth: "1200px", margin: "0 auto", padding: "0 32px 60px" }}>
         {/* Search & Filters */}
         <div style={{ background: "#ffffff", borderRadius: "16px", padding: "24px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", marginBottom: "28px" }}>
           <div style={{ display: "flex", gap: "16px", marginBottom: "20px" }}>
@@ -154,7 +154,7 @@ export default function JobsPage() {
               return (
               <div
                 key={job.id}
-                className="card-hover-lift"
+                className="card-hover-lift applicant-job-card"
                 style={{
                   background: "#ffffff",
                   borderRadius: "18px",

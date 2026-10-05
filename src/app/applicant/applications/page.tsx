@@ -545,8 +545,8 @@ export default function ApplicationsPage() {
                   </div>
 
                   {/* RECRUITMENT PIPELINE STEPPER TRACKER */}
-                  <div style={{ marginBottom: "26px" }}>
-                    <div style={{ position: "relative", marginBottom: "8px" }}>
+                  <div style={{ marginBottom: "26px", overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: "8px" }}>
+                    <div style={{ position: "relative", marginBottom: "8px", minWidth: "520px" }}>
                       {/* Inactive Track Line */}
                       <div
                         style={{

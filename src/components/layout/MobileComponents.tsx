@@ -46,15 +46,15 @@ export function MobileLayout({ userName, userRole, children }: MobileLayoutProps
     { label: "Dashboard", href: "/admin/dashboard", icon: "home" },
     { label: "Pelamar", href: "/admin/applicants", icon: "users" },
     { label: "Lowongan", href: "/admin/jobs", icon: "briefcase" },
+    { label: "Jadwal", href: "/admin/schedule", icon: "calendar" },
     { label: "Soal", href: "/admin/questions", icon: "clipboard" },
-    { label: "Profil", href: "/help", icon: "user" },
   ];
 
   const navItems = userRole === "APPLICANT" ? applicantNav : adminNav;
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F5F5F5", display: "flex", flexDirection: "column" }}>
+    <div className="kai-mobile-portal-shell" style={{ minHeight: "100vh", background: "#F8FAFC", display: "flex", flexDirection: "column" }}>
       {/* Fixed Header */}
       <header style={{
         position: "fixed",
@@ -63,7 +63,7 @@ export function MobileLayout({ userName, userRole, children }: MobileLayoutProps
         right: 0,
         zIndex: 100,
         background: "#FFFFFF",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
       }}>
         <div style={{
           display: "flex",
@@ -79,7 +79,7 @@ export function MobileLayout({ userName, userRole, children }: MobileLayoutProps
               <div style={{ fontSize: "9px", color: "#888888" }}>{userRole === "APPLICANT" ? "Pelamar" : "HR Admin"}</div>
             </div>
           </div>
-          <Link href={userRole === "APPLICANT" ? "/applicant/profile" : "/help"}>
+          <Link href={userRole === "APPLICANT" ? "/applicant/profile" : "/admin/dashboard"}>
             <div style={{
               width: "30px",
               height: "30px",
@@ -99,10 +99,10 @@ export function MobileLayout({ userName, userRole, children }: MobileLayoutProps
       </header>
 
       {/* Page Content */}
-      <main style={{
+      <main className="kai-portal-mobile-main" style={{
         flex: 1,
-        paddingTop: "62px",
-        paddingBottom: "70px",
+        paddingTop: "58px",
+        paddingBottom: "76px",
         paddingLeft: "12px",
         paddingRight: "12px",
         width: "100%",

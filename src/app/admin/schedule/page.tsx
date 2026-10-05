@@ -446,10 +446,10 @@ export default function SchedulePage() {
       </header>
 
       {/* Main Layout: Calendar (60%) + List (40%) */}
-      <div style={{ display: "flex", minHeight: "calc(100vh - 100px)" }}>
+      <div className="admin-schedule-split" style={{ display: "flex", minHeight: "calc(100vh - 100px)" }}>
 
         {/* LEFT: Calendar (60%) */}
-        <div style={{ width: "60%", background: "#ffffff", padding: "20px", borderRight: "1px solid #e0e0e0", display: "flex", flexDirection: "column" }}>
+        <div className="admin-schedule-calendar" style={{ width: "60%", background: "#ffffff", padding: "20px", borderRight: "1px solid #e0e0e0", display: "flex", flexDirection: "column" }}>
 
           {/* Calendar Header */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
@@ -551,7 +551,7 @@ export default function SchedulePage() {
         </div>
 
         {/* RIGHT: Jadwal per Lowongan + Detail Panel overlay */}
-        <div style={{ width: "40%", background: "#f8f9fa", position: "relative", overflow: "hidden" }}>
+        <div className="admin-schedule-list" style={{ width: "40%", background: "#f8f9fa", position: "relative", overflow: "hidden" }}>
           {/* Tab Filter */}
           <div style={{ background: "#ffffff", borderBottom: "1px solid #e0e0e0", padding: "12px 20px", display: "flex", gap: "8px" }}>
             <button

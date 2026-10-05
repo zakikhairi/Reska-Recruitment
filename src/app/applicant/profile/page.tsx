@@ -279,24 +279,24 @@ export default function ProfilePage() {
   };
 
   return (
-    <div style={{ fontFamily: "Inter, system-ui, sans-serif", minHeight: "100vh", background: "#f8f9fa", padding: "24px" }}>
+    <div className="kai-portal-profile-container" style={{ fontFamily: "Inter, system-ui, sans-serif", minHeight: "100vh", background: "#f8f9fa", padding: "24px" }}>
       <div style={{ maxWidth: "800px", margin: "0 auto" }}>
         {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
           <div>
-            <h1 style={{ fontSize: "28px", fontWeight: 800, color: "#00205B", marginBottom: "4px" }}>Profil Saya</h1>
-            <p style={{ fontSize: "14px", color: "#666666" }}>Kelola informasi profil Anda</p>
+            <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#00205B", marginBottom: "4px" }}>Profil Saya</h1>
+            <p style={{ fontSize: "13px", color: "#666666" }}>Kelola informasi profil Anda</p>
           </div>
           {!isEditing ? (
-            <button onClick={() => setIsEditing(true)} style={{ padding: "12px 24px", background: "#FF5E00", color: "#fff", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 700, cursor: "pointer" }}>
+            <button onClick={() => setIsEditing(true)} style={{ padding: "10px 20px", background: "#FF5E00", color: "#fff", border: "none", borderRadius: "10px", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}>
               Edit Profil
             </button>
           ) : (
-            <div style={{ display: "flex", gap: "12px" }}>
-              <button onClick={handleCancel} style={{ padding: "12px 24px", background: "#fff", color: "#666", border: "2px solid #e5e5e5", borderRadius: "10px", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}>
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button onClick={handleCancel} style={{ padding: "10px 18px", background: "#fff", color: "#666", border: "2px solid #e5e5e5", borderRadius: "10px", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
                 Batal
               </button>
-              <button onClick={handleSave} style={{ padding: "12px 24px", background: "#16a34a", color: "#fff", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 700, cursor: "pointer" }}>
+              <button onClick={handleSave} style={{ padding: "10px 20px", background: "#16a34a", color: "#fff", border: "none", borderRadius: "10px", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}>
                 Simpan
               </button>
             </div>
@@ -304,34 +304,34 @@ export default function ProfilePage() {
         </div>
 
         {/* Profile Card */}
-        <div style={{ background: "#fff", borderRadius: "16px", padding: "32px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", marginBottom: "24px" }}>
+        <div className="profile-card" style={{ background: "#fff", borderRadius: "16px", padding: "28px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", marginBottom: "24px" }}>
           {/* Avatar */}
-          <div style={{ display: "flex", alignItems: "center", gap: "20px", marginBottom: "32px", paddingBottom: "32px", borderBottom: "1px solid #eee" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px", paddingBottom: "24px", borderBottom: "1px solid #eee", flexWrap: "wrap" }}>
             <div style={{ position: "relative", cursor: "pointer" }} onClick={() => !isEditing && setShowPhotoModal(true)}>
               {photoUrl ? (
                 <img
                   src={photoUrl}
                   alt="Profile"
-                  style={{ width: "80px", height: "80px", borderRadius: "50%", objectFit: "cover", border: "3px solid #FF5E00" }}
+                  style={{ width: "72px", height: "72px", borderRadius: "50%", objectFit: "cover", border: "3px solid #FF5E00" }}
                 />
               ) : (
-                <div style={{ width: "80px", height: "80px", background: "linear-gradient(135deg, #00205B 0%, #003380 100%)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "28px", fontWeight: 700 }}>
+                <div style={{ width: "72px", height: "72px", background: "linear-gradient(135deg, #00205B 0%, #003380 100%)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "24px", fontWeight: 700 }}>
                   {form.fullName?.split(" ").map(n => n[0]).join("").slice(0, 2) || "AW"}
                 </div>
               )}
-              <div style={{ position: "absolute", bottom: "0", right: "0", width: "28px", height: "28px", background: "#FF5E00", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #fff" }}>
-                <Camera size={14} color="#fff" />
+              <div style={{ position: "absolute", bottom: "0", right: "0", width: "26px", height: "26px", background: "#FF5E00", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #fff" }}>
+                <Camera size={13} color="#fff" />
               </div>
             </div>
             <div>
-              <h2 style={{ fontSize: "24px", fontWeight: 700, color: "#111", marginBottom: "4px" }}>{form.fullName || "Nama Lengkap"}</h2>
-              <p style={{ fontSize: "14px", color: "#666" }}>{form.email}</p>
-              <span style={{ display: "inline-block", marginTop: "8px", padding: "4px 12px", background: "#dcfce7", color: "#16a34a", borderRadius: "20px", fontSize: "12px", fontWeight: 600 }}>Pelamar</span>
+              <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#111", marginBottom: "4px" }}>{form.fullName || "Nama Lengkap"}</h2>
+              <p style={{ fontSize: "13px", color: "#666" }}>{form.email}</p>
+              <span style={{ display: "inline-block", marginTop: "6px", padding: "3px 10px", background: "#dcfce7", color: "#16a34a", borderRadius: "20px", fontSize: "11.5px", fontWeight: 600 }}>Pelamar</span>
             </div>
           </div>
 
           {/* Form Fields */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+          <div className="profile-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
             {/* NIK */}
             <div>
               <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#555", marginBottom: "6px" }}>

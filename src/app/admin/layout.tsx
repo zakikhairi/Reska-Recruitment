@@ -69,28 +69,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (isMobile) {
     return (
       <MobileLayout userName={user.fullName || "Admin"} userRole={user.role}>
-        <div style={{ marginBottom: "12px" }}>
-          <Link href="/admin/jobs/create" style={{ textDecoration: "none" }}>
-            <button style={{
-              width: "100%",
-              padding: "12px 16px",
-              background: "#FF5E00",
-              color: "#FFFFFF",
-              border: "none",
-              borderRadius: "10px",
-              fontSize: "13px",
-              fontWeight: 700,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "6px"
-            }}>
-              <Plus size={16} />
-              Buat Lowongan
-            </button>
-          </Link>
-        </div>
         {children}
       </MobileLayout>
     );
