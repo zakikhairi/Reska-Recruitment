@@ -501,6 +501,9 @@ html, body {
     text-align: center !important;
     max-width: 100% !important;
   }
+  .kai-portal-mobile-main .admin-header-logout {
+    display: none !important;
+  }
 
   /* Center all section titles and card headings inside mobile portal */
   .kai-portal-mobile-main h1,

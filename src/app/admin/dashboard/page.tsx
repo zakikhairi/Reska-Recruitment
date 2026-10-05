@@ -859,6 +859,7 @@ export default function AdminDashboardPage() {
               </button>
             </Link>
             <button
+              className="admin-header-logout"
               onClick={() => setShowLogoutModal(true)}
               style={{
                 padding: "12px 18px",
