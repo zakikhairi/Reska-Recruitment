@@ -74,6 +74,7 @@ export function Sidebar({ userName = "User", userRole = "APPLICANT" }: SidebarPr
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showKaiPopup, setShowKaiPopup] = useState(false);
   const popupRef = useRef<HTMLDivElement>(null);
 
@@ -630,7 +631,7 @@ export function Sidebar({ userName = "User", userRole = "APPLICANT" }: SidebarPr
                 </div>
               </div>
               <button
-                onClick={handleLogout}
+                onClick={() => setShowLogoutModal(true)}
                 disabled={isLoggingOut}
                 title="Keluar dari Akun"
                 style={{
@@ -653,7 +654,7 @@ export function Sidebar({ userName = "User", userRole = "APPLICANT" }: SidebarPr
             </>
           ) : (
             <button
-              onClick={handleLogout}
+              onClick={() => setShowLogoutModal(true)}
               disabled={isLoggingOut}
               title="Keluar dari Akun"
               style={{
@@ -674,7 +675,148 @@ export function Sidebar({ userName = "User", userRole = "APPLICANT" }: SidebarPr
             </button>
           )}
         </div>
+
+        {/* Dedicated Full Logout Button */}
+        {!effectiveCollapsed ? (
+          <button
+            onClick={() => setShowLogoutModal(true)}
+            disabled={isLoggingOut}
+            style={{
+              width: "100%",
+              marginTop: "8px",
+              padding: "10px 14px",
+              background: "#fee2e2",
+              border: "1px solid #fecaca",
+              borderRadius: "10px",
+              color: "#dc2626",
+              fontSize: "13px",
+              fontWeight: 700,
+              cursor: isLoggingOut ? "not-allowed" : "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              transition: "all 0.2s ease",
+            }}
+            title="Keluar dari Akun"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Keluar dari {userRole === "APPLICANT" ? "Akun" : "Admin"}</span>
+          </button>
+        ) : (
+          <button
+            onClick={() => setShowLogoutModal(true)}
+            disabled={isLoggingOut}
+            style={{
+              width: "48px",
+              height: "36px",
+              margin: "8px auto 0",
+              background: "#fee2e2",
+              border: "1px solid #fecaca",
+              borderRadius: "8px",
+              color: "#dc2626",
+              cursor: isLoggingOut ? "not-allowed" : "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              transition: "all 0.2s ease",
+            }}
+            title="Keluar dari Akun"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        )}
       </div>
+
+      {/* Logout Confirmation Modal for Desktop */}
+      {showLogoutModal && (
+        <div
+          onClick={() => setShowLogoutModal(false)}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0, 0, 0, 0.5)",
+            zIndex: 1000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "#ffffff",
+              borderRadius: "16px",
+              padding: "24px",
+              width: "100%",
+              maxWidth: "380px",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                width: "52px",
+                height: "52px",
+                borderRadius: "50%",
+                background: "#fee2e2",
+                color: "#dc2626",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 14px",
+              }}
+            >
+              <LogOut className="w-6 h-6" />
+            </div>
+            <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#111827", marginBottom: "8px" }}>
+              Keluar dari Akun {userRole === "APPLICANT" ? "Pelamar" : "Admin"}?
+            </h3>
+            <p style={{ fontSize: "13px", color: "#6b7280", marginBottom: "22px", lineHeight: 1.5 }}>
+              Anda akan keluar dari sesi akun KAI Services. Anda harus memasukkan kredensial lagi untuk login kembali.
+            </p>
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                style={{
+                  flex: 1,
+                  padding: "10px 16px",
+                  background: "#f3f4f6",
+                  color: "#374151",
+                  border: "none",
+                  borderRadius: "10px",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                style={{
+                  flex: 1,
+                  padding: "10px 16px",
+                  background: "#dc2626",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "10px",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  cursor: isLoggingOut ? "not-allowed" : "pointer",
+                }}
+              >
+                {isLoggingOut ? "Mengeluarkan..." : "Ya, Keluar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

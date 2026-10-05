@@ -1,8 +1,10 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { LogOut, User as UserIcon, X, AlertTriangle } from "lucide-react";
+import { useAuthStore } from "@/stores/auth";
 
 interface MobileNavItem {
   label: string;
@@ -33,6 +35,17 @@ interface MobileLayoutProps {
 
 export function MobileLayout({ userName, userRole, children }: MobileLayoutProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { logout } = useAuthStore();
+  const [showAccountModal, setShowAccountModal] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = () => {
+    setIsLoggingOut(true);
+    logout();
+    router.push("/auth/login");
+  };
 
   const applicantNav: MobileNavItem[] = [
     { label: "Home", href: "/applicant/dashboard", icon: "home" },
@@ -79,24 +92,328 @@ export function MobileLayout({ userName, userRole, children }: MobileLayoutProps
               <div style={{ fontSize: "9px", color: "#888888" }}>{userRole === "APPLICANT" ? "Pelamar" : "HR Admin"}</div>
             </div>
           </div>
-          <Link href={userRole === "APPLICANT" ? "/applicant/profile" : "/admin/dashboard"}>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            {/* User Avatar Button - triggers Account Modal */}
+            <button
+              onClick={() => setShowAccountModal(true)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                background: "#F1F5F9",
+                border: "1px solid #E2E8F0",
+                borderRadius: "20px",
+                padding: "3px 8px 3px 4px",
+                cursor: "pointer",
+              }}
+              title="Menu Akun"
+            >
+              <div style={{
+                width: "26px",
+                height: "26px",
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #00205B, #003380)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#ffffff",
+                fontSize: "10px",
+                fontWeight: 700
+              }}>
+                {(userName || "U").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+              </div>
+              <span style={{ fontSize: "11px", fontWeight: 600, color: "#1E293B", maxWidth: "75px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {userName?.split(" ")[0] || "User"}
+              </span>
+            </button>
+
+            {/* Direct Logout Button */}
+            <button
+              onClick={() => setShowLogoutConfirm(true)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+                background: "#FEE2E2",
+                color: "#DC2626",
+                border: "1px solid #FECACA",
+                borderRadius: "8px",
+                padding: "5px 9px",
+                fontSize: "11px",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+              title="Keluar dari Akun"
+            >
+              <LogOut size={13} />
+              <span>Keluar</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Account Modal for Mobile */}
+      {showAccountModal && (
+        <div
+          onClick={() => setShowAccountModal(false)}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0, 0, 0, 0.45)",
+            zIndex: 1000,
+            display: "flex",
+            alignItems: "flex-end",
+            justifyContent: "center",
+            padding: "0",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "#ffffff",
+              borderTopLeftRadius: "20px",
+              borderTopRightRadius: "20px",
+              padding: "20px 18px 24px",
+              width: "100%",
+              maxWidth: "480px",
+              boxShadow: "0 -4px 20px rgba(0, 0, 0, 0.15)",
+              animation: "slideUp 0.25s ease-out",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <img src="/_logo_kais.png" alt="KAI" style={{ width: "24px", height: "24px" }} />
+                <span style={{ fontSize: "14px", fontWeight: 700, color: "#00205B" }}>Informasi Akun</span>
+              </div>
+              <button
+                onClick={() => setShowAccountModal(false)}
+                style={{
+                  background: "#F1F5F9",
+                  border: "none",
+                  borderRadius: "50%",
+                  width: "28px",
+                  height: "28px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#64748B",
+                  cursor: "pointer"
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
             <div style={{
-              width: "30px",
-              height: "30px",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              background: "#F8FAFC",
+              border: "1px solid #E2E8F0",
+              borderRadius: "14px",
+              padding: "14px",
+              marginBottom: "16px"
+            }}>
+              <div style={{
+                width: "44px",
+                height: "44px",
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #00205B, #003380)",
+                color: "#ffffff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "15px",
+                fontWeight: 700,
+                flexShrink: 0
+              }}>
+                {(userName || "U").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: "14px", fontWeight: 700, color: "#0F172A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {userName}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "3px" }}>
+                  <span style={{
+                    fontSize: "10px",
+                    fontWeight: 700,
+                    padding: "2px 7px",
+                    borderRadius: "6px",
+                    background: userRole === "APPLICANT" ? "#E0F2FE" : "#FEF3C7",
+                    color: userRole === "APPLICANT" ? "#0284C7" : "#D97706"
+                  }}>
+                    {userRole === "APPLICANT" ? "Pelamar" : "HR Administrator"}
+                  </span>
+                  <span style={{ fontSize: "11px", color: "#64748B" }}>KAI Services</span>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              {userRole === "APPLICANT" ? (
+                <Link
+                  href="/applicant/profile"
+                  onClick={() => setShowAccountModal(false)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    padding: "12px 14px",
+                    background: "#F8FAFC",
+                    border: "1px solid #E2E8F0",
+                    borderRadius: "10px",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    color: "#00205B",
+                    textDecoration: "none",
+                  }}
+                >
+                  <UserIcon size={16} />
+                  <span>Lihat Profil Pelamar</span>
+                </Link>
+              ) : (
+                <Link
+                  href="/admin/dashboard"
+                  onClick={() => setShowAccountModal(false)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    padding: "12px 14px",
+                    background: "#F8FAFC",
+                    border: "1px solid #E2E8F0",
+                    borderRadius: "10px",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    color: "#00205B",
+                    textDecoration: "none",
+                  }}
+                >
+                  <UserIcon size={16} />
+                  <span>Dashboard HR Admin</span>
+                </Link>
+              )}
+
+              <button
+                onClick={() => {
+                  setShowAccountModal(false);
+                  setShowLogoutConfirm(true);
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  padding: "12px 14px",
+                  background: "#FEE2E2",
+                  color: "#DC2626",
+                  border: "1px solid #FECACA",
+                  borderRadius: "10px",
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  marginTop: "4px"
+                }}
+              >
+                <LogOut size={16} />
+                <span>Keluar dari Akun (Logout)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Dialog for Mobile Logout */}
+      {showLogoutConfirm && (
+        <div
+          onClick={() => setShowLogoutConfirm(false)}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0, 0, 0, 0.5)",
+            zIndex: 1100,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "#ffffff",
+              borderRadius: "16px",
+              padding: "22px 20px",
+              width: "100%",
+              maxWidth: "340px",
+              boxShadow: "0 10px 25px rgba(0, 0, 0, 0.2)",
+              textAlign: "center",
+            }}
+          >
+            <div style={{
+              width: "50px",
+              height: "50px",
               borderRadius: "50%",
-              background: "linear-gradient(135deg, #00205B, #003380)",
+              background: "#FEE2E2",
+              color: "#DC2626",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "#ffffff",
-              fontSize: "11px",
-              fontWeight: 700
+              margin: "0 auto 12px",
             }}>
-              {(userName || "U").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+              <LogOut size={22} />
             </div>
-          </Link>
+            <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#111827", marginBottom: "6px" }}>
+              Keluar dari Sesi {userRole === "APPLICANT" ? "Pelamar" : "Admin"}?
+            </h3>
+            <p style={{ fontSize: "12px", color: "#64748B", marginBottom: "18px", lineHeight: 1.4 }}>
+              Anda akan keluar dari akun KAI Services. Anda harus login kembali untuk mengakses halaman ini.
+            </p>
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                style={{
+                  flex: 1,
+                  padding: "10px 14px",
+                  background: "#F1F5F9",
+                  color: "#475569",
+                  border: "none",
+                  borderRadius: "10px",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                style={{
+                  flex: 1,
+                  padding: "10px 14px",
+                  background: "#DC2626",
+                  color: "#FFFFFF",
+                  border: "none",
+                  borderRadius: "10px",
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  cursor: isLoggingOut ? "not-allowed" : "pointer",
+                }}
+              >
+                {isLoggingOut ? "Keluar..." : "Ya, Keluar"}
+              </button>
+            </div>
+          </div>
         </div>
-      </header>
+      )}
 
       {/* Page Content */}
       <main className="kai-portal-mobile-main" style={{

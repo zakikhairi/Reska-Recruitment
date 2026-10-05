@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Users,
   Briefcase,
@@ -29,8 +30,10 @@ import {
   AlertTriangle,
   CheckCheck,
   Check,
+  LogOut,
 } from "lucide-react";
 import { useJobsStore } from "@/stores/jobs";
+import { useAuthStore } from "@/stores/auth";
 
 const stats: { label: string; value: string; change: string; trend: "up" | "down"; icon: any; color: string }[] = [];
 const statusDistribution = [
@@ -203,6 +206,17 @@ function StatusFilterDropdown({ statusFilter, setStatusFilter }: { statusFilter:
 }
 
 export default function AdminDashboardPage() {
+  const router = useRouter();
+  const { logout, user } = useAuthStore();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = () => {
+    setIsLoggingOut(true);
+    logout();
+    router.push("/auth/login");
+  };
+
   const { jobs, _hasHydrated } = useJobsStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -844,9 +858,120 @@ export default function AdminDashboardPage() {
                 Buat Lowongan
               </button>
             </Link>
+            <button
+              onClick={() => setShowLogoutModal(true)}
+              style={{
+                padding: "12px 18px",
+                background: "#fee2e2",
+                color: "#dc2626",
+                border: "1px solid #fecaca",
+                borderRadius: "12px",
+                fontSize: "14px",
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                transition: "all 0.2s"
+              }}
+              title="Keluar dari Akun Admin"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Keluar</span>
+            </button>
           </div>
         </div>
       </header>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutModal && (
+        <div
+          onClick={() => setShowLogoutModal(false)}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0, 0, 0, 0.5)",
+            zIndex: 1000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "#ffffff",
+              borderRadius: "16px",
+              padding: "24px",
+              width: "100%",
+              maxWidth: "380px",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                width: "52px",
+                height: "52px",
+                borderRadius: "50%",
+                background: "#fee2e2",
+                color: "#dc2626",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 14px",
+              }}
+            >
+              <LogOut className="w-6 h-6" />
+            </div>
+            <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#111827", marginBottom: "8px" }}>
+              Keluar dari Akun Admin?
+            </h3>
+            <p style={{ fontSize: "13px", color: "#6b7280", marginBottom: "22px", lineHeight: 1.5 }}>
+              Anda akan keluar dari sesi administrator KAI Services. Anda harus memasukkan kredensial lagi untuk login kembali.
+            </p>
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                style={{
+                  flex: 1,
+                  padding: "10px 16px",
+                  background: "#f3f4f6",
+                  color: "#374151",
+                  border: "none",
+                  borderRadius: "10px",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                style={{
+                  flex: 1,
+                  padding: "10px 16px",
+                  background: "#dc2626",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "10px",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  cursor: isLoggingOut ? "not-allowed" : "pointer",
+                }}
+              >
+                {isLoggingOut ? "Mengeluarkan..." : "Ya, Keluar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="admin-dashboard-container" style={{ maxWidth: "1400px", margin: "0 auto", padding: "0 32px 60px" }}>
         {/* Stats Cards */}
