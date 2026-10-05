@@ -1095,7 +1095,7 @@ export default function HomePage() {
                 </h2>
 
                 {/* 5 Checklist Items */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginTop: "24px" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginTop: "24px" }} className="how-to-apply-checklist">
                   {[
                     "Registrasikan Akun Anda",
                     "Lengkapi Data Diri & Dokumen",

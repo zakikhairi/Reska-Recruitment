@@ -264,29 +264,151 @@ html, body {
     border-radius: 16px !important;
   }
 
-  /* Roadmap Section */
-  .roadmap-tabs-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 8px !important;
-    margin-bottom: 20px !important;
+  /* ===================================================
+     ROADMAP VERTICAL CONNECTED TIMELINE (MOBILE)
+     =================================================== */
+  .desktop-roadmap-view {
+    display: none !important;
   }
-  .roadmap-tabs-grid button {
-    padding: 12px 10px !important;
-    border-radius: 12px !important;
-  }
-
-  .roadmap-panel-grid {
-    grid-template-columns: 1fr !important;
-    gap: 24px !important;
-    padding: 24px 18px !important;
-    border-radius: 20px !important;
+  .mobile-roadmap-timeline {
+    display: block !important;
   }
 
-  /* How to Apply Section */
+  .roadmap-v-timeline {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    gap: 0;
+  }
+
+  .timeline-row {
+    display: flex;
+    gap: 14px;
+    align-items: stretch;
+    position: relative;
+  }
+
+  .timeline-node-track {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 36px;
+    flex-shrink: 0;
+  }
+
+  .timeline-node-circle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2.5px solid;
+    font-size: 13px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 2;
+    transition: all 0.25s ease;
+    flex-shrink: 0;
+    padding: 0;
+  }
+
+  .timeline-v-line {
+    width: 3px;
+    flex: 1;
+    min-height: 24px;
+    background: linear-gradient(180deg, #00205B 0%, #003399 25%, #FF5E00 50%, #2563eb 75%, #7c3aed 100%);
+    border-radius: 4px;
+    margin: 4px 0;
+    opacity: 0.55;
+  }
+
+  .timeline-card {
+    flex: 1;
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 16px 18px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 16px -2px rgba(0, 32, 91, 0.06);
+    cursor: pointer;
+    margin-bottom: 16px;
+    transition: all 0.25s ease;
+  }
+
+  .timeline-card.expanded {
+    box-shadow: 0 10px 28px -4px rgba(0, 32, 91, 0.14);
+    background: #ffffff;
+    border-color: #cbd5e1;
+  }
+
+  /* ===================================================
+     CARA MELAMAR VERTICAL CONNECTED TIMELINE (MOBILE)
+     =================================================== */
+  .how-to-apply-checklist {
+    display: none !important;
+  }
+
   .how-to-apply-cards {
-    grid-template-columns: 1fr !important;
-    gap: 14px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    position: relative !important;
+    padding-left: 36px !important;
+    gap: 18px !important;
   }
+
+  .how-to-apply-cards::before {
+    content: '' !important;
+    position: absolute !important;
+    left: 12px !important;
+    top: 28px !important;
+    bottom: 28px !important;
+    width: 3px !important;
+    background: linear-gradient(180deg, #00205B 0%, #0284C7 25%, #1D4ED8 50%, #334155 75%, #FF5E00 100%) !important;
+    border-radius: 9999px !important;
+    z-index: 1 !important;
+  }
+
+  .how-to-apply-cards > div {
+    position: relative !important;
+    width: 100% !important;
+  }
+
+  /* Timeline Node Dots on Cards */
+  .how-to-apply-cards > div::before {
+    content: '' !important;
+    position: absolute !important;
+    left: -30px !important;
+    top: 26px !important;
+    width: 15px !important;
+    height: 15px !important;
+    border-radius: 50% !important;
+    background: #ffffff !important;
+    border: 3.5px solid #00205B !important;
+    z-index: 2 !important;
+    box-shadow: 0 0 0 3px rgba(0, 32, 91, 0.18) !important;
+  }
+
+  .how-to-apply-cards > div:nth-child(2)::before {
+    border-color: #0284C7 !important;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.22) !important;
+  }
+
+  .how-to-apply-cards > div:nth-child(3)::before {
+    border-color: #1D4ED8 !important;
+    box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.22) !important;
+  }
+
+  .how-to-apply-cards > div:nth-child(4)::before {
+    border-color: #334155 !important;
+    box-shadow: 0 0 0 3px rgba(51, 65, 85, 0.22) !important;
+  }
+
+  .how-to-apply-cards > div:nth-child(5)::before {
+    border-color: #FF5E00 !important;
+    box-shadow: 0 0 0 4px rgba(255, 94, 0, 0.35) !important;
+    animation: pulseDot 2s infinite !important;
+  }
+
   .how-to-apply-cards > div > div {
     padding: 22px 20px !important;
     border-radius: 16px !important;

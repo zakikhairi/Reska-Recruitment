@@ -157,185 +157,366 @@ export default function InteractiveRoadmap() {
         </div>
 
         {/* Step Tabs Horizontal */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(6, 1fr)",
-            gap: "12px",
-            marginBottom: "32px",
-          }}
-          className="roadmap-tabs-grid"
-        >
-          {stages.map((stg) => {
-            const isActive = activeStage === stg.id;
-            return (
-              <div
-                key={stg.id}
-                onClick={() => setActiveStage(stg.id)}
-                style={{
-                  padding: "16px 12px",
-                  borderRadius: "16px",
-                  background: isActive ? "#ffffff" : "rgba(255, 255, 255, 0.6)",
-                  border: isActive ? `2px solid ${stg.color}` : "1px solid #e2e8f0",
-                  boxShadow: isActive ? "0 10px 25px -5px rgba(0, 32, 91, 0.12)" : "none",
-                  cursor: "pointer",
-                  transition: "all 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
-                  textAlign: "center",
-                  transform: isActive ? "translateY(-4px)" : "translateY(0)",
-                }}
-              >
+        {/* Desktop View: Horizontal Tabs + Detail Panel */}
+        <div className="desktop-roadmap-view">
+          {/* Step Tabs Horizontal */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(6, 1fr)",
+              gap: "12px",
+              marginBottom: "32px",
+            }}
+            className="roadmap-tabs-grid"
+          >
+            {stages.map((stg) => {
+              const isActive = activeStage === stg.id;
+              return (
                 <div
+                  key={stg.id}
+                  onClick={() => setActiveStage(stg.id)}
                   style={{
-                    width: "42px",
-                    height: "42px",
-                    borderRadius: "12px",
-                    background: isActive ? stg.color : "#f1f5f9",
-                    color: isActive ? "#ffffff" : "#64748b",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    margin: "0 auto 10px",
-                    transition: "all 0.2s",
+                    padding: "16px 12px",
+                    borderRadius: "16px",
+                    background: isActive ? "#ffffff" : "rgba(255, 255, 255, 0.6)",
+                    border: isActive ? `2px solid ${stg.color}` : "1px solid #e2e8f0",
+                    boxShadow: isActive ? "0 10px 25px -5px rgba(0, 32, 91, 0.12)" : "none",
+                    cursor: "pointer",
+                    transition: "all 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
+                    textAlign: "center",
+                    transform: isActive ? "translateY(-4px)" : "translateY(0)",
                   }}
                 >
-                  {stg.icon}
+                  <div
+                    style={{
+                      width: "42px",
+                      height: "42px",
+                      borderRadius: "12px",
+                      background: isActive ? stg.color : "#f1f5f9",
+                      color: isActive ? "#ffffff" : "#64748b",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      margin: "0 auto 10px",
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    {stg.icon}
+                  </div>
+                  <div style={{ fontSize: "11px", fontWeight: 800, color: isActive ? stg.color : "#94a3b8" }}>
+                    TAHAP {stg.number}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      color: isActive ? "#0f172a" : "#475569",
+                      marginTop: "2px",
+                      lineHeight: 1.3,
+                    }}
+                  >
+                    {stg.title.split(" ")[0]} {stg.title.split(" ")[1] || ""}
+                  </div>
                 </div>
-                <div style={{ fontSize: "11px", fontWeight: 800, color: isActive ? stg.color : "#94a3b8" }}>
-                  TAHAP {stg.number}
-                </div>
-                <div
+              );
+            })}
+          </div>
+
+          {/* Active Stage Detailed Panel */}
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: "24px",
+              padding: "36px 40px",
+              boxShadow: "0 12px 36px -8px rgba(0, 32, 91, 0.08)",
+              border: "1px solid #e2e8f0",
+              display: "grid",
+              gridTemplateColumns: "1.2fr 1fr",
+              gap: "40px",
+              alignItems: "start",
+            }}
+            className="roadmap-panel-grid"
+          >
+            {/* Left Column: Details */}
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+                <span
                   style={{
-                    fontSize: "13px",
-                    fontWeight: 700,
-                    color: isActive ? "#0f172a" : "#475569",
-                    marginTop: "2px",
-                    lineHeight: 1.3,
+                    padding: "4px 12px",
+                    borderRadius: "20px",
+                    background: current.color,
+                    color: "#ffffff",
+                    fontSize: "12px",
+                    fontWeight: 800,
                   }}
                 >
-                  {stg.title.split(" ")[0]} {stg.title.split(" ")[1] || ""}
+                  Tahap {current.number}
+                </span>
+                <span style={{ fontSize: "13px", color: "#64748b", fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
+                  <Clock size={14} />
+                  Estimasi Waktu: <strong>{current.duration}</strong>
+                </span>
+              </div>
+
+              <h3 style={{ fontSize: "26px", fontWeight: 800, color: "#00205B", margin: "0 0 12px" }}>
+                {current.title}
+              </h3>
+
+              <p style={{ fontSize: "15px", color: "#475569", lineHeight: 1.7, marginBottom: "24px" }}>
+                {current.shortDesc}
+              </p>
+
+              <div style={{ marginBottom: "24px" }}>
+                <div style={{ fontSize: "14px", fontWeight: 700, color: "#1e293b", marginBottom: "12px" }}>
+                  Rincian Aktivitas Tahapan Ini:
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  {current.details.map((dt, i) => (
+                    <div key={i} style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
+                      <div
+                        style={{
+                          width: "22px",
+                          height: "22px",
+                          borderRadius: "50%",
+                          background: "#e0e7ff",
+                          color: "#00205B",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "12px",
+                          fontWeight: 700,
+                          flexShrink: 0,
+                          marginTop: "2px",
+                        }}
+                      >
+                        {i + 1}
+                      </div>
+                      <span style={{ fontSize: "14px", color: "#334155", lineHeight: 1.6 }}>{dt}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
-            );
-          })}
-        </div>
-
-        {/* Active Stage Detailed Panel */}
-        <div
-          style={{
-            background: "#ffffff",
-            borderRadius: "24px",
-            padding: "36px 40px",
-            boxShadow: "0 12px 36px -8px rgba(0, 32, 91, 0.08)",
-            border: "1px solid #e2e8f0",
-            display: "grid",
-            gridTemplateColumns: "1.2fr 1fr",
-            gap: "40px",
-            alignItems: "start",
-          }}
-          className="roadmap-panel-grid"
-        >
-          {/* Left Column: Details */}
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
-              <span
-                style={{
-                  padding: "4px 12px",
-                  borderRadius: "20px",
-                  background: current.color,
-                  color: "#ffffff",
-                  fontSize: "12px",
-                  fontWeight: 800,
-                }}
-              >
-                Tahap {current.number}
-              </span>
-              <span style={{ fontSize: "13px", color: "#64748b", fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
-                <Clock size={14} />
-                Estimasi Waktu: <strong>{current.duration}</strong>
-              </span>
             </div>
 
-            <h3 style={{ fontSize: "26px", fontWeight: 800, color: "#00205B", margin: "0 0 12px" }}>
-              {current.title}
-            </h3>
-
-            <p style={{ fontSize: "15px", color: "#475569", lineHeight: 1.7, marginBottom: "24px" }}>
-              {current.shortDesc}
-            </p>
-
-            <div style={{ marginBottom: "24px" }}>
-              <div style={{ fontSize: "14px", fontWeight: 700, color: "#1e293b", marginBottom: "12px" }}>
-                Rincian Aktivitas Tahapan Ini:
+            {/* Right Column: Tips & Documents */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+              {/* HR Tips Box */}
+              <div
+                style={{
+                  background: "linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)",
+                  borderRadius: "18px",
+                  padding: "24px",
+                  border: "1px solid #fed7aa",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#ea580c", fontWeight: 800, fontSize: "15px", marginBottom: "10px" }}>
+                  <Lightbulb size={20} />
+                  Tips Sukses dari Tim HRD
+                </div>
+                <p style={{ fontSize: "14px", color: "#9a3412", lineHeight: 1.7, margin: 0 }}>
+                  &ldquo;{current.tips}&rdquo;
+                </p>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                {current.details.map((dt, i) => (
-                  <div key={i} style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
-                    <div
-                      style={{
-                        width: "22px",
-                        height: "22px",
-                        borderRadius: "50%",
-                        background: "#e0e7ff",
-                        color: "#00205B",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "12px",
-                        fontWeight: 700,
-                        flexShrink: 0,
-                        marginTop: "2px",
-                      }}
-                    >
-                      {i + 1}
+
+              {/* Documents Required */}
+              <div
+                style={{
+                  background: "#f8fafc",
+                  borderRadius: "18px",
+                  padding: "24px",
+                  border: "1px solid #e2e8f0",
+                }}
+              >
+                <div style={{ fontSize: "14px", fontWeight: 700, color: "#1e293b", marginBottom: "12px" }}>
+                  Kelengkapan / Dokumen Terkait:
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  {current.documents.map((doc, idx) => (
+                    <div key={idx} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#475569" }}>
+                      <CheckCircle size={16} color="#16a34a" />
+                      <span>{doc}</span>
                     </div>
-                    <span style={{ fontSize: "14px", color: "#334155", lineHeight: 1.6 }}>{dt}</span>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Right Column: Tips & Documents */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-            {/* HR Tips Box */}
-            <div
-              style={{
-                background: "linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)",
-                borderRadius: "18px",
-                padding: "24px",
-                border: "1px solid #fed7aa",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#ea580c", fontWeight: 800, fontSize: "15px", marginBottom: "10px" }}>
-                <Lightbulb size={20} />
-                Tips Sukses dari Tim HRD
-              </div>
-              <p style={{ fontSize: "14px", color: "#9a3412", lineHeight: 1.7, margin: 0 }}>
-                &ldquo;{current.tips}&rdquo;
-              </p>
-            </div>
+        {/* Mobile View: Vertical Connected Timeline */}
+        <div className="mobile-roadmap-timeline">
+          <div className="roadmap-v-timeline">
+            {stages.map((stg, idx) => {
+              const isExpanded = activeStage === stg.id;
+              const isLast = idx === stages.length - 1;
 
-            {/* Documents Required */}
-            <div
-              style={{
-                background: "#f8fafc",
-                borderRadius: "18px",
-                padding: "24px",
-                border: "1px solid #e2e8f0",
-              }}
-            >
-              <div style={{ fontSize: "14px", fontWeight: 700, color: "#1e293b", marginBottom: "12px" }}>
-                Kelengkapan / Dokumen Terkait:
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                {current.documents.map((doc, idx) => (
-                  <div key={idx} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#475569" }}>
-                    <CheckCircle size={16} color="#16a34a" />
-                    <span>{doc}</span>
+              return (
+                <div key={stg.id} className="timeline-row">
+                  {/* Left Column: Number Node and Connecting Line */}
+                  <div className="timeline-node-track">
+                    <button
+                      onClick={() => setActiveStage(isExpanded ? -1 : stg.id)}
+                      className={`timeline-node-circle ${isExpanded ? "active" : ""}`}
+                      style={{
+                        background: isExpanded ? stg.color : "#ffffff",
+                        borderColor: stg.color,
+                        color: isExpanded ? "#ffffff" : stg.color,
+                        boxShadow: isExpanded ? `0 4px 14px ${stg.color}50` : "0 2px 8px rgba(0,0,0,0.06)",
+                      }}
+                      aria-label={`Tahap ${stg.number}: ${stg.title}`}
+                    >
+                      {stg.number}
+                    </button>
+                    {!isLast && <div className="timeline-v-line" />}
                   </div>
-                ))}
-              </div>
-            </div>
+
+                  {/* Right Column: Step Card (Clickable to Expand) */}
+                  <div
+                    onClick={() => setActiveStage(isExpanded ? -1 : stg.id)}
+                    className={`timeline-card ${isExpanded ? "expanded" : ""}`}
+                    style={{
+                      borderLeft: `4px solid ${stg.color}`,
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px" }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "4px" }}>
+                          <span
+                            style={{
+                              fontSize: "11px",
+                              fontWeight: 800,
+                              padding: "2px 8px",
+                              borderRadius: "10px",
+                              background: `${stg.color}15`,
+                              color: stg.color,
+                            }}
+                          >
+                            TAHAP {stg.number}
+                          </span>
+                          <span style={{ fontSize: "11px", color: "#64748b", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                            <Clock size={12} />
+                            {stg.duration}
+                          </span>
+                        </div>
+                        <h4 style={{ fontSize: "15px", fontWeight: 800, color: "#00205B", margin: "0 0 4px 0", lineHeight: 1.3 }}>
+                          {stg.title}
+                        </h4>
+                        <p style={{ fontSize: "12.5px", color: "#64748b", margin: 0, lineHeight: 1.45 }}>
+                          {stg.shortDesc}
+                        </p>
+                      </div>
+
+                      <div
+                        style={{
+                          width: "28px",
+                          height: "28px",
+                          borderRadius: "50%",
+                          background: isExpanded ? "#f1f5f9" : "#ffffff",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                          transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
+                          transition: "transform 0.25s ease",
+                        }}
+                      >
+                        <ChevronRight size={16} color="#64748b" />
+                      </div>
+                    </div>
+
+                    {/* Expanded Detail Body */}
+                    {isExpanded && (
+                      <div
+                        style={{
+                          marginTop: "14px",
+                          paddingTop: "14px",
+                          borderTop: "1px solid #f1f5f9",
+                          animation: "slideInUp 0.2s ease-out forwards",
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {/* Activities */}
+                        <div style={{ marginBottom: "12px" }}>
+                          <div style={{ fontSize: "12px", fontWeight: 700, color: "#1e293b", marginBottom: "8px" }}>
+                            Rincian Aktivitas:
+                          </div>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                            {stg.details.map((dt, i) => (
+                              <div key={i} style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
+                                <div
+                                  style={{
+                                    width: "18px",
+                                    height: "18px",
+                                    borderRadius: "50%",
+                                    background: "#e0e7ff",
+                                    color: "#00205B",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: "10px",
+                                    fontWeight: 700,
+                                    flexShrink: 0,
+                                    marginTop: "2px",
+                                  }}
+                                >
+                                  {i + 1}
+                                </div>
+                                <span style={{ fontSize: "12px", color: "#334155", lineHeight: 1.5 }}>
+                                  {dt}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* HR Tips */}
+                        <div
+                          style={{
+                            background: "#fff7ed",
+                            borderRadius: "12px",
+                            padding: "12px",
+                            border: "1px solid #fed7aa",
+                            marginBottom: "12px",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#ea580c", fontWeight: 700, fontSize: "12px", marginBottom: "4px" }}>
+                            <Lightbulb size={14} />
+                            Tips HRD:
+                          </div>
+                          <p style={{ fontSize: "12px", color: "#9a3412", margin: 0, lineHeight: 1.5 }}>
+                            &ldquo;{stg.tips}&rdquo;
+                          </p>
+                        </div>
+
+                        {/* Documents */}
+                        <div>
+                          <div style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", marginBottom: "6px" }}>
+                            Dokumen Terkait:
+                          </div>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                            {stg.documents.map((doc, docIdx) => (
+                              <span
+                                key={docIdx}
+                                style={{
+                                  fontSize: "11px",
+                                  padding: "3px 8px",
+                                  borderRadius: "6px",
+                                  background: "#f1f5f9",
+                                  color: "#475569",
+                                  fontWeight: 500,
+                                }}
+                              >
+                                ✓ {doc}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
