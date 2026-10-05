@@ -454,7 +454,7 @@ html, body {
     box-sizing: border-box !important;
   }
 
-  /* Streamline secondary desktop headers on mobile INSIDE PORTAL */
+  /* Streamline secondary desktop headers on mobile INSIDE PORTAL - CENTERED */
   .kai-portal-mobile-main header {
     padding: 14px 16px !important;
     margin-bottom: 14px !important;
@@ -462,35 +462,89 @@ html, body {
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
+    text-align: center !important;
   }
   .kai-portal-mobile-main header > div {
     flex-direction: column !important;
-    align-items: stretch !important;
+    align-items: center !important;
+    justify-content: center !important;
     gap: 12px !important;
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
+    text-align: center !important;
+  }
+  .kai-portal-mobile-main header > div > div:first-child {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    width: 100% !important;
   }
   .kai-portal-mobile-main header h1 {
     font-size: 20px !important;
     margin-bottom: 2px !important;
+    text-align: center !important;
+    width: 100% !important;
   }
   .kai-portal-mobile-main header p {
     font-size: 12px !important;
+    text-align: center !important;
+    width: 100% !important;
   }
   .kai-portal-mobile-main header > div > div:last-child {
     display: flex !important;
     flex-wrap: wrap !important;
     align-items: center !important;
+    justify-content: center !important;
     gap: 8px !important;
     width: 100% !important;
   }
   .kai-portal-mobile-main header button,
   .kai-portal-mobile-main header a {
+    justify-content: center !important;
+    text-align: center !important;
     max-width: 100% !important;
   }
 
-  /* Responsive Stats Grid (2x2 on mobile instead of 4) INSIDE PORTAL */
+  /* Center all section titles and card headings inside mobile portal */
+  .kai-portal-mobile-main h1,
+  .kai-portal-mobile-main h2,
+  .kai-portal-mobile-main h3,
+  .kai-portal-mobile-main h4 {
+    text-align: center !important;
+    width: 100% !important;
+  }
+  .kai-portal-mobile-main .admin-funnel-card > div:first-child,
+  .kai-portal-mobile-main .admin-table-card > div:first-child,
+  .kai-portal-mobile-main div:has(> h2),
+  .kai-portal-mobile-main div:has(> h3) {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    width: 100% !important;
+  }
+  .kai-portal-mobile-main div:has(> h2) > div,
+  .kai-portal-mobile-main div:has(> h3) > div {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    width: 100% !important;
+  }
+  .kai-portal-mobile-main div:has(> h2) span,
+  .kai-portal-mobile-main div:has(> h3) span,
+  .kai-portal-mobile-main div:has(> h2) p,
+  .kai-portal-mobile-main div:has(> h3) p {
+    text-align: center !important;
+    width: 100% !important;
+  }
+
+  /* Responsive Stats Grid (2x2 on mobile instead of 4) INSIDE PORTAL - CENTERED */
   .kai-portal-mobile-main div[style*="gridTemplateColumns: repeat(4, 1fr)"],
   .kai-portal-mobile-main div[style*="grid-template-columns: repeat(4, 1fr)"],
   .kai-portal-mobile-main div[style*="gridTemplateColumns: repeat(3, 1fr)"],
@@ -503,16 +557,44 @@ html, body {
     width: 100% !important;
     box-sizing: border-box !important;
   }
-  .kai-portal-mobile-main .admin-stats-grid > div {
+  .kai-portal-mobile-main .admin-stats-grid > div,
+  .kai-portal-mobile-main div[style*="gridTemplateColumns: repeat(4, 1fr)"] > div,
+  .kai-portal-mobile-main div[style*="gridTemplateColumns: repeat(3, 1fr)"] > div {
     padding: 12px !important;
     border-radius: 12px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+  }
+  .kai-portal-mobile-main .admin-stats-grid > div > div:first-child {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    margin-bottom: 6px !important;
+    width: 100% !important;
+  }
+  .kai-portal-mobile-main .admin-stats-grid > div > div:first-child > div:first-child {
+    margin: 0 auto !important;
+  }
+  .kai-portal-mobile-main .admin-stats-grid > div > div:first-child > div:last-child {
+    margin: 0 auto !important;
+    justify-content: center !important;
+    text-align: center !important;
   }
   .kai-portal-mobile-main .admin-stats-grid div[style*="font-size: 32px"],
-  .kai-portal-mobile-main .admin-stats-grid div[style*="fontSize: 32px"] {
+  .kai-portal-mobile-main .admin-stats-grid div[style*="fontSize: 32px"],
+  .kai-portal-mobile-main .admin-stats-grid p,
+  .kai-portal-mobile-main .admin-stats-grid span {
+    text-align: center !important;
+    width: 100% !important;
     font-size: 20px !important;
   }
 
-  /* Responsive Pipeline Ribbon (Swipeable track on mobile) INSIDE PORTAL */
+  /* Responsive Pipeline Ribbon (Swipeable track on mobile) INSIDE PORTAL - CENTERED */
   .kai-portal-mobile-main .admin-funnel-grid {
     display: flex !important;
     flex-wrap: nowrap !important;
@@ -530,6 +612,20 @@ html, body {
     padding: 10px 12px !important;
     scroll-snap-align: start;
     border-radius: 12px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+  }
+  .kai-portal-mobile-main .admin-funnel-grid > div > div:first-child {
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+  .kai-portal-mobile-main .admin-funnel-grid > div * {
+    text-align: center !important;
   }
 
   /* 2-Column grids collapse to 1 column on mobile INSIDE PORTAL */
@@ -554,18 +650,22 @@ html, body {
     padding: 12px !important;
     border-right: none !important;
     border-bottom: 1px solid #e0e0e0 !important;
+    text-align: center !important;
   }
   .kai-portal-mobile-main .admin-schedule-list {
     width: 100% !important;
+    text-align: center !important;
   }
 
-  /* Auto-fill jobs grid on admin & applicant INSIDE PORTAL */
+  /* Auto-fill jobs grid on admin & applicant INSIDE PORTAL - CENTERED */
   .kai-portal-mobile-main .admin-jobs-grid {
     grid-template-columns: 1fr !important;
     gap: 12px !important;
   }
   .kai-portal-mobile-main .applicant-job-card {
     flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
     gap: 14px !important;
     padding: 16px !important;
   }
@@ -573,9 +673,10 @@ html, body {
     width: 44px !important;
     height: 44px !important;
     border-radius: 10px !important;
+    margin: 0 auto !important;
   }
 
-  /* Universal Responsive Tables INSIDE PORTAL */
+  /* Universal Responsive Tables INSIDE PORTAL - CENTERED */
   .kai-portal-mobile-main div:has(> table),
   .kai-portal-mobile-main .table-responsive,
   .kai-portal-mobile-main div[style*="overflowX: auto"],
@@ -594,6 +695,17 @@ html, body {
   .kai-portal-mobile-main td {
     padding: 10px 12px !important;
     font-size: 12px !important;
+    text-align: center !important;
+  }
+  .kai-portal-mobile-main td > div {
+    justify-content: center !important;
+    align-items: center !important;
+    text-align: center !important;
+    margin: 0 auto !important;
+  }
+  .kai-portal-mobile-main td span {
+    justify-content: center !important;
+    margin: 0 auto !important;
   }
 
   /* Responsive card boxes INSIDE PORTAL */
@@ -612,13 +724,16 @@ html, body {
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
+    text-align: center !important;
   }
 
-  /* Filter and search toolbars wrap cleanly INSIDE PORTAL */
+  /* Filter and search toolbars wrap cleanly INSIDE PORTAL - CENTERED */
   .kai-portal-mobile-main .admin-table-filter-toolbar,
   .kai-portal-mobile-main .admin-filters-row {
     flex-direction: column !important;
-    align-items: stretch !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
     gap: 10px !important;
     width: 100% !important;
     box-sizing: border-box !important;
@@ -630,7 +745,15 @@ html, body {
   .kai-portal-mobile-main input[placeholder*="Cari"] {
     width: 100% !important;
     min-width: 0 !important;
+    text-align: center !important;
+    text-align-last: center !important;
     box-sizing: border-box !important;
+  }
+  .kai-portal-mobile-main .admin-table-filter-toolbar button,
+  .kai-portal-mobile-main .admin-filters-row button,
+  .kai-portal-mobile-main button {
+    justify-content: center !important;
+    text-align: center !important;
   }
 
   /* Floating Chat Position on Mobile (Never block bottom navigation) */
