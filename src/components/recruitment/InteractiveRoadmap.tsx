@@ -16,6 +16,7 @@ import {
 
 export default function InteractiveRoadmap() {
   const [activeStage, setActiveStage] = useState<number>(0);
+  const [mobileExpandedStage, setMobileExpandedStage] = useState<number | null>(0);
 
   const stages = [
     {
@@ -117,7 +118,7 @@ export default function InteractiveRoadmap() {
     },
   ];
 
-  const current = stages[activeStage];
+  const current = stages[activeStage] || stages[0];
 
   return (
     <section style={{ padding: "80px 32px", background: "#f8fafc" }}>
@@ -348,7 +349,7 @@ export default function InteractiveRoadmap() {
         <div className="mobile-roadmap-timeline">
           <div className="roadmap-v-timeline">
             {stages.map((stg, idx) => {
-              const isExpanded = activeStage === stg.id;
+              const isExpanded = mobileExpandedStage === stg.id;
               const isLast = idx === stages.length - 1;
 
               return (
@@ -356,7 +357,7 @@ export default function InteractiveRoadmap() {
                   {/* Left Column: Number Node and Connecting Line */}
                   <div className="timeline-node-track">
                     <button
-                      onClick={() => setActiveStage(isExpanded ? -1 : stg.id)}
+                      onClick={() => setMobileExpandedStage(isExpanded ? null : stg.id)}
                       className={`timeline-node-circle ${isExpanded ? "active" : ""}`}
                       style={{
                         background: isExpanded ? stg.color : "#ffffff",
@@ -373,7 +374,7 @@ export default function InteractiveRoadmap() {
 
                   {/* Right Column: Step Card (Clickable to Expand) */}
                   <div
-                    onClick={() => setActiveStage(isExpanded ? -1 : stg.id)}
+                    onClick={() => setMobileExpandedStage(isExpanded ? null : stg.id)}
                     className={`timeline-card ${isExpanded ? "expanded" : ""}`}
                     style={{
                       borderLeft: `4px solid ${stg.color}`,
