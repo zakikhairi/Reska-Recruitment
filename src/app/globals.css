@@ -177,3 +177,199 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.6);
 }
 
+/* ===================================================
+   COMPREHENSIVE MOBILE & TABLET RESPONSIVE STYLES
+   =================================================== */
+
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Tablet Breakpoint (<= 1024px) */
+@media (max-width: 1024px) {
+  .benefits-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 20px !important;
+  }
+
+  .roadmap-tabs-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  .how-to-apply-grid {
+    grid-template-columns: 1fr !important;
+    gap: 40px !important;
+  }
+
+  .jobs-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 20px !important;
+  }
+
+  .about-grid-container {
+    grid-template-columns: 1fr !important;
+    gap: 40px !important;
+  }
+
+  .about-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 16px !important;
+  }
+}
+
+/* Mobile Breakpoint (<= 768px) */
+@media (max-width: 768px) {
+  /* Section standard padding on mobile */
+  #mengapa,
+  #cara-melamar,
+  #roadmap,
+  #lowongan,
+  #tentang,
+  #faq,
+  #kontak {
+    padding: 54px 16px !important;
+  }
+
+  /* Section Headings */
+  #mengapa h2,
+  #cara-melamar h2,
+  #roadmap h2,
+  #lowongan h2,
+  #tentang h2,
+  #faq h2,
+  #kontak h2 {
+    font-size: clamp(22px, 5.8vw, 28px) !important;
+    line-height: 1.25 !important;
+    margin-bottom: 8px !important;
+  }
+
+  #mengapa p,
+  #cara-melamar p,
+  #roadmap p,
+  #tentang p,
+  #faq p {
+    font-size: 14px !important;
+    line-height: 1.6 !important;
+  }
+
+  /* Benefits Grid 1 column on mobile */
+  .benefits-grid {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+  .benefits-grid > div {
+    padding: 22px 20px !important;
+    border-radius: 16px !important;
+  }
+
+  /* Roadmap Section */
+  .roadmap-tabs-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    margin-bottom: 20px !important;
+  }
+  .roadmap-tabs-grid button {
+    padding: 12px 10px !important;
+    border-radius: 12px !important;
+  }
+
+  .roadmap-panel-grid {
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+    padding: 24px 18px !important;
+    border-radius: 20px !important;
+  }
+
+  /* How to Apply Section */
+  .how-to-apply-cards {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+  .how-to-apply-cards > div > div {
+    padding: 22px 20px !important;
+    border-radius: 16px !important;
+    min-height: auto !important;
+  }
+
+  /* Jobs Grid */
+  .jobs-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+  .jobs-grid > div > div {
+    padding: 22px 20px !important;
+    border-radius: 16px !important;
+    min-height: auto !important;
+  }
+
+  #lowongan input[type="text"] {
+    max-width: 100% !important;
+    height: 48px !important;
+    font-size: 14px !important;
+  }
+
+  /* About Section */
+  .about-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+    margin-top: 24px !important;
+  }
+  .about-grid > div > div {
+    padding: 16px 14px !important;
+    min-height: auto !important;
+    border-radius: 14px !important;
+  }
+
+  /* FAQ Accordion items */
+  #faq input[type="text"] {
+    font-size: 14px !important;
+    padding: 12px 16px 12px 44px !important;
+  }
+
+  /* Footer */
+  footer {
+    padding: 48px 16px 36px !important;
+  }
+  .footer-grid {
+    grid-template-columns: 1fr !important;
+    gap: 32px !important;
+  }
+}
+
+/* Small Smartphone Breakpoint (<= 480px) */
+@media (max-width: 480px) {
+  #mengapa,
+  #cara-melamar,
+  #roadmap,
+  #lowongan,
+  #tentang,
+  #faq,
+  #kontak {
+    padding: 44px 14px !important;
+  }
+
+  /* Feature cards in About to 1 column on narrow screens */
+  .about-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Floating Chat Window responsive on phone */
+  .floating-chat-window:not(.minimized) {
+    width: calc(100vw - 20px) !important;
+    right: 10px !important;
+    bottom: 10px !important;
+    height: calc(100vh - 80px) !important;
+    max-height: 580px !important;
+    border-radius: 18px !important;
+  }
+  .floating-chat-btn {
+    bottom: 16px !important;
+    right: 16px !important;
+    width: 52px !important;
+    height: 52px !important;
+  }
+}
+
+
